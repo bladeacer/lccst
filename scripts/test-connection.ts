@@ -7,92 +7,90 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverPath = path.resolve(__dirname, "../dist/index.js");
 const testsDir = path.resolve(__dirname, "../tests");
 
-console.log("LCCST: Initializing dynamic test suite runner...");
+console.log("LCCST: Commencing test suite runner parsing verification...");
 
 if (!fs.existsSync(testsDir)) {
-  console.error(`Error: Tests directory not found at ${testsDir}`);
+  console.error(`Runtime Error: Directory not found at path: ${testsDir}`);
   process.exit(1);
 }
 
-// Locate all valid test files within the target directory
-const testFiles = fs.readdirSync(testsDir).filter(file => 
-  (file.endsWith(".test.ts") || file.endsWith(".ts")) && !file.endsWith(".d.ts")
-);
+const testFiles = fs.readdirSync(testsDir)
+  .filter(file => (file.endsWith(".test.ts") || file.endsWith(".ts")) && !file.endsWith(".d.ts"))
+  .sort();
 
 if (testFiles.length === 0) {
-  console.log("No test files detected in the tests directory.");
+  console.log("No test files detected.");
   process.exit(0);
 }
 
-let passedAll = true;
+let pipelinePassed = true;
 
-// Iterate through each detected test file sequentially
 for (const file of testFiles) {
   const filePath = path.join(testsDir, file);
   console.log(`Running: ${file}`);
 
   try {
-    // Import the payload sequence from the test file dynamically
     const { payload, expectedResponse } = await import(`file://${filePath}`);
-
-    const success = await runTestPayload(payload, expectedResponse);
-    if (!success) {
-      passedAll = false;
+    const success = await executeMcpStreamFrame(payload, expectedResponse);
+    
+    if (success) {
+      console.log(`Pass: ${file}`);
+    } else {
+      console.error(`Fail: ${file}`);
+      pipelinePassed = false;
     }
   } catch (error: any) {
-    console.error(`Failed to execute test file ${file}:`, error.message);
-    passedAll = false;
+    console.error(`Execution Error processing file: ${file}`, error.message);
+    pipelinePassed = false;
   }
 }
 
-if (passedAll) {
-  console.log("Status: All tests passed successfully.");
+if (pipelinePassed) {
+  console.log("Status: Suite execution completed successfully. All tests passed.");
   process.exit(0);
 } else {
-  console.error("Status: Test suite execution failed.");
+  console.error("Status: Failure occurred within the testing lifecycle pipeline.");
   process.exit(1);
 }
 
-// Spawns server instance and pipes JSON-RPC sequences
-function runTestPayload(payload: object, expectedResponse: (res: any) => boolean): Promise<boolean> {
+function executeMcpStreamFrame(payload: object, assertFn: (res: any) => boolean): Promise<boolean> {
   return new Promise((resolve) => {
-    const server = spawn("node", [serverPath]);
-    let outputData = "";
-    let errorData = "";
+    const processInstance = spawn("node", [serverPath]);
+    let stdoutBuffer = "";
+    let stderrBuffer = "";
 
-    server.stdout.on("data", (data) => {
-      outputData += data.toString();
+    processInstance.stdout.on("data", (data) => {
+      stdoutBuffer += data.toString();
     });
 
-    server.stderr.on("data", (data) => {
-      errorData += data.toString();
+    processInstance.stderr.on("data", (data) => {
+      stderrBuffer += data.toString();
     });
 
-    server.stdin.write(JSON.stringify(payload) + "\n");
+    // Write input JSON-RPC payload line to standard input
+    processInstance.stdin.write(JSON.stringify(payload) + "\n");
 
     setTimeout(() => {
-      server.kill();
+      processInstance.kill();
 
-      if (errorData) {
-        console.error("Server execution error log contains stderr noise:\n", errorData);
+      if (stderrBuffer.trim().length > 0) {
+        console.error("Runtime stream emitted unexpected stderr data:", stderrBuffer);
         return resolve(false);
       }
 
       try {
-        const lines = outputData.trim().split("\n");
-        const parsedResponse = JSON.parse(lines[0]);
-        
-        const isMatch = expectedResponse(parsedResponse);
-        if (isMatch) {
-          return resolve(true);
-        } else {
-          console.error("Response assertion failed. Payload received:", parsedResponse);
+        const payloadLines = stdoutBuffer.trim().split("\n");
+        if (payloadLines[0].length === 0) {
+          console.error("Blank stdout response stream received.");
           return resolve(false);
         }
+        
+        const parsedJson = JSON.parse(payloadLines[0]);
+        return resolve(assertFn(parsedJson));
       } catch (err) {
-        console.error("Failed to parse JSON-RPC response from stdout stream:", outputData);
+        console.error("Stream payload syntax could not be resolved to valid JSON:", stdoutBuffer);
         return resolve(false);
       }
-    }, 400);
+    }, 250);
   });
 }

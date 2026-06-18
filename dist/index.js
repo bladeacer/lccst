@@ -8,10 +8,12 @@ const server = new McpServer({
     name: "lccst-locust",
     version: "1.2.0"
 });
+// Enforce type contract constraints directly on prompt payload generation
 server.registerPrompt("swarm", {
     description: "Enforce strict lint-cluster-split-test-commit boundaries over the active workspace layout."
 }, async () => {
     try {
+        // Look one directory up from dist/index.js to find the project root asset
         const skillPath = path.resolve(__dirname, "../skill.md");
         const skillContent = fs.readFileSync(skillPath, "utf-8");
         return {

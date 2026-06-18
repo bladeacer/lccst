@@ -11,6 +11,7 @@ const server = new McpServer({
   version: "1.2.0"
 });
 
+// Enforce type contract constraints directly on prompt payload generation
 server.registerPrompt(
   "swarm",
   {
@@ -18,6 +19,7 @@ server.registerPrompt(
   },
   async () => {
     try {
+      // Look one directory up from dist/index.js to find the project root asset
       const skillPath = path.resolve(__dirname, "../skill.md");
       const skillContent = fs.readFileSync(skillPath, "utf-8");
 
