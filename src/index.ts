@@ -1,5 +1,5 @@
-import { McpServer } from "@modelcontextprotocol/server";
-import { StdioServerTransport } from "@modelcontextprotocol/server/stdio";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -8,12 +8,14 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const server = new McpServer({
   name: "lccst-locust",
-  version: "1.1.0"
+  version: "1.2.0"
 });
 
-server.prompt(
+server.registerPrompt(
   "swarm",
-  "Enforce strict lint-cluster-split-test-commit boundaries over the active workspace layout.",
+  {
+    description: "Enforce strict lint-cluster-split-test-commit boundaries over the active workspace layout."
+  },
   async () => {
     try {
       const skillPath = path.resolve(__dirname, "../skill.md");
