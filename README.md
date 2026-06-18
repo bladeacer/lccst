@@ -1,20 +1,40 @@
 # LCCST (Locust)
 
-An engineering gatekeeper built on explicit SOLID validations that splits complex, unstructured development workspaces into verified, atomic, sequential Git commits.
+An algorithmic codebase gatekeeper that breaks down complex workspace mutations into structured, atomic, test-verified Git commits while enforcing strict SOLID principles and architectural alignment.
+
+```
+1. Discover project linter, formatter, and test suites.
+2. Cluster unstructured workspace diffs into isolated logical groups.
+3. Verify changes using LSP context and local testing engines.
+4. Issue atomic conventional commits with thorough descriptions.
+```
+
+## Core Philosophy
+
+* **Architectural Alignment:** Adapts directly to the host architecture (e.g., Hexagonal, Elm, Domain-Driven Design) rather than imposing conflicting paradigms. Actively stops the creation of God Objects.
+* **Semantic Analysis:** Leverages language server contexts (LSP), Tree-sitter queries, and static analysis tools to verify structural modifications and downstream side-effects.
+* **Atomic Integrity:** Deconstructs complex multi-file diffs into isolated, test-verified commits containing distinct headers and analytical body descriptions.
+* **Non-Technical Audits:** Enforces compliance with test coverage baselines and flags updates needed for external documentation systems.
+
+## Installation
+
+Compile the TypeScript engine components using `pnpm`:
+
+```bash
+pnpm install
+pnpm run build
+```
 
 ---
 
-## Execution Topologies
+## Integration Topologies
 
-LCCST is decoupled to support both background automation workflows and direct declarative configuration files.
+### Option A: Model Context Protocol (MCP) Server Setup
 
-### MCP Server
+For AI runners that support automated standard I/O communication daemons (e.g., Claude Code, Cursor, Cline, Windsurf, Codex, Pi, OpenCode, Gemini CLI / Antigravity).
 
-To attach LCCST to your background system-wide Model Context Protocol environments, register the compiled build within the target host configuration file.
+Add the following configuration object to your global or project-level MCP server connection arrays (such as `claude_desktop_config.json`):
 
-#### Claude Desktop Configuration
-
-Add the server entry to `claude_desktop_config.json`:
 ```json
 {
   "mcpServers": {
@@ -25,78 +45,46 @@ Add the server entry to `claude_desktop_config.json`:
   }
 }
 ```
-
-#### Other Native Agent Implementations
-
-For runner environments that orchestrate background processes using standard I/O (such as Cline, Cursor MCP, or Windsurf), append the following item to their respective MCP server connection arrays:
-
-```json
-{
-  "command": "node",
-  "args": ["/absolute/path/to/lccst/dist/index.js"]
-}
-```
+*Once registered, invoke the `swarm` prompt through your agent's interface.*
 
 ---
 
-### Option B: Zero-Setup Declarative Skill Ingestion
+### Option B: Zero-Setup Declarative Ingestion
 
-For coding environments and runtime CLI agents that do not require an active background server process, use the direct declarative file injection route instead.
+For instruction-driven workflows, direct CLI executions, or platforms that don't need background processes.
 
-#### 1. Claude Code
+#### 1. Claude Code CLI
 
-Provide the instructions via the system file context during runtime operation:
-
+Inject the specification directly via runtime file referencing:
 ```bash
-claude "Review the active git diff using the instructions in ./skill.md"
+claude "Review the active git diff using the parameters in ./skill.md"
 ```
 
 #### 2. GitHub Copilot CLI & GitHub Copilot Chat
 
-Reference the file directly within the runtime user execution interface:
-* Append or pin `#skill.md` or `@skill.md` inside your conversational input frame.
-* Prompt: `"Process my uncommitted workspace changes using the protocol defined in this file."`
+Reference or pin the file within your conversational prompt context:
+* Attach `#skill.md` or `@skill.md` into your chat input interface.
+* Target Execution Prompt: `"Execute the protocol loop defined in this file over my uncommitted workspace changes."`
 
-#### 3. Codex & Independent Agent Runners
+#### 3. Codex, OpenCode & Independent Agent Harnesses
 
-Provide the file text inline during initialization or pass it down via custom execution scripts:
+Pipe the raw text content into initialization runs or supply it through custom extension layers:
 ```bash
 cat skill.md | your-agent-runner "Apply this system execution skill to the workspace diffs"
 ```
 
 #### 4. Project-Level Workspace Binding (Automated Rule Locking)
 
-To make the execution constraints active across a specific repository without manual prompt invocation, save or link the raw content of `skill.md` directly into the project root using your tool's native rule filename:
+To permanently bind an AI agent to the Locust framework constraints without typing manual prompt triggers, save or symlink `skill.md` directly into your repository root using the appropriate file target:
 * **Cursor IDE:** Save file as `.cursorrules` in your project root.
 * **Cline / VS Code AI Agents:** Save file as `.clinerules` in your project root.
+* **GitHub Copilot (Editor):** Save file as `.github/copilot-instructions.md`.
 
 #### 5. Global Editor Profiles
 
-To apply these behavioral constraints globally across all code spaces, paste the raw markdown specifications from `skill.md` directly inside your editor's global configurations:
-* **Cursor:** Navigate to `Settings -> Features -> Rules for AI` and insert the content blocks.
-
----
-
-## Development
-
-Clone the repository
-
-```bash
-git clone https://github.com/bladeacer/lccst
-```
-
-### Environment Initialization
-
-Install the dependencies and build the TypeScript codebase via `pnpm`:
-
-```bash
-pnpm install
-pnpm run build
-```
-
----
+To apply these rules globally across all open development spaces on your machine, copy the raw content of `skill.md` and paste it inside your editor's global behavioral configuration field:
+* **Cursor:** Navigate to `Settings -> Features -> Rules for AI` and append the ruleset.
 
 ## License
 
-This software is open-source and licensed under the terms of the MIT License.
-```
+This project is open-source and licensed under the terms of the MIT License.
