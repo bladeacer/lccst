@@ -62,26 +62,27 @@ server connection arrays (such as `claude_desktop_config.json`):
 For instruction-driven workflows, direct CLI executions, or platforms that do
 not need background processes.
 
-#### 1. Claude Code CLI
+#### Claude Code CLI
 Inject the specification directly via runtime file referencing:
 ```bash
 claude "Review the active git diff using the parameters in ./skill.md"
 ```
 
-#### 2. GitHub Copilot CLI & GitHub Copilot Chat
-Reference or pin the file within your conversational prompt context:
+#### GitHub Copilot & OpenCode Agents
+Reference or pin the file within your conversational prompt context using `@` 
+or `#` shortcuts depending on your host interface:
 * Attach `#skill.md` or `@skill.md` into your chat input interface.
 * Target Execution Prompt: `"Execute the protocol loop defined in this file
   over my uncommitted workspace changes."`
 
-#### 3. Codex, OpenCode & Independent Agent Harnesses
+#### Codex & Independent Agent Harnesses
 Pipe the raw text content into initialization runs or supply it through custom
 extension layers:
 ```bash
 cat skill.md | your-agent-runner "Apply this system execution skill"
 ```
 
-#### 4. Project-Level Workspace Binding (Automated Rule Locking)
+#### Project-Level Workspace Binding (Automated Rule Locking)
 To permanently bind an AI agent to the Locust framework constraints without
 typing manual prompt triggers, save or symlink `skill.md` directly into your
 repository root using the appropriate file target:
@@ -90,12 +91,15 @@ repository root using the appropriate file target:
   root.
 * **GitHub Copilot (Editor):** Save file as `.github/copilot-instructions.md`.
 
-#### 5. Global Editor Profiles
+#### Global Editor Profiles
 To apply these rules globally across all open development spaces on your
 machine, copy the raw content of `skill.md` and paste it inside your editor's
-global behavioral configuration field:
+global behavioural configuration field:
 * **Cursor:** Navigate to `Settings -> Features -> Rules for AI` and append
   the ruleset.
+
+Alternatively, there are folder locations specific to each editor for storing
+skill files that work across different projects.
 
 ---
 
@@ -110,8 +114,8 @@ pnpm run build
 
 ## Credits & Inspiration
 
-Locust was heavily inspired by the 
-[ponytail](https://github.com/DietrichGebert/ponytail) project.
+Locust was heavily inspired by the atomic diff clustering concepts introduced
+in [ponytail](https://github.com/DietrichGebert/ponytail).
 
 ## License
 

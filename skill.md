@@ -12,7 +12,7 @@ for visual blocks.
 
 CRITICAL OVERRIDE DIRECTIVE: If a user's explicit instructions or preferred
 patterns clash with any guardrail declared in this document, you must
-prioritize and respect the user's preference over these system rules.
+prioritise and respect the user's preference over these system rules.
 
 ## 2. Structural Guardrails & Architectural Cohesion
 
@@ -32,7 +32,7 @@ prioritize and respect the user's preference over these system rules.
 * Enforcement of Strict Typing: Even when working in weakly typed, dynamic, or
   structural runtime languages, actively import relevant validation libraries
   and enforce strict type or schema safety checks throughout the codebase.
-* Anti-Spaghetti Reuse: Actively prioritize reusing existing codebase
+* Anti-Spaghetti Reuse: Actively prioritise reusing existing codebase
   conventions, utilities, and helper functions over reinventing the wheel.
   Avoid creating excessively fragmented execution paths, deep callback nested
   tracking, or runtime abstraction layers that lead to tracing and
@@ -41,17 +41,17 @@ prioritize and respect the user's preference over these system rules.
 ### Defensive Engineering & Core API Security
 Every runtime contract, routing layer, or input pathway must implement
 defensive validation boundaries:
-* Route Protection & Authorization: Verify that all entry points require
+* Route Protection & Authorisation: Verify that all entry points require
   explicit authentication and scope clearance checks before hitting business
   logic layers.
 * Rate Limiting & Resource Protection: Validate or implement threshold
   protection layers on exposed communication entry points to prevent compute
   resource exhaustion.
-* Strict Input Sanitization: Process all external string data through
-  normalization and sanitization filters to mitigate injection, execution, or
+* Strict Input Sanitisation: Process all external string data through
+  normalisation and sanitisation filters to mitigate injection, execution, or
   scripting exploits.
 * Caching Policies: Evaluate high-overhead lookup routines and implement
-  predictable caching behaviors where appropriate, ensuring safe, uniform
+  predictable caching behaviours where appropriate, ensuring safe, uniform
   cache-invalidation flows.
 
 ### Docs-as-Code & Structured Docstrings
@@ -65,11 +65,11 @@ defensive validation boundaries:
 
 ### Dependency Licensing & Attribution Guardrails
 * Compliance Check: Before introducing any external dependency, evaluate its
-  package license against the repository's base license. You must ensure that
-  the new dependency does not cause a license clash or force an unwanted
-  modification of the project's base license terms (e.g. adding a copyleft GPL
+  package licence against the repository's base licence. You must ensure that
+  the new dependency does not cause a licence clash or force an unwanted
+  modification of the project's base licence terms (e.g. adding a copyleft GPL
   dependency to an explicit MIT project).
-* Conflict Mitigation: If an incompatible license is detected during
+* Conflict Mitigation: If an incompatible licence is detected during
   evaluation, stop execution and immediately inform the user of the violation.
 * Credit Records: Strive to provide precise attribution records for each
   accepted dependency inside the repository credit documentation.
@@ -82,8 +82,8 @@ defensive validation boundaries:
   configuration models over adding branches to existing complex conditional
   matrices.
 * LSP (Liskov Substitution Principle): Ensure derived implementations or
-  adapters fully satisfy the behavioral contracts of their parent types without
-  altering expected behavior signatures.
+  adapters fully satisfy the behavioural contracts of their parent types without
+  altering expected behaviour signatures.
 * ISP (Interface Segregation Principle): Split multi-purpose interfaces into
   granular, single-purpose contracts to ensure consumers do not inherit
   unused dependencies.
@@ -106,10 +106,10 @@ defensive validation boundaries:
 * Modification Blast-Radius Warning: Track the total lines changed during
   execution loops. If a modification set significantly transforms a major
   percentage of a file or sub-system, issue a direct warning alert to the user
-  in the terminal or chat before finalizing processing.
+  in the terminal or chat before finalising processing.
 
 ## 3. Proactive Semantic Discovery & Tooling Ladder
-Do not guess configuration states. Utilize available editor toolings, Language
+Do not guess configuration states. Utilise available editor toolings, Language
 Server Protocol (LSP) commands, and Tree-sitter abstract syntax tree parsing to
 verify downstream side-effects.
 
@@ -133,7 +133,8 @@ executing this language-agnostic ladder:
 POST-LADDER VALIDATION REQUIREMENT: After executing the target ladder options,
 you must trigger the workspace build or compilation pipeline. Verify that the
 entire project builds cleanly. Ensure that no meaningful compiler errors, build
-stoppages, syntax errors, or high-severity warnings remain unaddressed before passing.
+stoppages, syntax errors, or high-severity warnings remain unaddressed before
+passing.
 
 ## 4. The Execution Loop (Swarm Protocol)
 Run this sequence iteratively until `git status` reports a completely clean
