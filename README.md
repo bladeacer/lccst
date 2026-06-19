@@ -152,8 +152,7 @@ pnpm run build
 
 ## Credits & Inspiration
 
-Locust was heavily inspired by the atomic diff clustering concepts introduced
-in [ponytail](https://github.com/DietrichGebert/ponytail).
+Locust was heavily inspired by [ponytail](https://github.com/DietrichGebert/ponytail).
 
 ## License
 
