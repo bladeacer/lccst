@@ -1,6 +1,6 @@
 {
   "name": "lccst",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Lint, Clean, Cluster, Split, Test — Devouring messy diffs before they reach production.",
   "type": "module",
   "main": "dist/index.js",
@@ -10,7 +10,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "watch": "tsc --watch",
-    "test:mcp": "pnpm run build && tsx scripts/test-connection.ts"
+    "test:mcp": "pnpm run build && tsx scripts/test-connection.ts",
+    "bump": "tsx scripts/bump-version.ts"
   },
   "devDependencies": {
     "@types/node": "^20.12.7",
