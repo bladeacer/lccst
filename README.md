@@ -5,33 +5,59 @@ into isolated, test-verified, atomic Git commits while rigorously enforcing
 architectural cohesion and SOLID invariants.
 
 Locust operates as a deterministic, zero-compromise guardian for codebase
-health, test coverage, and structural boundaries—built to put your preferences
-first.
+health, test coverage, and structural boundaries—built to put your
+preferences first.
 
-```
-1. Discover & Format: Run lints and compilers via a strict Tooling Ladder.
-2. Hunk Clustering: Group workspace diffs into isolated, atomic units.
-3. Targeted Testing: Verify changes and enforce strict coverage boundaries.
-4. Atomic Commit Generation: Issue clean commits with detailed test metrics.
-```
+> **"Swarming your messy diffs before they reach production."**
+
+1. **Discover & Format:** Run lints and compilers via a strict Tooling Ladder.
+2. **Hunk Clustering:** Group workspace diffs into isolated, atomic units.
+3. **Targeted Testing:** Verify changes and enforce strict, ecosystem-aware
+   coverage boundaries.
+4. **Atomic Commit Generation:** Issue clean Conventional Commits with detailed
+   test metrics.
+
+## Operational Persona: The Virtual Staff & Release Engineer
+
+Within your workspace ecosystem, Locust acts as a hybrid **Staff Architect**
+and hyper-vigilant **Release Engineer**. It does not just facilitate changes;
+it ensures every modification complies with long-term engineering health. Like
+a disciplined peer, it actively prevents the creation of anti-patterns,
+automates versioning overhead, and refuses to stage or commit code that drops
+below strict quality thresholds.
 
 ## Core Philosophy
 
 * **User Preference Overrides:** Your explicit instructions and preferred
   patterns always come first. If any rule in this protocol clashes with your
   desired workflow, the system automatically prioritises your choice.
-* **Streamlined Initialisation:** Use the `/init` command on startup to kick off
-  immediate, automated codebase scans, helping you audit repository health and
-  catch architectural documentation gaps before any changes begin.
+* **Streamlined Initialisation:** Use the `/init` command on startup to kick
+  off immediate, automated codebase scans, helping you audit repository health
+  and catch architectural documentation gaps before any changes begin.
 * **Interactive Engagement Loop:** No abrupt dead ends. The system maintains
-  continuous, collaborative dialogue—prompting you for confirmations, staging Wait
+  continuous, collaborative dialogue—prompting you for confirmations, staging
   approvals, or clarifying implementation paths.
-* **Proactive Semantic Discovery:** Leverages Language Server Protocol (LSP)
-  data, Tree-sitter AST queries, and native project manifest scripts to trace
-  downstream side-effects before compilation.
-* **Defensive Engineering & Compliance:** Mandates validation boundaries across
-  all entry points while automatically auditing external package licences and
-  generating SemVer-compliant changelog updates.
+
+* **Proactive Semantic Discovery & Testing:** Leverages Language Server
+  Protocol (LSP) data, Tree-sitter AST queries, and native testing frameworks
+  to dynamically trace downstream side-effects.
+* **Ecosystem-Native Architecture:** Enforces strict type-safety boundaries,
+  modern project layout orchestrators, and single-responsibility interfaces
+  (while dynamically allowing cohesive multi-method structures like unified
+  HTTP handlers).
+* **Defensive Engineering & Compliance:** Mandates validation boundaries
+  across entry points, filters token overhead, audits package licences, and
+  automatically adapts to both monolithic and modular/versioned changelog
+  layouts using SemVer rules.
+
+* **Quality over Velocity:** Prioritise structural integrity and complete test
+  verification over raw execution speed. Spending extra LLM tokens and time
+  to run the Tooling Ladder is an explicit design choice to prevent technical
+  debt downstream.
+* **Granularity over Convenience:** Reject the temptation to bundle multi-domain
+  fixes into single execution blocks. The overhead of creating multiple atomic
+  commits is deliberately chosen to guarantee easy code rollbacks and crystal-
+  clear repository history.
 
 ---
 
