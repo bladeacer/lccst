@@ -1,4 +1,6 @@
-import { formatTime, Timer } from "../src/timer";
+import React from "react";
+import { render, screen } from "@testing-library/react";
+import { formatTime, Timer, TimerDisplay } from "../src/timer";
 
 jest.useFakeTimers();
 
@@ -74,5 +76,13 @@ describe("Timer", () => {
     jest.advanceTimersByTime(300);
     timer.stop();
     expect(timer.seconds).toBe(0.3);
+  });
+});
+
+describe("TimerDisplay", () => {
+  it("renders initial time", () => {
+    const timer = new Timer();
+    render(<TimerDisplay timer={timer} />);
+    expect(screen.getByTestId("display").textContent).toBe("00:00.0");
   });
 });

@@ -1,3 +1,5 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+
 export function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = (seconds % 60).toFixed(1);
@@ -53,3 +55,37 @@ export class Timer {
     this._notify();
   }
 }
+
+interface TimerDisplayProps {
+  timer: Timer;
+}
+
+export const TimerDisplay: React.FC<TimerDisplayProps> = ({ timer }) => {
+  const [state, setState] = useState<TimerState>({ seconds: 0, running: false });
+  const timerRef = useRef(timer);
+
+  useEffect(() => {
+    const t = timerRef.current;
+    const handler = (s: TimerState) => setState(s);
+    t.onUpdate(handler);
+    handler({ seconds: t.seconds, running: t.running });
+  }, []);
+
+  return (
+    <div className="timer">
+      <h1>Timer</h1>
+      <div className="time" data-testid="display">{formatTime(state.seconds)}</div>
+      <div className="controls">
+        <button onClick={() => timerRef.current.start()} disabled={state.running}>
+          Start
+        </button>
+        <button onClick={() => timerRef.current.stop()} disabled={!state.running}>
+          Stop
+        </button>
+        <button onClick={() => timerRef.current.reset()}>
+          Reset
+        </button>
+      </div>
+    </div>
+  );
+};

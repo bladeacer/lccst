@@ -80,6 +80,9 @@ silent runtime type failures.
 
 ## Playground and Benchmarking
 
+See [`playground/README.md`](playground/README.md) for the benchmarking suite
+that measures token impact of skill-guided vs plain code generation across
+three reference projects (Python HTTP server, React timer, Go login CRUD).
 
 ---
 
@@ -170,11 +173,28 @@ global behavioural configuration field:
 
 ## Development
 
-Compile the TypeScript engine components using `pnpm`:
+### Developer Dependencies
+
+| Tool | Version | Purpose |
+|------|---------|---------|
+| Node.js | >= 18 | Running the LCCST MCP server |
+| pnpm | >= 9 | Package manager for the engine |
+| TypeScript | >= 5.4 | Compiling engine source |
+| Python | >= 3.10 | Running playground benchmarks |
+| Go | >= 1.21 | Reference project in playground |
+| uv | >= 0.4 | (Recommended) Modern Python package manager for benchmark dependencies |
+
+### Compile the Engine
 
 ```bash
 pnpm install
 pnpm run build
+```
+
+### Run the Playground Benchmark
+
+```bash
+python3 playground/benchmarks/run_benchmark.py opencode-deepseek-v4-flash-free --install-deps
 ```
 
 ## LLM Usage Disclosure

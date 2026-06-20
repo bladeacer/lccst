@@ -9,8 +9,8 @@
 | Metric | Plain (no skill) | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
 | Total files | 4 | 13 | +9 |
-| Total lines | 409 | 1087 | +678 |
-| Estimated tokens | 2095 | 5637 | +3542 (+169%) |
+| Total lines | 409 | 1133 | +724 |
+| Estimated tokens | 2095 | 5885 | +3790 (+181%) |
 
 ## Per-Project Breakdown
 
@@ -55,7 +55,8 @@
 ============================= test session starts ==============================
 platform linux -- Python 3.14.5, pytest-9.0.3, pluggy-1.6.0 -- /usr/bin/python3
 cachedir: .pytest_cache
-rootdir: /home/data/Desktop/projects/lccst/playground/opencode-deepseek-v4-flash-free/python-http-server
+rootdir: /home/data/Desktop/projects/lccst/playground/opencode-deepseek-v4-flash-free/python-http-server/skill-guided
+configfile: pyproject.toml
 plugins: anyio-4.14.0
 collecting ... collected 12 items
 
@@ -72,7 +73,7 @@ skill-guided/tests/test_server.py::TestDeleteUser::test_delete_user PASSED [ 83%
 skill-guided/tests/test_server.py::TestDeleteUser::test_delete_user_not_found PASSED [ 91%]
 skill-guided/tests/test_server.py::TestNotFound::test_404 PASSED         [100%]
 
-============================== 12 passed in 0.64s ==============================
+============================== 12 passed in 0.63s ==============================
 
 ```
 
@@ -89,9 +90,9 @@ skill-guided/tests/test_server.py::TestNotFound::test_404 PASSED         [100%]
 
 #### Skill-Guided Implementation
 - Files: 2
-- Lines: 133
-- Chars: 3000
-- Tokens: 621
+- Lines: 179
+- Chars: 4371
+- Tokens: 869
 - Robustness Score: 67/100
 - Features: typing=True, security=False, error_handling=False
 - Tests Passed: YES
@@ -100,8 +101,8 @@ skill-guided/tests/test_server.py::TestNotFound::test_404 PASSED         [100%]
 | Aspect | Plain | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
 | Files | 2 | 2 | +0 |
-| Lines | 91 | 133 | +42 (+46%) |
-| Tokens | 515 | 621 | +106 (+21%) |
+| Lines | 91 | 179 | +88 (+97%) |
+| Tokens | 515 | 869 | +354 (+69%) |
 | Robustness | 15 | 67 | +52 |
 
 #### File Details
@@ -111,12 +112,12 @@ skill-guided/tests/test_server.py::TestNotFound::test_404 PASSED         [100%]
 - `plain/timer.js`: 36 lines, ~157 tokens
 
 **Skill-guided files:**
-- `skill-guided/src/timer.ts`: 55 lines, ~239 tokens
-- `skill-guided/tests/timer.test.ts`: 78 lines, ~382 tokens
+- `skill-guided/src/timer.tsx`: 91 lines, ~426 tokens
+- `skill-guided/tests/timer.test.tsx`: 88 lines, ~443 tokens
 
 **Test Errors:**
 ```
-PASS tests/timer.test.ts
+PASS tests/timer.test.tsx
   formatTime
     ✓ formats zero (1 ms)
     ✓ formats seconds correctly
@@ -127,14 +128,16 @@ PASS tests/timer.test.ts
     ✓ start() makes it running (1 ms)
     ✓ stop() makes it not running
     ✓ stop() on stopped timer is safe (1 ms)
-    ✓ reset() stops and zeros (1 ms)
-    ✓ fires onUpdate when time changes (2 ms)
+    ✓ reset() stops and zeros
+    ✓ fires onUpdate when time changes (1 ms)
     ✓ multiple starts are idempotent
+  TimerDisplay
+    ✓ renders initial time (22 ms)
 
 Test Suites: 1 passed, 1 total
-Tests:       11 passed, 11 total
+Tests:       12 passed, 12 total
 Snapshots:   0 total
-Time:        0.91 s, estimated 2 s
+Time:        2.178 s
 Ran all test suites.
 
 ```
@@ -232,7 +235,7 @@ ok  	skill-guided-login-crud/tests	(cached)
 ## Aggregate Analysis
 
 ### Token Overhead
-Skill-guided approach uses ~+169% more tokens (3542 total).
+Skill-guided approach uses ~+181% more tokens (3790 total).
 
 ### Robustness Assessment
 
@@ -252,7 +255,7 @@ Skill-guided approach uses ~+169% more tokens (3542 total).
 
 ### Key Findings
 
-1. **Token Cost of Rigour**: Skill-guided code is ~169% larger in token
+1. **Token Cost of Rigour**: Skill-guided code is ~181% larger in token
    count but provides comprehensive defensive engineering, test coverage, and
    architectural separation of concerns.
 2. **Test Coverage**: Plain implementations have zero formal tests. Skill-guided

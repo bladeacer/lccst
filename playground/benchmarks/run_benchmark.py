@@ -36,7 +36,7 @@ PROJECTS = {
         "test_cwd_guided": None,
     },
     "react-timer": {
-        "patterns": ["plain/*.html", "plain/*.js", "skill-guided/src/*.ts", "skill-guided/tests/*.ts"],
+        "patterns": ["plain/*.html", "plain/*.js", "skill-guided/src/*.tsx", "skill-guided/tests/*.tsx"],
         "plain_prefix": "plain",
         "guided_prefix": "skill-guided",
         "test_cmd_plain": None,

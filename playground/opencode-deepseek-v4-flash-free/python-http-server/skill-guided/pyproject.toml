@@ -1,0 +1,11 @@
+[project]
+name = "skill-guided-http-server"
+version = "1.0.0"
+description = "Skill-guided Python HTTP server with validation, rate limiting and tests"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

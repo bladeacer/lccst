@@ -16,12 +16,12 @@ playground/
   {agent-name}-{model-name}/        # Per-agent implementations
     python-http-server/
       plain/server.py
-      skill-guided/server.py
+      skill-guided/server.py + pyproject.toml
       skill-guided/tests/test_server.py
     react-timer/
       plain/index.html + timer.js
-      skill-guided/package.json + tsconfig + src/timer.ts
-      skill-guided/tests/timer.test.ts
+      skill-guided/package.json + tsconfig + src/timer.tsx
+      skill-guided/tests/timer.test.tsx
     go-login-crud/
       plain/main.go + go.mod
       skill-guided/go.mod + cmd/server/main.go
@@ -33,16 +33,16 @@ playground/
 
 ### 1. Python HTTP Server
 - **Plain**: Single-file Python HTTP server with CRUD for users (GET/POST/PUT/DELETE)
-- **Skill-guided**: Same API with input validation, email regex, rate limiting, type hints
-- **Tests**: pytest, runs against the skill-guided server on a dynamic port
+- **Skill-guided**: Same API with input validation, email regex, rate limiting, type hints, `pyproject.toml` manifest
+- **Tests**: pytest (runs via `uv run pytest` or `python3 -m pytest`)
 
 ### 2. React Timer
 - **Plain**: Vanilla HTML + JS stopwatch with start/stop/reset
-- **Skill-guided**: TypeScript Timer class with `formatTime()` utility, proper encapsulation, fake timers
-- **Tests**: Jest + ts-jest, no DOM required (pure logic testing)
+- **Skill-guided**: TypeScript + TSX—Timer class and `TimerDisplay` React component with `formatTime()` utility
+- **Tests**: Jest + ts-jest + @testing-library/react, both logic tests and component render test
 
 ### 3. Go Login CRUD
-- **Plain**: Single `main.go` with all-in-one server, bcrypt-style hashing, in-memory store
+- **Plain**: Single `main.go` with all-in-one server, SHA-256 hashing, in-memory store
 - **Skill-guided**: Layered architecture—`model`, `repository`, `handler`, `middleware`, `cache`—with interfaces and dependency injection
 - **Tests**: `go test` on repository, cache, and handler packages
 
@@ -51,12 +51,12 @@ playground/
 ### For Each Project
 
 1. **Plain implementation** — single file, minimal dependencies, no error handling, no typing
-2. **Skill-guided implementation** — structured into modules/packages, typed, security-aware, test-covered
+2. **Skill-guided implementation** — structured into modules/packages, typed, security-aware, test-covered, with modern tooling manifests
 
 ### Running the Benchmark
 
 ```bash
-# From the playground directory:
+# From repository root:
 python3 playground/benchmarks/run_benchmark.py <agent-tag> [--install-deps]
 ```
 
@@ -67,7 +67,7 @@ python3 playground/benchmarks/run_benchmark.py opencode-deepseek-v4-flash-free
 python3 playground/benchmarks/run_benchmark.py opencode-deepseek-v4-flash-free --install-deps
 ```
 
-The `--install-deps` flag installs npm dependencies (for React timer tests) before benchmarking.
+The `--install-deps` flag installs dependencies (npm for React timer) before benchmarking.
 
 ### What Gets Measured
 
@@ -91,10 +91,10 @@ The `--install-deps` flag installs npm dependencies (for React timer tests) befo
 
 1. **Set up the workspace**: Create `playground/{your-agent-tag}/` with the three project directories
 2. **Generate plain implementations**: Without consulting skill.md, write minimal working code for each project
-3. **Generate skill-guided implementations**: With skill.md loaded, write structured, typed, tested code
+3. **Generate skill-guided implementations**: With skill.md loaded, write structured, typed, tested code; use modern manifests (pyproject.toml, tsconfig, go.mod)
 4. **Install dependencies**:
-   - Python: `pip install pytest` (tiktoken optional, for accurate token counting)
-   - Node: run `npm install` in `react-timer/skill-guided/`
+   - Python: `uv sync` or `pip install -e ".[dev]"` in `python-http-server/skill-guided/`
+   - Node: `npm install` in `react-timer/skill-guided/`
    - Go: no external deps beyond stdlib
 5. **Run the benchmark**: `python3 playground/benchmarks/run_benchmark.py {your-agent-tag} --install-deps`
 6. **Read the report**: `playground/benchmarks/{your-agent-tag}/benchmark-report.md`
@@ -117,6 +117,6 @@ The `--install-deps` flag installs npm dependencies (for React timer tests) befo
 - Python 3.10+
 - Go 1.21+
 - Node.js 18+ / npm 9+
-- pytest (`pip install pytest`)
+- `uv` (recommended) or `pip` for Python dependency management
+- pytest (`uv run pytest` or `pip install pytest`)
 - (Optional) tiktoken (`pip install tiktoken`) for accurate token counts
-- (Optional) Jest will be auto-installed via npx if not present
