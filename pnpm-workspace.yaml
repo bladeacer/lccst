@@ -1,2 +1,6 @@
-allowBuilds:
-  esbuild: true
+packages:
+  - "playground/opencode-deepseek-v4-flash-free/react-timer/skill-guided"
+
+onlyBuiltDependencies:
+  - esbuild
+  - unrs-resolver

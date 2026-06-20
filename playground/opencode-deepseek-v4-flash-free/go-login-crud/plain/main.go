@@ -11,9 +11,9 @@ import (
 )
 
 var (
-	users   []User
-	nextID  = 1
-	mu      sync.Mutex
+	users  []User
+	nextID = 1
+	mu     sync.Mutex
 )
 
 type User struct {
