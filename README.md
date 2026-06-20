@@ -26,6 +26,27 @@ a disciplined peer, it actively prevents the creation of anti-patterns,
 automates versioning overhead, and refuses to stage or commit code that drops
 below strict quality thresholds.
 
+## Ecosystem Placement: The Quality Counter-Weight
+
+While the modern AI engineering space is heavily saturated with tools focusing 
+strictly on compression and cost-reduction, Locust provides the missing 
+philosophical balance. It is built to run standalone or alongside token-cutters.
+
+| Tool Layer | Focus | Tactical Mechanism |
+|---|---|---|
+| **[Ponytail](https://github.com/DietrichGebert/ponytail)** | Code Minimization | Prevents agent boilerplate bloat. |
+| **[Headroom](https://github.com/chopratejas/headroom)** | History Reduction | Trims context logs and chat data. |
+| **[Caveman](https://github.com/JuliusBrussee/caveman)** | Output Compression | Strips syntax token overhead. |
+| **Locust (LCCST)** | **Payload Integrity** | **Enforces typing, lints, and tests.** |
+
+### The Token Investment Philosophy
+Tools like Ponytail stop the AI from writing *too much* code, but they cannot 
+stop it from breaking your architectural boundaries. Locust treats tokens as 
+strategic capital. It invests tokens into multi-step validation loops (the 
+Tooling Ladder) to eliminate the exponentially higher downstream costs of 
+debugging broken production builds, untangling messy Git histories, or fixing 
+silent runtime type failures.
+
 ## Core Philosophy
 
 * **User Preference Overrides:** Your explicit instructions and preferred
@@ -37,7 +58,6 @@ below strict quality thresholds.
 * **Interactive Engagement Loop:** No abrupt dead ends. The system maintains
   continuous, collaborative dialogue—prompting you for confirmations, staging
   approvals, or clarifying implementation paths.
-
 * **Proactive Semantic Discovery & Testing:** Leverages Language Server
   Protocol (LSP) data, Tree-sitter AST queries, and native testing frameworks
   to dynamically trace downstream side-effects.
@@ -49,7 +69,6 @@ below strict quality thresholds.
   across entry points, filters token overhead, audits package licences, and
   automatically adapts to both monolithic and modular/versioned changelog
   layouts using SemVer rules.
-
 * **Quality over Velocity:** Prioritise structural integrity and complete test
   verification over raw execution speed. Spending extra LLM tokens and time
   to run the Tooling Ladder is an explicit design choice to prevent technical
@@ -59,9 +78,20 @@ below strict quality thresholds.
   commits is deliberately chosen to guarantee easy code rollbacks and crystal-
   clear repository history.
 
+## Playground and Benchmarking
+
+
 ---
 
-## Integration Topologies
+## Installation
+
+To clone only the latest commit state and save setup overhead, use a shallow
+clone:
+
+```bash
+git clone --depth 1 https://github.com/bladeaccer/lccst
+cd lccst
+```
 
 ### Option A: Model Context Protocol (MCP) Server Setup
 
@@ -136,12 +166,9 @@ global behavioural configuration field:
 * **Cursor:** Navigate to `Settings -> Features -> Rules for AI` and append
   the ruleset.
 
-Alternatively, there are folder locations specific to each editor for storing
-skill files that work across different projects.
-
 ---
 
-## Installation
+## Development
 
 Compile the TypeScript engine components using `pnpm`:
 
@@ -149,6 +176,12 @@ Compile the TypeScript engine components using `pnpm`:
 pnpm install
 pnpm run build
 ```
+
+## LLM Usage Disclosure
+
+It's an AI skill, AI assistance was used in the making of this project.
+Architectural, design decisions and ensuring the code works as intended was
+done by a human.
 
 ## Credits & Inspiration
 

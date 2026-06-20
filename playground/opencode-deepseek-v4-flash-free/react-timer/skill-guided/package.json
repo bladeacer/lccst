@@ -1,0 +1,14 @@
+{
+  "name": "skill-guided-timer",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "jest --no-coverage"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.4.0"
+  }
+}
