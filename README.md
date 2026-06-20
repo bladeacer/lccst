@@ -8,7 +8,7 @@ Locust operates as a deterministic, zero-compromise guardian for codebase
 health, test coverage, and structural boundaries - built to put your
 preferences first.
 
-> **"Swarming your messy diffs before they reach production."**
+> "Swarming your messy diffs before they reach production."
 
 1. **Discover & Format:** Run lints and compilers via a strict Tooling Ladder.
 2. **Hunk Clustering:** Group workspace diffs into isolated, atomic units.
@@ -28,8 +28,8 @@ below strict quality thresholds.
 
 ## Ecosystem Placement: The Quality Counter-Weight
 
-While the modern AI engineering space is heavily saturated with tools focusing 
-strictly on compression and cost-reduction, Locust provides the missing 
+While the modern AI engineering space is heavily saturated with tools focusing
+strictly on compression and cost-reduction, Locust provides the missing
 philosophical balance. It is built to run standalone or alongside token-cutters.
 
 | Tool Layer | Focus | Tactical Mechanism |
@@ -40,11 +40,15 @@ philosophical balance. It is built to run standalone or alongside token-cutters.
 | **Locust (LCCST)** | **Payload Integrity** | **Enforces typing, lints, and tests.** |
 
 ### The Token Investment Philosophy
-Tools like Ponytail stop the AI from writing *too much* code, but they cannot 
-stop it from breaking your architectural boundaries. Locust treats tokens as 
-strategic capital. It invests tokens into multi-step validation loops (the 
-Tooling Ladder) to eliminate the exponentially higher downstream costs of 
-debugging broken production builds, untangling messy Git histories, or fixing 
+The project name itself embodies this duality: **LCCST** stands as a direct pun
+on **Low Cost** asset management while algorithmically executing **Locality
+Clustering** over your workspace tree.
+
+Tools like Ponytail stop the AI from writing *too much* code, but they cannot
+stop it from breaking your architectural boundaries. Locust treats tokens as
+strategic capital. It invests tokens into multi-step validation loops (the
+Tooling Ladder) to eliminate the exponentially higher downstream costs of
+debugging broken production builds, untangling messy Git histories, or fixing
 silent runtime type failures.
 
 ## Core Philosophy
@@ -74,9 +78,12 @@ silent runtime type failures.
   to run the Tooling Ladder is an explicit design choice to prevent technical
   debt downstream.
 * **Granularity over Convenience:** Reject the temptation to bundle multi-domain
-  fixes into single execution blocks. The overhead of creating multiple atomic
-  commits is deliberately chosen to guarantee easy code rollbacks and crystal-
-  clear repository history.
+  fixes into single execution blocks. Locust applies strict **Locality
+  Clustering** to group workspace diffs by their functional domain boundaries.
+  The overhead of creating multiple atomic commits is deliberately chosen to
+  guarantee easy code rollbacks and crystal-clear repository history.
+
+---
 
 ## Playground and Benchmarking
 
