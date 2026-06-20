@@ -231,6 +231,8 @@ configurations.
 | `allow-builds` blocks Jest deps | pnpm v11 refuses to build `unrs-resolver`, halting install | Create `.npmrc` with `allow-builds=unrs-resolver` before install. |
 | `formatTime` floating-point drift | `Math.floor((5.3 - 5) * 10)` yields 2 due to IEEE 754 precision | Use `Math.floor((seconds - totalSecs) * 10 + 0.0001)` or `Math.round((seconds - totalSecs) * 10)`. |
 | TimerDisplay double-render via useState | Component wraps time in state, causing initial render to show stale `0` | Render `formatTime(time)` directly from props. Remove local state. |
+| jest-dom v6 `toHaveTextContent` ts-jest type error | ts-jest diagnostics fail: `Property toHaveTextContent does not exist` | Assert on `.textContent` property instead: `expect(el.textContent).toBe("...")`. |
+| Benchmark under-counts guided source files | Scanner picks only `.ts`/`.tsx` source and `.test.ts`/`.test.tsx` test files; config files (package.json, tsconfig, jest.config, .npmrc) are invisible to metrics | Place all functional source under `src/` and all tests under `tests/` with correct extensions. Config-only files do not count toward robustness. |
 
 ### Python uv & Test Isolation Constraints
 
@@ -256,6 +258,9 @@ rate-limiter mocking strategy, and email regex false positives.
 | Email regex too strict or loose | Common valid emails like `user+tag@domain.co` get rejected | Use `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$` derived from RFC 5322 simplified. |
 | ID type mismatch in assertions | Plain version uses int IDs, guided uses uuid strings; comparing causes failure | Decide ID strategy per variant: plain uses sequential int, guided uses uuid.uuid4(). |
 | `uv sync` venv path collision | Running `uv run pytest` from root picks wrong venv if parent has one | Ensure `VIRTUAL_ENV` is unset before running; the benchmark script handles this. |
+| `DISABLE_RATE_LIMIT` env var not visible at import time | Setting env var inside a test function/fixture is too late: module-level code reads `os.environ` at import | Set `os.environ["DISABLE_RATE_LIMIT"] = "1"` at the TOP of the test file, before the server import, then use `# noqa: E402` on the import line. |
+| Server fixture not consumed by test functions | Test suite defines a session-scoped `server` fixture that starts the HTTP server, but tests call `urlopen()` directly without accepting the fixture parameter — server never starts | Every test function that makes HTTP requests must accept the `server_url` fixture as a parameter. The fixture must bind to port 0 (dynamic allocation) and report the assigned port back. |
+| Module-level state shared between test thread and server thread | The `users` dict is cleared by an autouse fixture, but the server thread holds the same module reference — shared mutable state causes flaky ordering if `clear_users` runs mid-request | The autouse fixture clears `users` before each test via `users.clear()`. This works only when server and test run in the same process (thread-based server). Do NOT fork a subprocess for the server. |
 
 ### Go Module Layout & Test Isolation Constraints
 
@@ -282,6 +287,7 @@ When executing the Go Login CRUD subproject, agents loop on `package main` impor
 | `json:"-"` field test fails | `user.Password != ""` assertion fails because the field IS set internally | Assert on JSON output: `json.Marshal(user)`, unmarshal to map, check for absence of password key. |
 | Cached test results hide fixes | `go test ./tests/ -v` returns cached PASS after code changes | Append `-count=1` to force uncached execution: `go test ./tests/ -v -count=1`. |
 | Module path mismatch across files | One internal file imports path with wrong layout or missing prefixes | Audit all import statements to match the single module path declared in `go.mod`. |
+| `httptest.NewRequest` + `SetPathValue` not called for path parameters | Handler uses `r.PathValue("id")` which returns empty string if path value not set on the test request | Call `req.SetPathValue("id", "...")` after constructing the test request when using Go 1.22+ routing patterns. |
 
 ## Traceability
 
