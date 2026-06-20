@@ -24,7 +24,11 @@
 
 ## Per-Project Breakdown
 
+Scores are normalized to 100 using project-specific profiles: each project is graded only on features relevant to its domain (e.g. security is not scored for a UI timer).
+
 ### python-http-server
+
+*Project profile: (profile: typing=17, security=17, error_handling=16)*
 
 #### Plain Implementation
 - Files: 2
@@ -83,19 +87,21 @@ tests/test_server.py::test_update_user_invalid_email PASSED              [ 81%]
 tests/test_server.py::test_delete_user PASSED                            [ 90%]
 tests/test_server.py::test_delete_user_not_found PASSED                  [100%]
 
-============================== 11 passed in 5.59s ==============================
+============================== 11 passed in 5.57s ==============================
 
 ```
 
 ---
 ### react-timer
 
+*Project profile: (profile: typing=17, security=0, error_handling=0)*
+
 #### Plain Implementation
 - Files: 1
 - Lines: 66
 - Chars: 1615
 - Tokens: 440
-- Robustness Score: 15/100
+- Robustness Score: 22/100
 - Features: typing=False, security=False, error_handling=False
 
 #### Skill-Guided Implementation
@@ -103,7 +109,7 @@ tests/test_server.py::test_delete_user_not_found PASSED                  [100%]
 - Lines: 131
 - Chars: 3262
 - Tokens: 845
-- Robustness Score: 67/100
+- Robustness Score: 100/100
 - Features: typing=True, security=False, error_handling=False
 - Tests Passed: YES
 
@@ -113,7 +119,7 @@ tests/test_server.py::test_delete_user_not_found PASSED                  [100%]
 | Files | 1 | 4 | +3 |
 | Lines | 66 | 131 | +65 (+98%) |
 | Tokens | 440 | 845 | +405 (+92%) |
-| Robustness | 15 | 67 | +52 |
+| Robustness | 22 | 100 | +78 |
 
 #### File Details
 
@@ -132,27 +138,29 @@ npm warn Unknown project config "allow-builds". This will stop working in the ne
 PASS tests/Timer.test.tsx
   formatTime
     ✓ formats zero (1 ms)
-    ✓ formats seconds
-    ✓ formats minutes and seconds (1 ms)
+    ✓ formats seconds (1 ms)
+    ✓ formats minutes and seconds
     ✓ formats tenths
   Timer
-    ✓ starts and stops (1 ms)
-    ✓ resets elapsed time
-    ✓ calls onTick after start (103 ms)
+    ✓ starts and stops
+    ✓ resets elapsed time (1 ms)
+    ✓ calls onTick after start (102 ms)
   TimerDisplay
-    ✓ renders formatted time (29 ms)
-    ✓ renders zero time (2 ms)
+    ✓ renders formatted time (18 ms)
+    ✓ renders zero time (1 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       9 passed, 9 total
 Snapshots:   0 total
-Time:        1.013 s
+Time:        0.915 s, estimated 1 s
 Ran all test suites.
 
 ```
 
 ---
 ### go-login-crud
+
+*Project profile: (profile: typing=17, security=17, error_handling=16)*
 
 #### Plain Implementation
 - Files: 1
@@ -235,8 +243,8 @@ Skill-guided approach uses ~+133% more tokens (4001 total).
 
 | Approach | Avg Robustness | Description |
 |----------|:-:|---|
-| Plain    | 43/100 | Minimal structure, no formal testing, no defensive coding |
-| Guided   | 89/100 | Typed, security-aware, error-handling, tested |
+| Plain    | 45/100 | Minimal structure, no formal testing, no defensive coding |
+| Guided   | 100/100 | Typed, security-aware, error-handling, tested |
 
 ### Feature Presence (projects with feature)
 

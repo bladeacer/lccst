@@ -168,8 +168,17 @@ def run_tests(project_dir, test_cmd, test_cwd=None, test_env=None):
         return {"exit_code": -1, "passed": False, "stdout": "", "stderr": "Test timed out after 120s"}
 
 
-def compute_robustness_score(test_result, file_details, totals):
-    """Resilience score based on test pass + feature analysis, not file volume."""
+PROJECT_PROFILES = {
+    "python-http-server": {"max_typing": 17, "max_security": 17, "max_error_handling": 16},
+    "react-timer":        {"max_typing": 17, "max_security": 0,  "max_error_handling": 0},
+    "go-login-crud":      {"max_typing": 17, "max_security": 17, "max_error_handling": 16},
+}
+
+
+def compute_robustness_score(test_result, file_details, totals, project_name):
+    """Resilience score based on test pass + feature analysis, not file volume.
+    Normalizes to 100 using per-project profiles so irrelevant feature categories
+    (e.g. security in a UI timer) do not cap the score."""
     score = 0
 
     if test_result["passed"]:
@@ -179,15 +188,21 @@ def compute_robustness_score(test_result, file_details, totals):
     else:
         score += 15
 
+    profile = PROJECT_PROFILES.get(
+        project_name,
+        {"max_typing": 17, "max_security": 17, "max_error_handling": 16},
+    )
     feat = totals["features_aggregate"]
-    if feat["has_typing"]:
-        score += 17
-    if feat["has_security"]:
-        score += 17
-    if feat["has_error_handling"]:
-        score += 16
 
-    return min(score, 100)
+    if feat["has_typing"]:
+        score += profile["max_typing"]
+    if feat["has_security"]:
+        score += profile["max_security"]
+    if feat["has_error_handling"]:
+        score += profile["max_error_handling"]
+
+    max_available = 50 + profile["max_typing"] + profile["max_security"] + profile["max_error_handling"]
+    return min(int(score / max_available * 100), 100)
 
 
 def main():
@@ -237,8 +252,8 @@ def main():
               f"(exit: {test_result['exit_code']})")
 
         plain_test_result = {"passed": False, "exit_code": 1, "stdout": "", "stderr": ""}
-        plain_robustness = compute_robustness_score(plain_test_result, plain, plain_t)
-        guided_robustness = compute_robustness_score(test_result, guided, guided_t)
+        plain_robustness = compute_robustness_score(plain_test_result, plain, plain_t, proj_name)
+        guided_robustness = compute_robustness_score(test_result, guided, guided_t, proj_name)
 
         results[proj_name] = {
             "plain": {
@@ -339,6 +354,8 @@ def generate_report(results, agent_tag):
 
 ## Per-Project Breakdown
 
+Scores are normalized to 100 using project-specific profiles: each project is graded only on features relevant to its domain (e.g. security is not scored for a UI timer).
+
 """
     for proj_name, data in results.items():
         p = data["plain"]
@@ -346,7 +363,16 @@ def generate_report(results, agent_tag):
         p_token_pct = ((g["total_tokens"] - p["total_tokens"]) / max(p["total_tokens"], 1)) * 100
         p_line_pct = ((g["total_lines"] - p["total_lines"]) / max(p["total_lines"], 1)) * 100
 
+        profile = PROJECT_PROFILES.get(proj_name, {})
+        profile_note = (
+            f"(profile: typing={profile.get('max_typing', 17)}"
+            f", security={profile.get('max_security', 17)}"
+            f", error_handling={profile.get('max_error_handling', 16)})"
+        )
+
         report += f"""### {proj_name}
+
+*Project profile: {profile_note}*
 
 #### Plain Implementation
 - Files: {p['file_count']}

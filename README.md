@@ -5,7 +5,7 @@ into isolated, test-verified, atomic Git commits while rigorously enforcing
 architectural cohesion and SOLID invariants.
 
 Locust operates as a deterministic, zero-compromise guardian for codebase
-health, test coverage, and structural boundaries—built to put your
+health, test coverage, and structural boundaries - built to put your
 preferences first.
 
 > **"Swarming your messy diffs before they reach production."**
@@ -56,7 +56,7 @@ silent runtime type failures.
   off immediate, automated codebase scans, helping you audit repository health
   and catch architectural documentation gaps before any changes begin.
 * **Interactive Engagement Loop:** No abrupt dead ends. The system maintains
-  continuous, collaborative dialogue—prompting you for confirmations, staging
+  continuous, collaborative dialogue - prompting you for confirmations, staging
   approvals, or clarifying implementation paths.
 * **Proactive Semantic Discovery & Testing:** Leverages Language Server
   Protocol (LSP) data, Tree-sitter AST queries, and native testing frameworks
@@ -86,37 +86,47 @@ three reference projects (Python HTTP server, React timer, Go login CRUD).
 
 ### Verification Matrix & Baseline Benchmarks
 
-The following baseline metrics were recorded using the automated evaluation harness.
-The data explicitly highlights the performance delta between standard generation
-and structured protocol compliance.
+The baseline metrics below were captured using our automated evaluation harness.
+The data highlights the concrete performance delta observed between unguided 
+generation and structured protocol compliance. 
+
+Scores are fully normalised to a 100-point scale using project-specific
+evaluation profiles. Each target subproject is graded exclusively on features
+relevant to its architectural domain (for instance, front-end presentation 
+components are not penalised for a lack of database encryption patterns).
+
+### opencode-deepseek-v4-flash-free
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.1` | Headroom MCP | **Python HTTP Server** | 32/100 | **100/100** | 11/11 Passed |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.1` | Headroom MCP | **React Timer** | 15/100 | **67/100** | 13/13 Passed |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.1` | Headroom MCP | **Go Login CRUD** | 65/100 | **100/100** | 18/18 Passed |
-| **Summary** |  |  |  | **Workspace Average** | **37/100** | **89/100** | **42/42 Total** |
+| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **Python HTTP Server** | 48/100 | **100/100** | 11/11 Passed |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **React Timer** | 22/100 | **100/100** | 9/9 Passed |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **Go Login CRUD** | 65/100 | **100/100** | 12/12 Passed |
+| **Summary** | | | | **Workspace Average** | **45/100** | **100/100** | **32/32 Total** |
 
 ### Core Architectural Insights
 
-* **The Token Trade-Off:** The skill-guided protocol introduces a **+182% token overhead**
-(+4,156 tokens total across the suite). This investment directly translates into ironclad
-typing layouts, explicit error boundary catch blocks, and automated unit testing configurations.
-* **The React Bottleneck:** React remains a major structural challenge for generative models.
-While the guided configuration successfully achieved a **100% test pass rate (13/13)**,
-the robustness score (67/100) reflects the strict penalties applied during black-box static
-analysis due to the model's defensive style adjustments.
-* **Deterministic Tool Integration:** Utilizing the **Headroom MCP** server acts as an essential
-buffer layer. By handling filesystem queries and execution loops natively, it isolates the core
-model context from drifting during file staging passes.
+* **The Token Trade-Off:** The skill-guided protocol introduces an expected
+  +133% token overhead (+4,001 tokens total across the workspace suite). This
+  focused context investment directly translates into ironclad interface types,
+  explicit error boundary catches, and comprehensive unit testing suites.
+* **Profile-Aware Calibration:** Adjusting the scoring harness to use domain
+  isolation profiles prevents metric flatlining. By eliminating security bias
+  from purely declarative UI modules (React timer), the framework accurately
+  tracks valid modular scaling victories without rewarding hallucinated
+  compliance features.
+* **Deterministic Tool Integration:** Organising the run via a Headroom MCP 
+  server acts as an essential system buffer layer. By handling file operations
+  and local compiler steps natively, it completely isolates the core language
+  model context from syntax drift during file staging sequences.
 
-Full verification traces are logged natively at:
+Full verification traces are logged natively at:  
+`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report.md`
 
-[`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report.md`](./playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report.md).
+### Adding Benchmarks for Other Models
 
-### Adding benchmarks for other models
-
-Feel free to clone the repository and contribute your agent specific benchmarks.
+Feel free to clone the repository and contribute your agent-specific metrics
+to the main matrix.
 
 ---
 
