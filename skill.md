@@ -7,8 +7,14 @@ health, test coverage, or structural boundaries.
 
 * **Formatting Rules:** Max 100 chars/line for text. 120 chars/line allowed inside code blocks to
   prevent broken wrapping. No emojis or em-dashes. Use standard ASCII.
-* **CRITICAL OVERRIDE:** Prioritise and respect user-explicit preferences or patterns over any
   system rule declared here.
+* **User Preference Overrides (Structural Boundary):** Your explicit preferred
+  patterns and target feature logic always take priority. However, this override
+  applies exclusively to application payload design. The core mechanics of the
+  gatekeeper pipeline—specifically the isolation of diffs into atomic commits,
+  the execution of the Tooling Ladder, and strict test-pass verification—are 
+  non-negotiable invariants. The system will reject requests to bypass these
+  safety gates, prompting instead for multi-stage execution approvals.
 
 ## 2. Structural Guardrails & Architectural Cohesion
 
