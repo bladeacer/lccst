@@ -114,9 +114,9 @@ Full verification traces are logged natively at:
 
 [`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report.md`](./playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report.md).
 
----
+### Adding benchmarks for other models
 
-This layout maps out the variables completely. It displays your exact model and runtime stack while turning that +182% token cost into a feature, showing it bought you zero-defect code execution. Drop this into the `README.md` and your portfolio layer is completely locked down!
+Feel free to clone the repository and contribute your agent specific benchmarks.
 
 ---
 
