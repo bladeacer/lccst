@@ -5,64 +5,54 @@ import (
 	"time"
 )
 
-type Item struct {
-	Value      interface{}
-	Expiration int64
+type CacheEntry struct {
+	data      interface{}
+	expiresAt time.Time
 }
 
 type Cache struct {
-	mu    sync.RWMutex
-	items map[string]*Item
-	ttl   time.Duration
+	mu       sync.RWMutex
+	entries  map[string]CacheEntry
+	ttl      time.Duration
 }
 
 func NewCache(ttl time.Duration) *Cache {
-	c := &Cache{
-		items: make(map[string]*Item),
-		ttl:   ttl,
+	return &Cache{
+		entries: make(map[string]CacheEntry),
+		ttl:     ttl,
 	}
-	go c.cleanup()
-	return c
 }
 
 func (c *Cache) Get(key string) (interface{}, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
-	item, ok := c.items[key]
+	entry, ok := c.entries[key]
 	if !ok {
 		return nil, false
 	}
-	if item.Expiration > 0 && time.Now().UnixNano() > item.Expiration {
+	if time.Now().After(entry.expiresAt) {
 		return nil, false
 	}
-	return item.Value, true
+	return entry.data, true
 }
 
-func (c *Cache) Set(key string, value interface{}) {
+func (c *Cache) Set(key string, data interface{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.items[key] = &Item{
-		Value:      value,
-		Expiration: time.Now().Add(c.ttl).UnixNano(),
+	c.entries[key] = CacheEntry{
+		data:      data,
+		expiresAt: time.Now().Add(c.ttl),
 	}
 }
 
 func (c *Cache) Delete(key string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	delete(c.items, key)
+	delete(c.entries, key)
 }
 
-func (c *Cache) cleanup() {
-	ticker := time.NewTicker(time.Minute)
-	for range ticker.C {
-		c.mu.Lock()
-		now := time.Now().UnixNano()
-		for k, v := range c.items {
-			if v.Expiration > 0 && now > v.Expiration {
-				delete(c.items, k)
-			}
-		}
-		c.mu.Unlock()
-	}
+func (c *Cache) Clear() {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.entries = make(map[string]CacheEntry)
 }

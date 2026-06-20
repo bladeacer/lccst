@@ -77,7 +77,7 @@ wheels = [
 ]
 
 [[package]]
-name = "skill-guided-http-server"
+name = "python-http-server"
 version = "1.0.0"
 source = { virtual = "." }
 

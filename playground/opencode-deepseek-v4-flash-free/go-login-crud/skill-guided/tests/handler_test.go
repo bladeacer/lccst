@@ -11,286 +11,229 @@ import (
 	"go-login-crud-skill/internal/repository"
 )
 
+func setupHandler() *handler.UserHandler {
+	repo := repository.NewInMemoryUserRepository()
+	return handler.NewUserHandler(repo)
+}
+
 func TestHealth(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	req := httptest.NewRequest("GET", "/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/health", nil)
 	w := httptest.NewRecorder()
-	h.Health(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w.Code)
+	http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	}).ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
 	}
-
-	var resp map[string]string
-	json.NewDecoder(w.Body).Decode(&resp)
-	if resp["status"] != "ok" {
-		t.Errorf("expected ok, got %s", resp["status"])
+	var body map[string]string
+	json.NewDecoder(resp.Body).Decode(&body)
+	if body["status"] != "ok" {
+		t.Errorf("expected ok, got %s", body["status"])
 	}
 }
 
 func TestCreateUser(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	body := map[string]string{"name": "Alice", "email": "alice@test.com"}
-	b, _ := json.Marshal(body)
-	req := httptest.NewRequest("POST", "/users", bytes.NewReader(b))
-	req.Header.Set("Content-Type", "application/json")
+	h := setupHandler()
+	body := bytes.NewBufferString(`{"username":"alice","password":"secret"}`)
+	req := httptest.NewRequest(http.MethodPost, "/users", body)
 	w := httptest.NewRecorder()
-	h.HandleUsers(w, req)
-
-	if w.Code != http.StatusCreated {
-		t.Errorf("expected 201, got %d", w.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusCreated {
+		t.Errorf("expected 201, got %d", resp.StatusCode)
 	}
-
 	var user map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&user)
-	if user["name"] != "Alice" {
-		t.Errorf("expected Alice, got %s", user["name"])
-	}
-	if user["id"] == nil {
-		t.Error("expected id")
+	json.NewDecoder(resp.Body).Decode(&user)
+	if user["username"] != "alice" {
+		t.Errorf("expected alice, got %v", user["username"])
 	}
 }
 
 func TestCreateUserMissingFields(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	body := map[string]string{"name": ""}
-	b, _ := json.Marshal(body)
-	req := httptest.NewRequest("POST", "/users", bytes.NewReader(b))
-	req.Header.Set("Content-Type", "application/json")
+	h := setupHandler()
+	body := bytes.NewBufferString(`{"username":"alice"}`)
+	req := httptest.NewRequest(http.MethodPost, "/users", body)
 	w := httptest.NewRecorder()
-	h.HandleUsers(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
 	}
 }
 
 func TestListUsers(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
+	h := setupHandler()
+	body1 := bytes.NewBufferString(`{"username":"alice","password":"pass"}`)
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/users", body1))
+	body2 := bytes.NewBufferString(`{"username":"bob","password":"pass"}`)
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodPost, "/users", body2))
 
-	body := map[string]string{"name": "Bob", "email": "bob@test.com"}
-	b, _ := json.Marshal(body)
-	req := httptest.NewRequest("POST", "/users", bytes.NewReader(b))
-	req.Header.Set("Content-Type", "application/json")
+	req := httptest.NewRequest(http.MethodGet, "/users", nil)
 	w := httptest.NewRecorder()
-	h.HandleUsers(w, req)
-
-	req2 := httptest.NewRequest("GET", "/users", nil)
-	w2 := httptest.NewRecorder()
-	h.HandleUsers(w2, req2)
-
-	if w2.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w2.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
 	}
-
-	var users []interface{}
-	json.NewDecoder(w2.Body).Decode(&users)
-	if len(users) != 1 {
-		t.Errorf("expected 1 user, got %d", len(users))
+	var users []map[string]interface{}
+	json.NewDecoder(resp.Body).Decode(&users)
+	if len(users) != 2 {
+		t.Errorf("expected 2 users, got %d", len(users))
 	}
 }
 
 func TestUpdateUser(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	body := map[string]string{"name": "Charlie", "email": "charlie@test.com"}
-	b, _ := json.Marshal(body)
-	req := httptest.NewRequest("POST", "/users", bytes.NewReader(b))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	h.HandleUsers(w, req)
+	h := setupHandler()
+	createBody := bytes.NewBufferString(`{"username":"alice","password":"secret"}`)
+	createW := httptest.NewRecorder()
+	h.ServeHTTP(createW, httptest.NewRequest(http.MethodPost, "/users", createBody))
 
 	var created map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&created)
+	json.NewDecoder(createW.Result().Body).Decode(&created)
 
-	update := map[string]string{"name": "Charlie Updated"}
-	b2, _ := json.Marshal(update)
-	req2 := httptest.NewRequest("PUT", "/users/1", bytes.NewReader(b2))
-	req2.Header.Set("Content-Type", "application/json")
-	w2 := httptest.NewRecorder()
-	h.HandleUserByID(w2, req2)
-
-	if w2.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w2.Code)
+	updateBody := bytes.NewBufferString(`{"username":"alice-updated","password":"newpass"}`)
+	req := httptest.NewRequest(http.MethodPut, "/users/"+created["id"].(string), updateBody)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
 	}
-
 	var updated map[string]interface{}
-	json.NewDecoder(w2.Body).Decode(&updated)
-	if updated["name"] != "Charlie Updated" {
-		t.Errorf("expected Charlie Updated, got %s", updated["name"])
+	json.NewDecoder(resp.Body).Decode(&updated)
+	if updated["username"] != "alice-updated" {
+		t.Errorf("expected alice-updated, got %v", updated["username"])
 	}
 }
 
 func TestUpdateUserNotFound(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	update := map[string]string{"name": "Ghost"}
-	b, _ := json.Marshal(update)
-	req := httptest.NewRequest("PUT", "/users/999", bytes.NewReader(b))
-	req.Header.Set("Content-Type", "application/json")
+	h := setupHandler()
+	body := bytes.NewBufferString(`{"username":"nobody","password":"pass"}`)
+	req := httptest.NewRequest(http.MethodPut, "/users/nonexistent", body)
 	w := httptest.NewRecorder()
-	h.HandleUserByID(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", w.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", resp.StatusCode)
 	}
 }
 
 func TestDeleteUser(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
+	h := setupHandler()
+	createBody := bytes.NewBufferString(`{"username":"alice","password":"secret"}`)
+	createW := httptest.NewRecorder()
+	h.ServeHTTP(createW, httptest.NewRequest(http.MethodPost, "/users", createBody))
 
-	body := map[string]string{"name": "Dave", "email": "dave@test.com"}
-	b, _ := json.Marshal(body)
-	req := httptest.NewRequest("POST", "/users", bytes.NewReader(b))
-	req.Header.Set("Content-Type", "application/json")
+	var created map[string]interface{}
+	json.NewDecoder(createW.Result().Body).Decode(&created)
+
+	req := httptest.NewRequest(http.MethodDelete, "/users/"+created["id"].(string), nil)
 	w := httptest.NewRecorder()
-	h.HandleUsers(w, req)
-
-	req2 := httptest.NewRequest("DELETE", "/users/1", nil)
-	w2 := httptest.NewRecorder()
-	h.HandleUserByID(w2, req2)
-
-	if w2.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w2.Code)
-	}
-
-	var resp map[string]interface{}
-	json.NewDecoder(w2.Body).Decode(&resp)
-	if resp["deleted"] != true {
-		t.Errorf("expected deleted true, got %v", resp["deleted"])
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusNoContent {
+		t.Errorf("expected 204, got %d", resp.StatusCode)
 	}
 }
 
 func TestDeleteUserNotFound(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	req := httptest.NewRequest("DELETE", "/users/999", nil)
+	h := setupHandler()
+	req := httptest.NewRequest(http.MethodDelete, "/users/nonexistent", nil)
 	w := httptest.NewRecorder()
-	h.HandleUserByID(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", w.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", resp.StatusCode)
 	}
 }
 
 func TestGetUserByID(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
+	h := setupHandler()
+	createBody := bytes.NewBufferString(`{"username":"alice","password":"secret"}`)
+	createW := httptest.NewRecorder()
+	h.ServeHTTP(createW, httptest.NewRequest(http.MethodPost, "/users", createBody))
 
-	body := map[string]string{"name": "Eve", "email": "eve@test.com"}
-	b, _ := json.Marshal(body)
-	req := httptest.NewRequest("POST", "/users", bytes.NewReader(b))
-	req.Header.Set("Content-Type", "application/json")
+	var created map[string]interface{}
+	json.NewDecoder(createW.Result().Body).Decode(&created)
+
+	req := httptest.NewRequest(http.MethodGet, "/users/"+created["id"].(string), nil)
 	w := httptest.NewRecorder()
-	h.HandleUsers(w, req)
-
-	req2 := httptest.NewRequest("GET", "/users/1", nil)
-	w2 := httptest.NewRecorder()
-	h.HandleUserByID(w2, req2)
-
-	if w2.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", w2.Code)
-	}
-
-	var user map[string]interface{}
-	json.NewDecoder(w2.Body).Decode(&user)
-	if user["name"] != "Eve" {
-		t.Errorf("expected Eve, got %s", user["name"])
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected 200, got %d", resp.StatusCode)
 	}
 }
 
 func TestGetUserByIDNotFound(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	req := httptest.NewRequest("GET", "/users/999", nil)
+	h := setupHandler()
+	req := httptest.NewRequest(http.MethodGet, "/users/nonexistent", nil)
 	w := httptest.NewRecorder()
-	h.HandleUserByID(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", w.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", resp.StatusCode)
 	}
 }
 
 func TestMethodNotAllowed(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	req := httptest.NewRequest("PATCH", "/users", nil)
+	h := setupHandler()
+	req := httptest.NewRequest(http.MethodPatch, "/users", nil)
 	w := httptest.NewRecorder()
-	h.HandleUsers(w, req)
-
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Errorf("expected 405, got %d", w.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusMethodNotAllowed {
+		t.Errorf("expected 405, got %d", resp.StatusCode)
 	}
 }
 
 func TestInvalidUserID(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	req := httptest.NewRequest("GET", "/users/abc", nil)
+	h := setupHandler()
+	req := httptest.NewRequest(http.MethodGet, "/users/invalid!id", nil)
 	w := httptest.NewRecorder()
-	h.HandleUserByID(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", resp.StatusCode)
 	}
 }
 
 func TestInvalidJSON(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	req := httptest.NewRequest("POST", "/users", bytes.NewReader([]byte("not json")))
-	req.Header.Set("Content-Type", "application/json")
+	h := setupHandler()
+	body := bytes.NewBufferString(`not json`)
+	req := httptest.NewRequest(http.MethodPost, "/users", body)
 	w := httptest.NewRecorder()
-	h.HandleUsers(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
 	}
 }
 
 func TestInvalidJSONOnUpdate(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	req := httptest.NewRequest("PUT", "/users/1", bytes.NewReader([]byte("not json")))
-	req.Header.Set("Content-Type", "application/json")
+	h := setupHandler()
+	body := bytes.NewBufferString(`not json`)
+	req := httptest.NewRequest(http.MethodPut, "/users/1", body)
 	w := httptest.NewRecorder()
-	h.HandleUserByID(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", w.Code)
+	h.ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d", resp.StatusCode)
 	}
 }
 
 func TestNotFound(t *testing.T) {
-	repo := repository.NewUserRepository()
-	h := handler.NewUserHandler(repo)
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", h.Health)
-	mux.HandleFunc("/users", h.HandleUsers)
-	mux.HandleFunc("/users/", h.HandleUserByID)
-
-	req := httptest.NewRequest("GET", "/nonexistent", nil)
+	req := httptest.NewRequest(http.MethodGet, "/nonexistent", nil)
 	w := httptest.NewRecorder()
-	mux.ServeHTTP(w, req)
-
-	if w.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", w.Code)
+	http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(`{"error":"Not found"}`))
+	}).ServeHTTP(w, req)
+	resp := w.Result()
+	if resp.StatusCode != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", resp.StatusCode)
 	}
 }

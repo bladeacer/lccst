@@ -1,111 +1,139 @@
 import json
 import os
-import sys
 import threading
 import time
-from http.server import HTTPServer
+import unittest
 from http.client import HTTPConnection
+from http.server import HTTPServer
 
 os.environ["DISABLE_RATE_LIMIT"] = "1"
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from server import Handler, USERS
-
-SERVER = None
-THREAD = None
-PORT = 18081
+from server import Handler, users  # noqa: E402
 
 
-def setup_module():
-    global SERVER, THREAD
-    USERS.clear()
-    SERVER = HTTPServer(("localhost", PORT), Handler)
-    THREAD = threading.Thread(target=SERVER.serve_forever)
-    THREAD.daemon = True
-    THREAD.start()
-    time.sleep(0.1)
+class TestBase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        users.clear()
+        cls.server = HTTPServer(("127.0.0.1", 0), Handler)
+        cls.port = cls.server.server_address[1]
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+        time.sleep(0.05)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.shutdown()
+
+    def setUp(self):
+        users.clear()
+        self.conn = HTTPConnection("127.0.0.1", self.port)
+
+    def tearDown(self):
+        self.conn.close()
+
+    def _post(self, path: str, body: dict) -> tuple[int, dict]:
+        self.conn.request("POST", path, json.dumps(body), {"Content-Type": "application/json"})
+        resp = self.conn.getresponse()
+        data = json.loads(resp.read())
+        return resp.status, data
+
+    def _get(self, path: str) -> tuple[int, dict | list]:
+        self.conn.request("GET", path)
+        resp = self.conn.getresponse()
+        data = json.loads(resp.read())
+        return resp.status, data
+
+    def _put(self, path: str, body: dict) -> tuple[int, dict]:
+        self.conn.request("PUT", path, json.dumps(body), {"Content-Type": "application/json"})
+        resp = self.conn.getresponse()
+        data = json.loads(resp.read())
+        return resp.status, data
+
+    def _delete(self, path: str) -> tuple[int, bytes]:
+        self.conn.request("DELETE", path)
+        resp = self.conn.getresponse()
+        return resp.status, resp.read()
 
 
-def teardown_module():
-    if SERVER:
-        SERVER.shutdown()
-        THREAD.join()
-
-
-def request(method, path, body=None):
-    conn = HTTPConnection("localhost", PORT, timeout=5)
-    headers = {"Content-Type": "application/json"}
-    b = json.dumps(body).encode() if body else None
-    conn.request(method, path, b, headers)
-    resp = conn.getresponse()
-    data = json.loads(resp.read())
-    conn.close()
-    return resp.status, data
-
-
-class TestHealth:
+class TestHealth(TestBase):
     def test_health(self):
-        status, data = request("GET", "/health")
-        assert status == 200
-        assert data["status"] == "ok"
+        status, data = self._get("/health")
+        self.assertEqual(status, 200)
+        self.assertEqual(data, {"status": "ok"})
 
 
-class TestCreateUser:
+class TestCreateUser(TestBase):
     def test_create_user(self):
-        status, data = request("POST", "/users", {"name": "Alice", "email": "alice@test.com"})
-        assert status == 201
-        assert data["name"] == "Alice"
+        status, data = self._post("/users", {"name": "Alice", "email": "alice@example.com"})
+        self.assertEqual(status, 201)
+        self.assertEqual(data["name"], "Alice")
+        self.assertEqual(data["email"], "alice@example.com")
+        self.assertIn("id", data)
 
     def test_create_user_missing_fields(self):
-        status, data = request("POST", "/users", {"name": ""})
-        assert status == 400
+        status, data = self._post("/users", {"name": "Alice"})
+        self.assertEqual(status, 400)
+        self.assertIn("error", data)
 
     def test_create_user_invalid_email(self):
-        status, data = request("POST", "/users", {"name": "Bob", "email": "bad"})
-        assert status == 400
+        status, data = self._post("/users", {"name": "Alice", "email": "not-an-email"})
+        self.assertEqual(status, 400)
+        self.assertIn("error", data)
 
     def test_create_user_invalid_json(self):
-        conn = HTTPConnection("localhost", PORT, timeout=5)
-        conn.request("POST", "/users", b"not json", {"Content-Type": "application/json"})
-        resp = conn.getresponse()
-        assert resp.status == 400
-        conn.close()
+        self.conn.request("POST", "/users", b"not json", {"Content-Type": "application/json"})
+        resp = self.conn.getresponse()
+        data = json.loads(resp.read())
+        self.assertEqual(resp.status, 400)
+        self.assertIn("error", data)
 
 
-class TestListUsers:
+class TestListUsers(TestBase):
     def test_list_users(self):
-        status, data = request("GET", "/users")
-        assert status == 200
-        assert isinstance(data, list)
+        self._post("/users", {"name": "Alice", "email": "alice@example.com"})
+        self._post("/users", {"name": "Bob", "email": "bob@example.com"})
+        status, data = self._get("/users")
+        self.assertEqual(status, 200)
+        self.assertEqual(len(data), 2)
 
 
-class TestUpdateUser:
+class TestUpdateUser(TestBase):
     def test_update_user(self):
-        status, data = request("PUT", "/users/1", {"name": "Alice Updated"})
-        assert status == 200
-        assert data["name"] == "Alice Updated"
+        _, created = self._post("/users", {"name": "Alice", "email": "alice@example.com"})
+        uid = created["id"]
+        status, data = self._put(f"/users/{uid}", {"name": "Alice Updated"})
+        self.assertEqual(status, 200)
+        self.assertEqual(data["name"], "Alice Updated")
 
     def test_update_user_not_found(self):
-        status, data = request("PUT", "/users/999", {"name": "Ghost"})
-        assert status == 404
+        status, data = self._put("/users/nonexistent", {"name": "Nobody"})
+        self.assertEqual(status, 404)
+        self.assertIn("error", data)
 
     def test_update_invalid_id(self):
-        status, data = request("PUT", "/users/abc", {"name": "x"})
-        assert status == 400
+        status, data = self._put("/users/", {"name": "Nobody"})
+        self.assertEqual(status, 404)
 
 
-class TestDeleteUser:
+class TestDeleteUser(TestBase):
     def test_delete_user(self):
-        status, data = request("DELETE", "/users/1")
-        assert status == 200
-        assert data["deleted"] is True
+        _, created = self._post("/users", {"name": "Alice", "email": "alice@example.com"})
+        uid = created["id"]
+        status, _ = self._delete(f"/users/{uid}")
+        self.assertEqual(status, 204)
 
     def test_delete_user_not_found(self):
-        status, data = request("DELETE", "/users/999")
-        assert status == 404
+        status, data = self._delete("/users/nonexistent")
+        self.assertEqual(status, 404)
 
 
-class TestNotFound:
+class TestNotFound(TestBase):
     def test_404(self):
-        status, data = request("GET", "/nonexistent")
-        assert status == 404
+        status, data = self._get("/nonexistent")
+        self.assertEqual(status, 404)
+        self.assertIn("error", data)
+
+
+if __name__ == "__main__":
+    unittest.main()

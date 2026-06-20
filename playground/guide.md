@@ -166,6 +166,91 @@ Go test files inside a `tests/` subdirectory must use a separate package name (`
 
 Python projects use `uv` for dependency management. The `pyproject.toml` can declare dev dependencies under `[dependency-groups]` (PEP 735) or `[tool.uv] dev-dependencies`. Run `uv sync` to install, then `uv run pytest` to execute tests. The benchmark script unsets `VIRTUAL_ENV` before running Python tests to avoid venv mismatch.
 
+## Implementation Pitfalls & Loop Prevention
+
+The following findings were collected from actual implementation runs. Agents
+frequently exhaust tokens by looping on these specific issues. Enforce the
+mitigation rules below to avoid repeated test-fix-rerem cycles.
+
+### TypeScript & pnpm Sandbox Constraints
+
+When executing the React Timer subproject, agents frequently exhaust tokens by
+looping on implicit type dependencies (e.g., `@types/jest` or React testing
+utilities) or attempting to modify root configurations.
+
+**Enforced Mitigation Rules for Future Runs:**
+1. **Pre-Baked Configuration:** The runtime workspace MUST pre-supply a working
+   `tsconfig.json` and basic `package.json` with standard testing packages.
+2. **Strict Module Resolution:** Force the agent to use explicit relative paths
+   and native sub-component imports (`.tsx`) rather than attempting to refactor
+   global compiler paths.
+3. **No Dynamic Linkage:** Explicitly forbid the agent from running `pnpm link`
+   or global installs during the execution loop. If a type dependency is missing,
+   it must log the gap and proceed with static assertions rather than looping.
+
+**Known Token Traps (do not iterate on these):**
+
+| Trap | Symptom | One-Shot Fix |
+|------|---------|-------------|
+| Missing `jest-environment-jsdom` | Jest 29+ does not ship jsdom. Test fails with "Test environment not found." | Add `jest-environment-jsdom` to `devDependencies` in `package.json` before first `pnpm install`. |
+| `allow-builds` blocks Jest deps | pnpm v11 refuses to build `unrs-resolver` (ts-jest transitive dep), halting install | Create `.npmrc` with `allow-builds=unrs-resolver` before install, or add to root `pnpm-workspace.yaml` `onlyBuiltDependencies`. |
+| `formatTime` floating-point drift | `Math.floor((5.3 - 5) * 10)` yields 2 due to IEEE 754 representation | Use `Math.floor((seconds - totalSecs) * 10 + 0.0001)` or `Math.round((seconds - totalSecs) * 10)`. |
+| TimerDisplay double-render via useState | Component wraps time in `useState`/`useEffect`, causing initial render to show stale `0` instead of prop | Render `formatTime(time)` directly from props. Remove local state. |
+
+### Python uv & Test Isolation Constraints
+
+When executing the Python HTTP Server subproject, agents loop on import path
+resolution, rate-limiter mocking strategy, and email regex false positives.
+
+**Enforced Mitigation Rules for Future Runs:**
+1. **Test-Friendly Rate Limiting:** The rate limiter MUST check an environment
+   variable (`DISABLE_RATE_LIMIT`) to allow tests to bypass throttling without
+   mocking `time.monotonic()`. Do not attempt to mock or monkey-patch time.
+2. **Explicit Test Runner Path:** Run tests exclusively via `uv run python3 -m pytest tests/ -v --tb=short`. Do not use bare `pytest` which may resolve the wrong
+   interpreter or missing `.venv`.
+3. **No Global `sys.path` Mutation:** The test file MUST import the server module
+   with a relative `from server import ...` and a `# noqa: E402` comment if
+   placed after the `os.environ` override. Never mutate `sys.path`.
+
+**Known Token Traps (do not iterate on these):**
+
+| Trap | Symptom | One-Shot Fix |
+|------|---------|-------------|
+| Rate-limiter blocks tests in CI | `time.monotonic()` is unmockable in simple unittest; tests timeout | Gate rate limiter behind `DISABLE_RATE_LIMIT` env var; set it at module import time before importing server. |
+| Email regex too strict/too loose | Common valid emails like `user+tag@domain.co` get rejected | Use `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$` — the standard pattern from RFC 5322 simplified. |
+| ID type mismatch in assertions | Plain version uses `int` IDs, skill-guided uses `uuid` strings; comparing across versions causes false negatives | Decide ID strategy per variant: plain uses sequential `int`, guided uses `uuid.uuid4()`. Never assert ID type across variants. |
+| `uv sync` venv path collision | Running `uv run pytest` from project root picks wrong `.venv` if parent also has one | Ensure `VIRTUAL_ENV` is unset before running; the benchmark script already does this. |
+
+### Go Module Layout & Test Isolation Constraints
+
+When executing the Go Login CRUD subproject, agents loop on `package main`
+import restrictions, `internal/` directory visibility, and test output
+assertions.
+
+**Enforced Mitigation Rules for Future Runs:**
+1. **Never Import `package main` from Tests:** Go test files in a `tests/`
+   subdirectory use `package tests` and CANNOT import `cmd/server` (which is
+   `package main`). Wire handlers directly in test setup by importing
+   `internal/repository` and `internal/handler`.
+2. **Strict `internal/` Boundaries:** The Go toolchain enforces that packages
+   under `internal/` are only importable by code rooted at the parent of
+   `internal/`. Keep all domain logic under `internal/` and all entry points in
+   `cmd/server`. Do not attempt to bypass this with symlinks or vendoring.
+3. **Password Field Test Strategy:** The `User.Password` struct field has
+   `json:"-"` which excludes it from JSON serialization, but the Go field still
+   holds a value. To verify passwords are not leaked, test JSON marshalling
+   explicitly: marshal to JSON, unmarshal to `map[string]interface{}`, and
+   assert the `"password"` key is absent. Never assert `user.Password == ""`.
+
+**Known Token Traps (do not iterate on these):**
+
+| Trap | Symptom | One-Shot Fix |
+|------|---------|-------------|
+| `package tests` cannot access `package main` | Handler tests in `tests/` fail to compile: `imports cmd/server` | Never import `cmd/server`. Create handler via `handler.NewUserHandler(repo)` directly, using `httptest.NewRecorder()` and `httptest.NewRequest()`. |
+| `json:"-"` field test fails | `user.Password != ""` assertion fails because the field IS set internally | Assert on JSON output: `json.Marshal(user)`, unmarshal to map, check for absence of `"password"` key. |
+| Cached test results hide fixes | `go test ./tests/ -v` returns cached (stale) PASS after code changes | Append `-count=1` to force uncached execution: `go test ./tests/ -v -count=1`. |
+| Module path mismatch across files | One internal file imports `go-login-crud-skill/model` while another uses `go-login-crud-skill/internal/model` | Audit all `import` statements to match the single module path declared in `go.mod`. All internal imports MUST include the `internal/` prefix in the import path. |
+
 ## Traceability
 
 Each benchmark report includes:

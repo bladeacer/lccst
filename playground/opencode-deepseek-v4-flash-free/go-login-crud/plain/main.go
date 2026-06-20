@@ -1,132 +1,138 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"sync"
 )
 
-var (
-	users  []User
-	nextID = 1
-	mu     sync.Mutex
-)
-
 type User struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"-"`
+}
+
+type Store struct {
+	mu    sync.RWMutex
+	users map[string]User
+}
+
+var store = &Store{users: make(map[string]User)}
+
+func hashPassword(password string) string {
+	h := sha256.Sum256([]byte(password))
+	return hex.EncodeToString(h[:])
 }
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/health", handleHealth)
-	mux.HandleFunc("/users", handleUsers)
-	mux.HandleFunc("/users/", handleUserByID)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		path := strings.TrimPrefix(r.URL.Path, "/")
+		parts := strings.Split(path, "/")
 
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "18080"
-	}
-
-	log.Printf("Starting server on :%s", port)
-	log.Fatal(http.ListenAndServe(":"+port, mux))
-}
-
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, 200, map[string]string{"status": "ok"})
-}
-
-func handleUsers(w http.ResponseWriter, r *http.Request) {
-	switch r.Method {
-	case http.MethodGet:
-		mu.Lock()
-		defer mu.Unlock()
-		writeJSON(w, 200, users)
-	case http.MethodPost:
-		var u User
-		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-			writeJSON(w, 400, map[string]string{"error": "Invalid JSON"})
+		if path == "health" && r.Method == "GET" {
+			json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 			return
 		}
-		mu.Lock()
-		u.ID = nextID
-		nextID++
-		users = append(users, u)
-		mu.Unlock()
-		writeJSON(w, 201, u)
-	default:
-		writeJSON(w, 405, map[string]string{"error": "Method not allowed"})
-	}
-}
-
-func handleUserByID(w http.ResponseWriter, r *http.Request) {
-	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/users/"), "/")
-	if len(parts) == 0 || parts[0] == "" {
-		writeJSON(w, 404, map[string]string{"error": "Not found"})
-		return
-	}
-
-	id, err := strconv.Atoi(parts[0])
-	if err != nil {
-		writeJSON(w, 400, map[string]string{"error": "Invalid user ID"})
-		return
-	}
-
-	switch r.Method {
-	case http.MethodGet:
-		mu.Lock()
-		defer mu.Unlock()
-		for _, u := range users {
-			if u.ID == id {
-				writeJSON(w, 200, u)
-				return
+		if parts[0] == "users" {
+			switch r.Method {
+			case "GET":
+				if len(parts) == 2 {
+					store.mu.RLock()
+					user, ok := store.users[parts[1]]
+					store.mu.RUnlock()
+					if !ok {
+						w.WriteHeader(404)
+						json.NewEncoder(w).Encode(map[string]string{"error": "Not found"})
+						return
+					}
+					json.NewEncoder(w).Encode(user)
+				} else {
+					store.mu.RLock()
+					list := make([]User, 0, len(store.users))
+					for _, u := range store.users {
+						list = append(list, u)
+					}
+					store.mu.RUnlock()
+					json.NewEncoder(w).Encode(list)
+				}
+			case "POST":
+				var input struct {
+					Username string `json:"username"`
+					Password string `json:"password"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+					w.WriteHeader(400)
+					json.NewEncoder(w).Encode(map[string]string{"error": "Invalid JSON"})
+					return
+				}
+				id := fmt.Sprintf("%d", len(store.users)+1)
+				user := User{ID: id, Username: input.Username, Password: hashPassword(input.Password)}
+				store.mu.Lock()
+				store.users[id] = user
+				store.mu.Unlock()
+				w.WriteHeader(201)
+				json.NewEncoder(w).Encode(user)
+			case "PUT":
+				if len(parts) != 2 {
+					w.WriteHeader(404)
+					json.NewEncoder(w).Encode(map[string]string{"error": "Not found"})
+					return
+				}
+				var input struct {
+					Username string `json:"username"`
+					Password string `json:"password"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+					w.WriteHeader(400)
+					json.NewEncoder(w).Encode(map[string]string{"error": "Invalid JSON"})
+					return
+				}
+				store.mu.Lock()
+				user, ok := store.users[parts[1]]
+				if ok {
+					user.Username = input.Username
+					user.Password = hashPassword(input.Password)
+					store.users[parts[1]] = user
+				}
+				store.mu.Unlock()
+				if !ok {
+					w.WriteHeader(404)
+					json.NewEncoder(w).Encode(map[string]string{"error": "Not found"})
+					return
+				}
+				json.NewEncoder(w).Encode(user)
+			case "DELETE":
+				if len(parts) != 2 {
+					w.WriteHeader(404)
+					json.NewEncoder(w).Encode(map[string]string{"error": "Not found"})
+					return
+				}
+				store.mu.Lock()
+				_, ok := store.users[parts[1]]
+				if ok {
+					delete(store.users, parts[1])
+				}
+				store.mu.Unlock()
+				if !ok {
+					w.WriteHeader(404)
+					json.NewEncoder(w).Encode(map[string]string{"error": "Not found"})
+					return
+				}
+				w.WriteHeader(204)
+			default:
+				w.WriteHeader(405)
+				json.NewEncoder(w).Encode(map[string]string{"error": "Method not allowed"})
 			}
-		}
-		writeJSON(w, 404, map[string]string{"error": "Not found"})
-	case http.MethodPut:
-		var updated User
-		if err := json.NewDecoder(r.Body).Decode(&updated); err != nil {
-			writeJSON(w, 400, map[string]string{"error": "Invalid JSON"})
 			return
 		}
-		mu.Lock()
-		defer mu.Unlock()
-		for i, u := range users {
-			if u.ID == id {
-				if updated.Name != "" {
-					users[i].Name = updated.Name
-				}
-				if updated.Email != "" {
-					users[i].Email = updated.Email
-				}
-				writeJSON(w, 200, users[i])
-				return
-			}
-		}
-		writeJSON(w, 404, map[string]string{"error": "Not found"})
-	case http.MethodDelete:
-		mu.Lock()
-		defer mu.Unlock()
-		for i, u := range users {
-			if u.ID == id {
-				users = append(users[:i], users[i+1:]...)
-				writeJSON(w, 200, map[string]bool{"deleted": true})
-				return
-			}
-		}
-		writeJSON(w, 404, map[string]string{"error": "Not found"})
-	default:
-		writeJSON(w, 405, map[string]string{"error": "Method not allowed"})
-	}
-}
-
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data)
+		w.WriteHeader(404)
+		json.NewEncoder(w).Encode(map[string]string{"error": "Not found"})
+	})
+	log.Fatal(http.ListenAndServe(":8000", nil))
 }

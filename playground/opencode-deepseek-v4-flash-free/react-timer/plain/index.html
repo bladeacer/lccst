@@ -2,54 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Timer</title>
-<style>
-body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; background: #f0f0f0; }
-.timer { text-align: center; background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-.time { font-size: 3rem; font-variant-numeric: tabular-nums; margin: 1rem 0; }
-.controls button { margin: 0 0.25rem; padding: 0.5rem 1rem; font-size: 1rem; cursor: pointer; border: 1px solid #ccc; border-radius: 6px; background: #fff; }
-.controls button:hover { background: #e0e0e0; }
-</style>
+<title>Stopwatch</title>
 </head>
 <body>
-<div class="timer" id="app">
-  <h1>Timer</h1>
-  <div class="time" id="display">00:00.0</div>
-  <div class="controls">
-    <button id="startBtn">Start</button>
-    <button id="stopBtn">Stop</button>
-    <button id="resetBtn">Reset</button>
-  </div>
-</div>
-<script>
-let seconds = 0;
-let interval = null;
-const display = document.getElementById("display");
-
-function format(s) {
-  const m = Math.floor(s / 60);
-  const sec = (s % 60).toFixed(1);
-  return `${String(m).padStart(2, "0")}:${sec.padStart(4, "0")}`;
-}
-
-function update() {
-  seconds += 0.1;
-  display.textContent = format(seconds);
-}
-
-document.getElementById("startBtn").onclick = () => {
-  if (!interval) interval = setInterval(update, 100);
-};
-document.getElementById("stopBtn").onclick = () => {
-  clearInterval(interval);
-  interval = null;
-};
-document.getElementById("resetBtn").onclick = () => {
-  clearInterval(interval);
-  interval = null;
-  seconds = 0;
-  display.textContent = format(0);
-};
-</script>
+<h1>Stopwatch</h1>
+<div id="display">00:00.0</div>
+<button id="startBtn">Start</button>
+<button id="stopBtn">Stop</button>
+<button id="resetBtn">Reset</button>
+<script src="timer.js"></script>
 </body>
 </html>

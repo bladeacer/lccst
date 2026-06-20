@@ -1,74 +1,104 @@
+#!/usr/bin/env python3
 import json
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
+import re
 
-USERS = []
-
+users = {}
+next_id = 1
 
 class Handler(BaseHTTPRequestHandler):
-    def _send_json(self, data, status=200):
-        self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(json.dumps(data).encode())
-
-    def _read_body(self):
-        length = int(self.headers.get("Content-Length", 0))
-        return json.loads(self.rfile.read(length)) if length else {}
-
     def do_GET(self):
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
         if path == "/health":
-            self._send_json({"status": "ok"})
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"status": "ok"}).encode())
         elif path == "/users":
-            self._send_json(USERS)
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(list(users.values())).encode())
+        elif match := re.match(r"/users/(\d+)", path):
+            uid = int(match.group(1))
+            user = users.get(uid)
+            if user:
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(user).encode())
+            else:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Not found"}).encode())
         else:
-            self._send_json({"error": "Not found"}, 404)
+            self.send_response(404)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Not found"}).encode())
 
     def do_POST(self):
-        path = urlparse(self.path).path
-        if path == "/users":
-            body = self._read_body()
-            user = {"id": len(USERS) + 1, "name": body.get("name", ""), "email": body.get("email", "")}
-            USERS.append(user)
-            self._send_json(user, 201)
+        global next_id
+        parsed = urlparse(self.path)
+        if parsed.path == "/users":
+            length = int(self.headers.get("Content-Length", 0))
+            body = json.loads(self.rfile.read(length))
+            user = {"id": next_id, "name": body["name"], "email": body["email"]}
+            users[next_id] = user
+            next_id += 1
+            self.send_response(201)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps(user).encode())
         else:
-            self._send_json({"error": "Not found"}, 404)
+            self.send_response(404)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Not found"}).encode())
 
     def do_PUT(self):
-        parts = urlparse(self.path).path.split("/")
-        if len(parts) == 3 and parts[1] == "users":
-            uid = int(parts[2])
-            body = self._read_body()
-            for u in USERS:
-                if u["id"] == uid:
-                    u.update({k: v for k, v in body.items() if k in ("name", "email")})
-                    self._send_json(u)
-                    return
-            self._send_json({"error": "Not found"}, 404)
+        if match := re.match(r"/users/(\d+)", self.path):
+            uid = int(match.group(1))
+            if uid in users:
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length))
+                users[uid].update(body)
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps(users[uid]).encode())
+            else:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Not found"}).encode())
         else:
-            self._send_json({"error": "Not found"}, 404)
+            self.send_response(404)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Not found"}).encode())
 
     def do_DELETE(self):
-        parts = urlparse(self.path).path.split("/")
-        if len(parts) == 3 and parts[1] == "users":
-            uid = int(parts[2])
-            for i, u in enumerate(USERS):
-                if u["id"] == uid:
-                    USERS.pop(i)
-                    self._send_json({"deleted": True})
-                    return
-            self._send_json({"error": "Not found"}, 404)
+        if match := re.match(r"/users/(\d+)", self.path):
+            uid = int(match.group(1))
+            if uid in users:
+                del users[uid]
+                self.send_response(204)
+                self.end_headers()
+            else:
+                self.send_response(404)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Not found"}).encode())
         else:
-            self._send_json({"error": "Not found"}, 404)
-
-    def log_message(self, format, *args):
-        pass
-
+            self.send_response(404)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": "Not found"}).encode())
 
 if __name__ == "__main__":
-    server = HTTPServer(("localhost", 18080), Handler)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        server.server_close()
+    server = HTTPServer(("0.0.0.0", 8000), Handler)
+    server.serve_forever()

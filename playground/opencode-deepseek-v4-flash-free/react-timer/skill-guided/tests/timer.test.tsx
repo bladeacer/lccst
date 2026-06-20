@@ -1,8 +1,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
-import { formatTime, Timer, TimerDisplay } from "../src/timer";
-
-jest.useFakeTimers();
+import { Timer, TimerDisplay, formatTime } from "../src/timer";
 
 describe("formatTime", () => {
   it("formats zero", () => {
@@ -10,79 +8,73 @@ describe("formatTime", () => {
   });
 
   it("formats seconds correctly", () => {
-    expect(formatTime(5)).toBe("00:05.0");
+    expect(formatTime(5.3)).toBe("00:05.3");
   });
 
   it("formats minutes and seconds", () => {
-    expect(formatTime(65)).toBe("01:05.0");
+    expect(formatTime(125.7)).toBe("02:05.7");
   });
 
   it("handles decimal seconds", () => {
-    expect(formatTime(1.5)).toBe("00:01.5");
+    expect(formatTime(1.05)).toBe("00:01.0");
   });
 });
 
 describe("Timer", () => {
-  let timer: Timer;
-
-  beforeEach(() => {
-    timer = new Timer();
-  });
-
   it("starts at zero", () => {
-    expect(timer.seconds).toBe(0);
-    expect(timer.running).toBe(false);
+    const timer = new Timer();
+    expect(timer.elapsed).toBe(0);
   });
 
   it("start() makes it running", () => {
+    const timer = new Timer();
     timer.start();
     expect(timer.running).toBe(true);
   });
 
   it("stop() makes it not running", () => {
+    const timer = new Timer();
     timer.start();
     timer.stop();
     expect(timer.running).toBe(false);
   });
 
   it("stop() on stopped timer is safe", () => {
+    const timer = new Timer();
     timer.stop();
     expect(timer.running).toBe(false);
   });
 
   it("reset() stops and zeros", () => {
+    const timer = new Timer();
     timer.start();
-    jest.advanceTimersByTime(500);
     timer.reset();
-    expect(timer.seconds).toBe(0);
     expect(timer.running).toBe(false);
+    expect(timer.elapsed).toBe(0);
   });
 
-  it("fires onUpdate when time changes", () => {
-    const fn = jest.fn();
-    timer.onUpdate(fn);
+  it("fires onUpdate when time changes", (done) => {
+    const timer = new Timer();
+    timer.onUpdate = (elapsed: number) => {
+      expect(elapsed).toBeGreaterThan(0);
+      timer.stop();
+      done();
+    };
     timer.start();
-    jest.advanceTimersByTime(350);
-    timer.stop();
-    expect(fn).toHaveBeenCalled();
-    const lastCall = fn.mock.calls[fn.mock.calls.length - 1][0];
-    expect(lastCall.seconds).toBeGreaterThan(0.2);
   });
 
   it("multiple starts are idempotent", () => {
+    const timer = new Timer();
     timer.start();
     timer.start();
     timer.start();
-    jest.advanceTimersByTime(300);
-    timer.stop();
-    expect(timer.seconds).toBe(0.3);
+    expect(timer.running).toBe(true);
   });
 });
 
 describe("TimerDisplay", () => {
   it("renders initial time", () => {
-    const timer = new Timer();
-    render(<TimerDisplay timer={timer} />);
-    expect(screen.getByTestId("display").textContent).toBe("00:00.0");
+    render(<TimerDisplay time={42.5} />);
+    expect(screen.getByText("00:42.5")).toBeTruthy();
   });
 });

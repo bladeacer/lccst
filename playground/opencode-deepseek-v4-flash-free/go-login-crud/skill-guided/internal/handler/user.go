@@ -3,94 +3,119 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
 	"strings"
+
 	"go-login-crud-skill/internal/model"
 	"go-login-crud-skill/internal/repository"
 )
 
 type UserHandler struct {
-	repo *repository.UserRepository
+	repo repository.UserRepository
 }
 
-func NewUserHandler(repo *repository.UserRepository) *UserHandler {
+func NewUserHandler(repo repository.UserRepository) *UserHandler {
 	return &UserHandler{repo: repo}
 }
 
-func (h *UserHandler) Health(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-}
+func (h *UserHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	path := strings.TrimPrefix(r.URL.Path, "/users")
+	path = strings.TrimPrefix(path, "/")
 
-func (h *UserHandler) HandleUsers(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		users := h.repo.GetAll()
-		writeJSON(w, http.StatusOK, users)
+		if path == "" {
+			h.listUsers(w, r)
+		} else {
+			h.getUser(w, r, path)
+		}
 	case http.MethodPost:
-		var req model.CreateUserRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "Invalid JSON"})
+		h.createUser(w, r)
+	case http.MethodPut:
+		if path == "" {
+			writeError(w, http.StatusNotFound, "Not found")
 			return
 		}
-		if req.Name == "" || req.Email == "" {
-			writeJSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "Name and email required"})
+		h.updateUser(w, r, path)
+	case http.MethodDelete:
+		if path == "" {
+			writeError(w, http.StatusNotFound, "Not found")
 			return
 		}
-		user := h.repo.Create(req)
-		writeJSON(w, http.StatusCreated, user)
+		h.deleteUser(w, r, path)
 	default:
-		writeJSON(w, http.StatusMethodNotAllowed, model.ErrorResponse{Error: "Method not allowed"})
+		writeError(w, http.StatusMethodNotAllowed, "Method not allowed")
 	}
 }
 
-func (h *UserHandler) HandleUserByID(w http.ResponseWriter, r *http.Request) {
-	id, err := extractID(r.URL.Path)
+func (h *UserHandler) listUsers(w http.ResponseWriter, r *http.Request) {
+	users, err := h.repo.GetAll()
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "Invalid user ID"})
+		writeError(w, http.StatusInternalServerError, "Internal error")
 		return
 	}
-
-	switch r.Method {
-	case http.MethodGet:
-		user, ok := h.repo.GetByID(id)
-		if !ok {
-			writeJSON(w, http.StatusNotFound, model.ErrorResponse{Error: "Not found"})
-			return
-		}
-		writeJSON(w, http.StatusOK, user)
-	case http.MethodPut:
-		var req model.UpdateUserRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSON(w, http.StatusBadRequest, model.ErrorResponse{Error: "Invalid JSON"})
-			return
-		}
-		user, ok := h.repo.Update(id, req)
-		if !ok {
-			writeJSON(w, http.StatusNotFound, model.ErrorResponse{Error: "Not found"})
-			return
-		}
-		writeJSON(w, http.StatusOK, user)
-	case http.MethodDelete:
-		if ok := h.repo.Delete(id); !ok {
-			writeJSON(w, http.StatusNotFound, model.ErrorResponse{Error: "Not found"})
-			return
-		}
-		writeJSON(w, http.StatusOK, map[string]bool{"deleted": true})
-	default:
-		writeJSON(w, http.StatusMethodNotAllowed, model.ErrorResponse{Error: "Method not allowed"})
-	}
+	writeJSON(w, http.StatusOK, users)
 }
 
-func extractID(path string) (int, error) {
-	parts := strings.Split(strings.TrimPrefix(path, "/users/"), "/")
-	if len(parts) == 0 || parts[0] == "" {
-		return 0, strconv.ErrSyntax
+func (h *UserHandler) getUser(w http.ResponseWriter, r *http.Request, id string) {
+	user, err := h.repo.GetByID(id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "User not found")
+		return
 	}
-	return strconv.Atoi(parts[0])
+	writeJSON(w, http.StatusOK, user)
+}
+
+func (h *UserHandler) createUser(w http.ResponseWriter, r *http.Request) {
+	var req model.CreateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	user, err := h.repo.Create(req)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "Internal error")
+		return
+	}
+	writeJSON(w, http.StatusCreated, user)
+}
+
+func (h *UserHandler) updateUser(w http.ResponseWriter, r *http.Request, id string) {
+	var req model.UpdateUserRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "Invalid JSON")
+		return
+	}
+	if err := req.Validate(); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	user, err := h.repo.Update(id, req)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "User not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, user)
+}
+
+func (h *UserHandler) deleteUser(w http.ResponseWriter, r *http.Request, id string) {
+	if err := h.repo.Delete(id); err != nil {
+		writeError(w, http.StatusNotFound, "User not found")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(data)
+}
+
+func writeError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{"error": message})
 }

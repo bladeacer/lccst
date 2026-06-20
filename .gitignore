@@ -1,3 +1,4 @@
 node_modules
 .headroom
 __pycache__
+.pytest_cache

@@ -1,37 +1,39 @@
 package main
 
 import (
+	"net/http"
+	"time"
+
 	"go-login-crud-skill/internal/cache"
 	"go-login-crud-skill/internal/handler"
 	"go-login-crud-skill/internal/middleware"
 	"go-login-crud-skill/internal/repository"
-	"net/http"
-	"time"
 )
 
 type App struct {
-	userHandler *handler.UserHandler
-	cache       *cache.Cache
+	Server *http.Server
 }
 
-func NewApp() (*App, error) {
-	repo := repository.NewUserRepository()
-	c := cache.NewCache(5 * time.Minute)
-	uh := handler.NewUserHandler(repo)
-	return &App{
-		userHandler: uh,
-		cache:       c,
-	}, nil
-}
+func NewApp() *App {
+	repo := repository.NewInMemoryUserRepository()
+	_ = cache.NewCache(5 * time.Minute)
 
-func (a *App) Routes() http.Handler {
+	userHandler := handler.NewUserHandler(repo)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/health", a.userHandler.Health)
-	mux.HandleFunc("/users", a.userHandler.HandleUsers)
-	mux.HandleFunc("/users/", a.userHandler.HandleUserByID)
+	mux.Handle("/users", userHandler)
+	mux.Handle("/users/", userHandler)
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
 
-	var h http.Handler = mux
-	h = middleware.Recovery(h)
-	h = middleware.Logger(h)
-	return h
+	loggedMux := middleware.Logging(mux)
+
+	return &App{
+		Server: &http.Server{
+			Addr:    ":8000",
+			Handler: loggedMux,
+		},
+	}
 }

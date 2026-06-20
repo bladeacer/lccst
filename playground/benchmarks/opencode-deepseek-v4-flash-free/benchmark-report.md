@@ -1,7 +1,7 @@
 # LCCST Playground Benchmark Report
 
 **Agent:** opencode-deepseek-v4-flash-free
-**Skill Version:** v1.9
+**Skill Version:** v2.1
 **Token Encoder:** tiktoken (cl100k_base)
 **Python:** 3.13.11
 **pnpm:** 11.3.0
@@ -13,8 +13,8 @@
 | Metric | Plain (no skill) | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
 | Total files | 4 | 15 | +11 |
-| Total lines | 297 | 1275 | +978 |
-| Estimated tokens | 2129 | 8329 | +6200 (+291%) |
+| Total lines | 302 | 1312 | +1010 |
+| Estimated tokens | 2160 | 9203 | +7043 (+326%) |
 
 ## Per-Project Breakdown
 
@@ -22,37 +22,37 @@
 
 #### Plain Implementation
 - Files: 1
-- Lines: 74
-- Chars: 2447
-- Tokens: 575
-- Robustness Score: 48/100
-- Features: typing=True, security=False, error_handling=True
+- Lines: 104
+- Chars: 4161
+- Tokens: 857
+- Robustness Score: 32/100
+- Features: typing=True, security=False, error_handling=False
 
 #### Skill-Guided Implementation
 - Files: 2
-- Lines: 255
-- Chars: 7890
-- Tokens: 1852
-- Robustness Score: 100/100
-- Features: typing=True, security=True, error_handling=True
+- Lines: 311
+- Chars: 10911
+- Tokens: 2574
+- Robustness Score: 84/100
+- Features: typing=True, security=True, error_handling=False
 - Tests Passed: YES
 
 #### Comparison
 | Aspect | Plain | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
 | Files | 1 | 2 | +1 |
-| Lines | 74 | 255 | +181 (+245%) |
-| Tokens | 575 | 1852 | +1277 (+222%) |
-| Robustness | 48 | 100 | +52 |
+| Lines | 104 | 311 | +207 (+199%) |
+| Tokens | 857 | 2574 | +1717 (+200%) |
+| Robustness | 32 | 84 | +52 |
 
 #### File Details
 
 **Plain files:**
-- `plain/server.py`: 74 lines, ~575 tokens
+- `plain/server.py`: 104 lines, ~857 tokens
 
 **Skill-guided files:**
-- `skill-guided/server.py`: 144 lines, ~1121 tokens
-- `skill-guided/tests/test_server.py`: 111 lines, ~731 tokens
+- `skill-guided/server.py`: 172 lines, ~1495 tokens
+- `skill-guided/tests/test_server.py`: 139 lines, ~1079 tokens
 
 **Test Output:**
 ```
@@ -65,18 +65,18 @@ collecting ... collected 12 items
 
 tests/test_server.py::TestHealth::test_health PASSED                     [  8%]
 tests/test_server.py::TestCreateUser::test_create_user PASSED            [ 16%]
-tests/test_server.py::TestCreateUser::test_create_user_missing_fields PASSED [ 25%]
-tests/test_server.py::TestCreateUser::test_create_user_invalid_email PASSED [ 33%]
-tests/test_server.py::TestCreateUser::test_create_user_invalid_json PASSED [ 41%]
+tests/test_server.py::TestCreateUser::test_create_user_invalid_email PASSED [ 25%]
+tests/test_server.py::TestCreateUser::test_create_user_invalid_json PASSED [ 33%]
+tests/test_server.py::TestCreateUser::test_create_user_missing_fields PASSED [ 41%]
 tests/test_server.py::TestListUsers::test_list_users PASSED              [ 50%]
-tests/test_server.py::TestUpdateUser::test_update_user PASSED            [ 58%]
-tests/test_server.py::TestUpdateUser::test_update_user_not_found PASSED  [ 66%]
-tests/test_server.py::TestUpdateUser::test_update_invalid_id PASSED      [ 75%]
+tests/test_server.py::TestUpdateUser::test_update_invalid_id PASSED      [ 58%]
+tests/test_server.py::TestUpdateUser::test_update_user PASSED            [ 66%]
+tests/test_server.py::TestUpdateUser::test_update_user_not_found PASSED  [ 75%]
 tests/test_server.py::TestDeleteUser::test_delete_user PASSED            [ 83%]
 tests/test_server.py::TestDeleteUser::test_delete_user_not_found PASSED  [ 91%]
 tests/test_server.py::TestNotFound::test_404 PASSED                      [100%]
 
-============================== 12 passed in 0.64s ==============================
+============================== 12 passed in 3.36s ==============================
 
 ```
 
@@ -85,17 +85,17 @@ tests/test_server.py::TestNotFound::test_404 PASSED                      [100%]
 
 #### Plain Implementation
 - Files: 2
-- Lines: 91
-- Chars: 2481
-- Tokens: 717
+- Lines: 60
+- Chars: 1454
+- Tokens: 375
 - Robustness Score: 15/100
 - Features: typing=False, security=False, error_handling=False
 
 #### Skill-Guided Implementation
 - Files: 2
-- Lines: 179
-- Chars: 4371
-- Tokens: 1119
+- Lines: 141
+- Chars: 3414
+- Tokens: 906
 - Robustness Score: 67/100
 - Features: typing=True, security=False, error_handling=False
 - Tests Passed: YES
@@ -104,43 +104,44 @@ tests/test_server.py::TestNotFound::test_404 PASSED                      [100%]
 | Aspect | Plain | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
 | Files | 2 | 2 | +0 |
-| Lines | 91 | 179 | +88 (+97%) |
-| Tokens | 717 | 1119 | +402 (+56%) |
+| Lines | 60 | 141 | +81 (+135%) |
+| Tokens | 375 | 906 | +531 (+142%) |
 | Robustness | 15 | 67 | +52 |
 
 #### File Details
 
 **Plain files:**
-- `plain/index.html`: 55 lines, ~502 tokens
-- `plain/timer.js`: 36 lines, ~215 tokens
+- `plain/index.html`: 15 lines, ~96 tokens
+- `plain/timer.js`: 45 lines, ~279 tokens
 
 **Skill-guided files:**
-- `skill-guided/src/timer.tsx`: 91 lines, ~579 tokens
-- `skill-guided/tests/timer.test.tsx`: 88 lines, ~540 tokens
+- `skill-guided/src/timer.tsx`: 61 lines, ~414 tokens
+- `skill-guided/tests/timer.test.tsx`: 80 lines, ~492 tokens
 
 **Test Errors:**
 ```
+npm warn Unknown project config "allow-builds". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
 PASS tests/timer.test.tsx
   formatTime
     ✓ formats zero (1 ms)
     ✓ formats seconds correctly
     ✓ formats minutes and seconds
-    ✓ handles decimal seconds
+    ✓ handles decimal seconds (1 ms)
   Timer
     ✓ starts at zero
-    ✓ start() makes it running (1 ms)
+    ✓ start() makes it running
     ✓ stop() makes it not running
-    ✓ stop() on stopped timer is safe
-    ✓ reset() stops and zeros (1 ms)
-    ✓ fires onUpdate when time changes (1 ms)
-    ✓ multiple starts are idempotent (1 ms)
+    ✓ stop() on stopped timer is safe (1 ms)
+    ✓ reset() stops and zeros
+    ✓ fires onUpdate when time changes (102 ms)
+    ✓ multiple starts are idempotent
   TimerDisplay
-    ✓ renders initial time (18 ms)
+    ✓ renders initial time (17 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       12 passed, 12 total
 Snapshots:   0 total
-Time:        1.047 s
+Time:        1.099 s, estimated 2 s
 Ran all test suites.
 
 ```
@@ -150,46 +151,46 @@ Ran all test suites.
 
 #### Plain Implementation
 - Files: 1
-- Lines: 132
-- Chars: 2900
-- Tokens: 837
-- Robustness Score: 48/100
-- Features: typing=True, security=False, error_handling=True
+- Lines: 138
+- Chars: 3488
+- Tokens: 928
+- Robustness Score: 49/100
+- Features: typing=True, security=True, error_handling=False
 
 #### Skill-Guided Implementation
 - Files: 11
-- Lines: 841
-- Chars: 19866
-- Tokens: 5358
-- Robustness Score: 83/100
-- Features: typing=True, security=False, error_handling=True
+- Lines: 860
+- Chars: 21960
+- Tokens: 5723
+- Robustness Score: 100/100
+- Features: typing=True, security=True, error_handling=True
 - Tests Passed: YES
 
 #### Comparison
 | Aspect | Plain | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
 | Files | 1 | 11 | +10 |
-| Lines | 132 | 841 | +709 (+537%) |
-| Tokens | 837 | 5358 | +4521 (+540%) |
-| Robustness | 48 | 83 | +35 |
+| Lines | 138 | 860 | +722 (+523%) |
+| Tokens | 928 | 5723 | +4795 (+517%) |
+| Robustness | 49 | 100 | +51 |
 
 #### File Details
 
 **Plain files:**
-- `plain/main.go`: 132 lines, ~837 tokens
+- `plain/main.go`: 138 lines, ~928 tokens
 
 **Skill-guided files:**
-- `skill-guided/cmd/server/app.go`: 37 lines, ~212 tokens
-- `skill-guided/cmd/server/main.go`: 47 lines, ~254 tokens
-- `skill-guided/internal/cache/cache.go`: 68 lines, ~339 tokens
-- `skill-guided/internal/handler/user.go`: 96 lines, ~706 tokens
-- `skill-guided/internal/middleware/middleware.go`: 27 lines, ~158 tokens
-- `skill-guided/internal/model/user.go`: 21 lines, ~94 tokens
-- `skill-guided/internal/repository/user.go`: 80 lines, ~437 tokens
-- `skill-guided/tests/cache_test.go`: 47 lines, ~270 tokens
-- `skill-guided/tests/handler_test.go`: 296 lines, ~2058 tokens
-- `skill-guided/tests/model_test.go`: 35 lines, ~240 tokens
-- `skill-guided/tests/repository_test.go`: 87 lines, ~590 tokens
+- `skill-guided/cmd/server/app.go`: 39 lines, ~219 tokens
+- `skill-guided/cmd/server/main.go`: 9 lines, ~37 tokens
+- `skill-guided/internal/cache/cache.go`: 58 lines, ~273 tokens
+- `skill-guided/internal/handler/user.go`: 121 lines, ~788 tokens
+- `skill-guided/internal/middleware/middleware.go`: 26 lines, ~139 tokens
+- `skill-guided/internal/model/user.go`: 39 lines, ~179 tokens
+- `skill-guided/internal/repository/user.go`: 90 lines, ~549 tokens
+- `skill-guided/tests/cache_test.go`: 48 lines, ~283 tokens
+- `skill-guided/tests/handler_test.go`: 239 lines, ~1834 tokens
+- `skill-guided/tests/model_test.go`: 81 lines, ~642 tokens
+- `skill-guided/tests/repository_test.go`: 110 lines, ~780 tokens
 
 **Test Output:**
 ```
@@ -200,7 +201,7 @@ Ran all test suites.
 === RUN   TestCacheDelete
 --- PASS: TestCacheDelete (0.00s)
 === RUN   TestCacheExpiration
---- PASS: TestCacheExpiration (0.10s)
+--- PASS: TestCacheExpiration (0.20s)
 === RUN   TestHealth
 --- PASS: TestHealth (0.00s)
 === RUN   TestCreateUser
@@ -234,9 +235,21 @@ Ran all test suites.
 === RUN   TestUserModel
 --- PASS: TestUserModel (0.00s)
 === RUN   TestCreateUserRequest
+=== RUN   TestCreateUserRequest/valid
+=== RUN   TestCreateUserRequest/missing_username
+=== RUN   TestCreateUserRequest/missing_password
 --- PASS: TestCreateUserRequest (0.00s)
+    --- PASS: TestCreateUserRequest/valid (0.00s)
+    --- PASS: TestCreateUserRequest/missing_username (0.00s)
+    --- PASS: TestCreateUserRequest/missing_password (0.00s)
 === RUN   TestUpdateUserRequest
+=== RUN   TestUpdateUserRequest/valid
+=== RUN   TestUpdateUserRequest/missing_username
+=== RUN   TestUpdateUserRequest/missing_password
 --- PASS: TestUpdateUserRequest (0.00s)
+    --- PASS: TestUpdateUserRequest/valid (0.00s)
+    --- PASS: TestUpdateUserRequest/missing_username (0.00s)
+    --- PASS: TestUpdateUserRequest/missing_password (0.00s)
 === RUN   TestErrorResponse
 --- PASS: TestErrorResponse (0.00s)
 === RUN   TestRepositoryCreate
@@ -264,27 +277,27 @@ ok  	go-login-crud-skill/tests	(cached)
 ## Aggregate Analysis
 
 ### Token Overhead
-Skill-guided approach uses ~+291% more tokens (6200 total).
+Skill-guided approach uses ~+326% more tokens (7043 total).
 
 ### Robustness Assessment
 
 | Approach | Avg Robustness | Description |
 |----------|:-:|---|
-| Plain    | 37/100 | Minimal structure, no formal testing, no defensive coding |
-| Guided   | 83/100 | Typed, security-aware, error-handling, tested |
+| Plain    | 32/100 | Minimal structure, no formal testing, no defensive coding |
+| Guided   | 84/100 | Typed, security-aware, error-handling, tested |
 
 ### Feature Presence (projects with feature)
 
 | Feature | Plain | Guided |
 |---------|:-:|:-:|
 | Typing / Interfaces | 2/3 | 3/3 |
-| Security (auth, hash, rate-limit) | 0/3 | 1/3 |
-| Error handling | 2/3 | 2/3 |
+| Security (auth, hash, rate-limit) | 1/3 | 2/3 |
+| Error handling | 0/3 | 1/3 |
 | Test assertions | 0/3 | 3/3 |
 
 ### Key Findings
 
-1. **Token Cost of Rigour**: Skill-guided code is ~291% larger in token
+1. **Token Cost of Rigour**: Skill-guided code is ~326% larger in token
    count but provides comprehensive defensive engineering, test coverage, and
    architectural separation of concerns.
 2. **Test Coverage**: Plain implementations have zero formal tests. Skill-guided

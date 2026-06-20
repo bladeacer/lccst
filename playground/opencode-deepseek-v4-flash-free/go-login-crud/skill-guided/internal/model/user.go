@@ -1,21 +1,39 @@
 package model
 
+import "errors"
+
 type User struct {
-	ID    int    `json:"id"`
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Password string `json:"-"`
 }
 
 type CreateUserRequest struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type UpdateUserRequest struct {
-	Name  *string `json:"name,omitempty"`
-	Email *string `json:"email,omitempty"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
-type ErrorResponse struct {
-	Error string `json:"error"`
+func (r *CreateUserRequest) Validate() error {
+	if r.Username == "" {
+		return errors.New("username is required")
+	}
+	if r.Password == "" {
+		return errors.New("password is required")
+	}
+	return nil
+}
+
+func (r *UpdateUserRequest) Validate() error {
+	if r.Username == "" {
+		return errors.New("username is required")
+	}
+	if r.Password == "" {
+		return errors.New("password is required")
+	}
+	return nil
 }

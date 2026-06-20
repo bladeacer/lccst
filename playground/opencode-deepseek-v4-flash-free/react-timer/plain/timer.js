@@ -1,36 +1,45 @@
+let display = document.getElementById("display");
+let startBtn = document.getElementById("startBtn");
+let stopBtn = document.getElementById("stopBtn");
+let resetBtn = document.getElementById("resetBtn");
+
+let startTime = 0;
+let running = false;
+let interval = null;
+
 function formatTime(seconds) {
-  const m = Math.floor(seconds / 60);
-  const s = (seconds % 60).toFixed(1);
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(4, "0")}`;
+  let mins = Math.floor(seconds / 60);
+  let secs = seconds % 60;
+  let tenths = Math.floor((seconds - Math.floor(seconds)) * 10);
+  return String(mins).padStart(2, "0") + ":" + String(secs).padStart(2, "0") + "." + tenths;
 }
 
-function createTimer() {
-  let seconds = 0;
-  let interval = null;
-  const listeners = [];
+function updateDisplay() {
+  let elapsed = (Date.now() - startTime) / 1000;
+  display.textContent = formatTime(elapsed);
+}
 
-  function notify() {
-    const val = formatTime(seconds);
-    listeners.forEach(fn => fn(val));
+startBtn.addEventListener("click", function() {
+  if (!running) {
+    running = true;
+    startTime = Date.now();
+    interval = setInterval(updateDisplay, 100);
   }
+});
 
-  return {
-    start() {
-      if (interval) return;
-      interval = setInterval(() => { seconds += 0.1; notify(); }, 100);
-    },
-    stop() {
-      clearInterval(interval);
-      interval = null;
-    },
-    reset() {
-      this.stop();
-      seconds = 0;
-      notify();
-    },
-    getSeconds() { return seconds; },
-    onUpdate(fn) { listeners.push(fn); },
-  };
-}
+stopBtn.addEventListener("click", function() {
+  if (running) {
+    running = false;
+    clearInterval(interval);
+    interval = null;
+  }
+});
 
-if (typeof module !== "undefined") module.exports = { formatTime, createTimer };
+resetBtn.addEventListener("click", function() {
+  running = false;
+  if (interval) {
+    clearInterval(interval);
+    interval = null;
+  }
+  display.textContent = "00:00.0";
+});

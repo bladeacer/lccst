@@ -177,29 +177,8 @@ global behavioural configuration field:
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| Node.js | >= 18 | Running the LCCST MCP server |
 | pnpm | >= 9 | Package manager (engine + playground Node projects) |
 | TypeScript | >= 5.4 | Compiling engine source |
-| Python | >= 3.10 | Running playground benchmarks |
-| Go | >= 1.21 | Reference project in playground |
-| uv | >= 0.4 | Python package manager (benchmark + playground project deps) |
-
-### Compile the Engine
-
-```bash
-pnpm install
-pnpm run build
-```
-
-### Run the Playground Benchmark
-
-```bash
-# Install benchmark Python deps (tiktoken for accurate token counting)
-cd playground/benchmarks && uv sync && cd ../..
-
-# Run the benchmark
-python3 playground/benchmarks/run_benchmark.py opencode-deepseek-v4-flash-free --install-deps
-```
 
 ## LLM Usage Disclosure
 
