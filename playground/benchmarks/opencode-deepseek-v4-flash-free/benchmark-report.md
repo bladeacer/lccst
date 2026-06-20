@@ -12,9 +12,9 @@
 
 | Metric | Plain (no skill) | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
-| Total files | 4 | 15 | +11 |
-| Total lines | 302 | 1312 | +1010 |
-| Estimated tokens | 2160 | 9203 | +7043 (+326%) |
+| Total files | 3 | 12 | +9 |
+| Total lines | 339 | 926 | +587 |
+| Estimated tokens | 2288 | 6444 | +4156 (+182%) |
 
 ## Per-Project Breakdown
 
@@ -22,37 +22,37 @@
 
 #### Plain Implementation
 - Files: 1
-- Lines: 104
-- Chars: 4161
-- Tokens: 857
+- Lines: 80
+- Chars: 2503
+- Tokens: 615
 - Robustness Score: 32/100
 - Features: typing=True, security=False, error_handling=False
 
 #### Skill-Guided Implementation
 - Files: 2
-- Lines: 311
-- Chars: 10911
-- Tokens: 2574
-- Robustness Score: 84/100
-- Features: typing=True, security=True, error_handling=False
+- Lines: 249
+- Chars: 8264
+- Tokens: 2039
+- Robustness Score: 100/100
+- Features: typing=True, security=True, error_handling=True
 - Tests Passed: YES
 
 #### Comparison
 | Aspect | Plain | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
 | Files | 1 | 2 | +1 |
-| Lines | 104 | 311 | +207 (+199%) |
-| Tokens | 857 | 2574 | +1717 (+200%) |
-| Robustness | 32 | 84 | +52 |
+| Lines | 80 | 249 | +169 (+211%) |
+| Tokens | 615 | 2039 | +1424 (+232%) |
+| Robustness | 32 | 100 | +68 |
 
 #### File Details
 
 **Plain files:**
-- `plain/server.py`: 104 lines, ~857 tokens
+- `plain/server.py`: 80 lines, ~615 tokens
 
 **Skill-guided files:**
-- `skill-guided/server.py`: 172 lines, ~1495 tokens
-- `skill-guided/tests/test_server.py`: 139 lines, ~1079 tokens
+- `skill-guided/server.py`: 132 lines, ~1054 tokens
+- `skill-guided/tests/test_server.py`: 117 lines, ~985 tokens
 
 **Test Output:**
 ```
@@ -61,22 +61,21 @@ platform linux -- Python 3.13.11, pytest-9.1.1, pluggy-1.6.0 -- /home/data/Deskt
 cachedir: .pytest_cache
 rootdir: /home/data/Desktop/projects/lccst/playground/opencode-deepseek-v4-flash-free/python-http-server/skill-guided
 configfile: pyproject.toml
-collecting ... collected 12 items
+collecting ... collected 11 items
 
-tests/test_server.py::TestHealth::test_health PASSED                     [  8%]
-tests/test_server.py::TestCreateUser::test_create_user PASSED            [ 16%]
-tests/test_server.py::TestCreateUser::test_create_user_invalid_email PASSED [ 25%]
-tests/test_server.py::TestCreateUser::test_create_user_invalid_json PASSED [ 33%]
-tests/test_server.py::TestCreateUser::test_create_user_missing_fields PASSED [ 41%]
-tests/test_server.py::TestListUsers::test_list_users PASSED              [ 50%]
-tests/test_server.py::TestUpdateUser::test_update_invalid_id PASSED      [ 58%]
-tests/test_server.py::TestUpdateUser::test_update_user PASSED            [ 66%]
-tests/test_server.py::TestUpdateUser::test_update_user_not_found PASSED  [ 75%]
-tests/test_server.py::TestDeleteUser::test_delete_user PASSED            [ 83%]
-tests/test_server.py::TestDeleteUser::test_delete_user_not_found PASSED  [ 91%]
-tests/test_server.py::TestNotFound::test_404 PASSED                      [100%]
+tests/test_server.py::test_create_user PASSED                            [  9%]
+tests/test_server.py::test_create_user_missing_fields PASSED             [ 18%]
+tests/test_server.py::test_create_user_invalid_email PASSED              [ 27%]
+tests/test_server.py::test_get_user PASSED                               [ 36%]
+tests/test_server.py::test_get_user_not_found PASSED                     [ 45%]
+tests/test_server.py::test_update_user PASSED                            [ 54%]
+tests/test_server.py::test_delete_user PASSED                            [ 63%]
+tests/test_server.py::test_list_users PASSED                             [ 72%]
+tests/test_server.py::test_email_regex_valid PASSED                      [ 81%]
+tests/test_server.py::test_email_regex_invalid PASSED                    [ 90%]
+tests/test_server.py::test_rate_limiter_disabled PASSED                  [100%]
 
-============================== 12 passed in 3.36s ==============================
+============================== 11 passed in 0.59s ==============================
 
 ```
 
@@ -84,18 +83,18 @@ tests/test_server.py::TestNotFound::test_404 PASSED                      [100%]
 ### react-timer
 
 #### Plain Implementation
-- Files: 2
-- Lines: 60
-- Chars: 1454
-- Tokens: 375
+- Files: 1
+- Lines: 69
+- Chars: 1642
+- Tokens: 465
 - Robustness Score: 15/100
 - Features: typing=False, security=False, error_handling=False
 
 #### Skill-Guided Implementation
 - Files: 2
-- Lines: 141
-- Chars: 3414
-- Tokens: 906
+- Lines: 30
+- Chars: 1014
+- Tokens: 252
 - Robustness Score: 67/100
 - Features: typing=True, security=False, error_handling=False
 - Tests Passed: YES
@@ -103,45 +102,30 @@ tests/test_server.py::TestNotFound::test_404 PASSED                      [100%]
 #### Comparison
 | Aspect | Plain | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
-| Files | 2 | 2 | +0 |
-| Lines | 60 | 141 | +81 (+135%) |
-| Tokens | 375 | 906 | +531 (+142%) |
+| Files | 1 | 2 | +1 |
+| Lines | 69 | 30 | +-39 (-57%) |
+| Tokens | 465 | 252 | +-213 (-46%) |
 | Robustness | 15 | 67 | +52 |
 
 #### File Details
 
 **Plain files:**
-- `plain/index.html`: 15 lines, ~96 tokens
-- `plain/timer.js`: 45 lines, ~279 tokens
+- `plain/index.html`: 69 lines, ~465 tokens
 
 **Skill-guided files:**
-- `skill-guided/src/timer.tsx`: 61 lines, ~414 tokens
-- `skill-guided/tests/timer.test.tsx`: 80 lines, ~492 tokens
+- `skill-guided/src/TimerDisplay.tsx`: 10 lines, ~66 tokens
+- `skill-guided/tests/TimerDisplay.test.tsx`: 20 lines, ~186 tokens
 
 **Test Errors:**
 ```
 npm warn Unknown project config "allow-builds". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
-PASS tests/timer.test.tsx
-  formatTime
-    ✓ formats zero (1 ms)
-    ✓ formats seconds correctly
-    ✓ formats minutes and seconds
-    ✓ handles decimal seconds (1 ms)
-  Timer
-    ✓ starts at zero
-    ✓ start() makes it running
-    ✓ stop() makes it not running
-    ✓ stop() on stopped timer is safe (1 ms)
-    ✓ reset() stops and zeros
-    ✓ fires onUpdate when time changes (102 ms)
-    ✓ multiple starts are idempotent
-  TimerDisplay
-    ✓ renders initial time (17 ms)
+PASS tests/TimerDisplay.test.tsx
+PASS tests/timer.test.ts
 
-Test Suites: 1 passed, 1 total
-Tests:       12 passed, 12 total
+Test Suites: 2 passed, 2 total
+Tests:       13 passed, 13 total
 Snapshots:   0 total
-Time:        1.099 s, estimated 2 s
+Time:        1.064 s
 Ran all test suites.
 
 ```
@@ -151,17 +135,17 @@ Ran all test suites.
 
 #### Plain Implementation
 - Files: 1
-- Lines: 138
-- Chars: 3488
-- Tokens: 928
-- Robustness Score: 49/100
-- Features: typing=True, security=True, error_handling=False
+- Lines: 190
+- Chars: 4444
+- Tokens: 1208
+- Robustness Score: 65/100
+- Features: typing=True, security=True, error_handling=True
 
 #### Skill-Guided Implementation
-- Files: 11
-- Lines: 860
-- Chars: 21960
-- Tokens: 5723
+- Files: 8
+- Lines: 647
+- Chars: 15542
+- Tokens: 4153
 - Robustness Score: 100/100
 - Features: typing=True, security=True, error_handling=True
 - Tests Passed: YES
@@ -169,107 +153,66 @@ Ran all test suites.
 #### Comparison
 | Aspect | Plain | Skill-Guided | Delta |
 |--------|:-:|:-:|:-:|
-| Files | 1 | 11 | +10 |
-| Lines | 138 | 860 | +722 (+523%) |
-| Tokens | 928 | 5723 | +4795 (+517%) |
-| Robustness | 49 | 100 | +51 |
+| Files | 1 | 8 | +7 |
+| Lines | 190 | 647 | +457 (+241%) |
+| Tokens | 1208 | 4153 | +2945 (+244%) |
+| Robustness | 65 | 100 | +35 |
 
 #### File Details
 
 **Plain files:**
-- `plain/main.go`: 138 lines, ~928 tokens
+- `plain/main.go`: 190 lines, ~1208 tokens
 
 **Skill-guided files:**
-- `skill-guided/cmd/server/app.go`: 39 lines, ~219 tokens
-- `skill-guided/cmd/server/main.go`: 9 lines, ~37 tokens
-- `skill-guided/internal/cache/cache.go`: 58 lines, ~273 tokens
-- `skill-guided/internal/handler/user.go`: 121 lines, ~788 tokens
-- `skill-guided/internal/middleware/middleware.go`: 26 lines, ~139 tokens
-- `skill-guided/internal/model/user.go`: 39 lines, ~179 tokens
-- `skill-guided/internal/repository/user.go`: 90 lines, ~549 tokens
-- `skill-guided/tests/cache_test.go`: 48 lines, ~283 tokens
-- `skill-guided/tests/handler_test.go`: 239 lines, ~1834 tokens
-- `skill-guided/tests/model_test.go`: 81 lines, ~642 tokens
-- `skill-guided/tests/repository_test.go`: 110 lines, ~780 tokens
+- `skill-guided/cmd/server/main.go`: 38 lines, ~223 tokens
+- `skill-guided/internal/handler/handler.go`: 101 lines, ~658 tokens
+- `skill-guided/internal/middleware/middleware.go`: 53 lines, ~309 tokens
+- `skill-guided/internal/model/user.go`: 7 lines, ~30 tokens
+- `skill-guided/internal/repository/repository.go`: 93 lines, ~539 tokens
+- `skill-guided/tests/cache_test.go`: 48 lines, ~288 tokens
+- `skill-guided/tests/handler_test.go`: 188 lines, ~1387 tokens
+- `skill-guided/tests/repository_test.go`: 119 lines, ~719 tokens
 
 **Test Output:**
 ```
-=== RUN   TestCacheSetGet
---- PASS: TestCacheSetGet (0.00s)
-=== RUN   TestCacheGetMissing
---- PASS: TestCacheGetMissing (0.00s)
-=== RUN   TestCacheDelete
---- PASS: TestCacheDelete (0.00s)
-=== RUN   TestCacheExpiration
---- PASS: TestCacheExpiration (0.20s)
-=== RUN   TestHealth
---- PASS: TestHealth (0.00s)
-=== RUN   TestCreateUser
---- PASS: TestCreateUser (0.00s)
-=== RUN   TestCreateUserMissingFields
---- PASS: TestCreateUserMissingFields (0.00s)
-=== RUN   TestListUsers
---- PASS: TestListUsers (0.00s)
-=== RUN   TestUpdateUser
---- PASS: TestUpdateUser (0.00s)
-=== RUN   TestUpdateUserNotFound
---- PASS: TestUpdateUserNotFound (0.00s)
-=== RUN   TestDeleteUser
---- PASS: TestDeleteUser (0.00s)
-=== RUN   TestDeleteUserNotFound
---- PASS: TestDeleteUserNotFound (0.00s)
-=== RUN   TestGetUserByID
---- PASS: TestGetUserByID (0.00s)
-=== RUN   TestGetUserByIDNotFound
---- PASS: TestGetUserByIDNotFound (0.00s)
-=== RUN   TestMethodNotAllowed
---- PASS: TestMethodNotAllowed (0.00s)
-=== RUN   TestInvalidUserID
---- PASS: TestInvalidUserID (0.00s)
-=== RUN   TestInvalidJSON
---- PASS: TestInvalidJSON (0.00s)
-=== RUN   TestInvalidJSONOnUpdate
---- PASS: TestInvalidJSONOnUpdate (0.00s)
-=== RUN   TestNotFound
---- PASS: TestNotFound (0.00s)
-=== RUN   TestUserModel
---- PASS: TestUserModel (0.00s)
-=== RUN   TestCreateUserRequest
-=== RUN   TestCreateUserRequest/valid
-=== RUN   TestCreateUserRequest/missing_username
-=== RUN   TestCreateUserRequest/missing_password
---- PASS: TestCreateUserRequest (0.00s)
-    --- PASS: TestCreateUserRequest/valid (0.00s)
-    --- PASS: TestCreateUserRequest/missing_username (0.00s)
-    --- PASS: TestCreateUserRequest/missing_password (0.00s)
-=== RUN   TestUpdateUserRequest
-=== RUN   TestUpdateUserRequest/valid
-=== RUN   TestUpdateUserRequest/missing_username
-=== RUN   TestUpdateUserRequest/missing_password
---- PASS: TestUpdateUserRequest (0.00s)
-    --- PASS: TestUpdateUserRequest/valid (0.00s)
-    --- PASS: TestUpdateUserRequest/missing_username (0.00s)
-    --- PASS: TestUpdateUserRequest/missing_password (0.00s)
-=== RUN   TestErrorResponse
---- PASS: TestErrorResponse (0.00s)
-=== RUN   TestRepositoryCreate
---- PASS: TestRepositoryCreate (0.00s)
-=== RUN   TestRepositoryGetByID
---- PASS: TestRepositoryGetByID (0.00s)
-=== RUN   TestRepositoryGetByIDNotFound
---- PASS: TestRepositoryGetByIDNotFound (0.00s)
-=== RUN   TestRepositoryGetAll
---- PASS: TestRepositoryGetAll (0.00s)
-=== RUN   TestRepositoryUpdate
---- PASS: TestRepositoryUpdate (0.00s)
-=== RUN   TestRepositoryUpdateNotFound
---- PASS: TestRepositoryUpdateNotFound (0.00s)
-=== RUN   TestRepositoryDelete
---- PASS: TestRepositoryDelete (0.00s)
-=== RUN   TestRepositoryDeleteNotFound
---- PASS: TestRepositoryDeleteNotFound (0.00s)
+=== RUN   TestRateLimiterAllowsUnderLimit
+--- PASS: TestRateLimiterAllowsUnderLimit (0.00s)
+=== RUN   TestRateLimiterBlocksOverLimit
+--- PASS: TestRateLimiterBlocksOverLimit (0.00s)
+=== RUN   TestCreateUserHandler
+--- PASS: TestCreateUserHandler (0.00s)
+=== RUN   TestCreateUserHandlerMissingFields
+--- PASS: TestCreateUserHandlerMissingFields (0.00s)
+=== RUN   TestGetUserHandler
+--- PASS: TestGetUserHandler (0.00s)
+=== RUN   TestGetUserHandlerNotFound
+--- PASS: TestGetUserHandlerNotFound (0.00s)
+=== RUN   TestUpdateUserHandler
+--- PASS: TestUpdateUserHandler (0.00s)
+=== RUN   TestDeleteUserHandler
+--- PASS: TestDeleteUserHandler (0.00s)
+=== RUN   TestLoginHandler
+--- PASS: TestLoginHandler (0.00s)
+=== RUN   TestLoginHandlerInvalid
+--- PASS: TestLoginHandlerInvalid (0.00s)
+=== RUN   TestPasswordNotInJSONResponse
+--- PASS: TestPasswordNotInJSONResponse (0.00s)
+=== RUN   TestCreateAndGet
+--- PASS: TestCreateAndGet (0.00s)
+=== RUN   TestCreateDuplicate
+--- PASS: TestCreateDuplicate (0.00s)
+=== RUN   TestGetNotFound
+--- PASS: TestGetNotFound (0.00s)
+=== RUN   TestUpdate
+--- PASS: TestUpdate (0.00s)
+=== RUN   TestDelete
+--- PASS: TestDelete (0.00s)
+=== RUN   TestLogin
+--- PASS: TestLogin (0.00s)
+=== RUN   TestPasswordNotLeakedInJSON
+--- PASS: TestPasswordNotLeakedInJSON (0.00s)
 PASS
-ok  	go-login-crud-skill/tests	(cached)
+ok  	go-login-crud/tests	0.003s
 
 ```
 
@@ -277,14 +220,14 @@ ok  	go-login-crud-skill/tests	(cached)
 ## Aggregate Analysis
 
 ### Token Overhead
-Skill-guided approach uses ~+326% more tokens (7043 total).
+Skill-guided approach uses ~+182% more tokens (4156 total).
 
 ### Robustness Assessment
 
 | Approach | Avg Robustness | Description |
 |----------|:-:|---|
-| Plain    | 32/100 | Minimal structure, no formal testing, no defensive coding |
-| Guided   | 84/100 | Typed, security-aware, error-handling, tested |
+| Plain    | 37/100 | Minimal structure, no formal testing, no defensive coding |
+| Guided   | 89/100 | Typed, security-aware, error-handling, tested |
 
 ### Feature Presence (projects with feature)
 
@@ -292,12 +235,12 @@ Skill-guided approach uses ~+326% more tokens (7043 total).
 |---------|:-:|:-:|
 | Typing / Interfaces | 2/3 | 3/3 |
 | Security (auth, hash, rate-limit) | 1/3 | 2/3 |
-| Error handling | 0/3 | 1/3 |
-| Test assertions | 0/3 | 3/3 |
+| Error handling | 1/3 | 2/3 |
+| Test assertions | 1/3 | 3/3 |
 
 ### Key Findings
 
-1. **Token Cost of Rigour**: Skill-guided code is ~326% larger in token
+1. **Token Cost of Rigour**: Skill-guided code is ~182% larger in token
    count but provides comprehensive defensive engineering, test coverage, and
    architectural separation of concerns.
 2. **Test Coverage**: Plain implementations have zero formal tests. Skill-guided
