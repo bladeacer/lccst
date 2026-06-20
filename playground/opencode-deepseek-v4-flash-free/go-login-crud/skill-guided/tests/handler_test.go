@@ -7,182 +7,202 @@ import (
 	"strings"
 	"testing"
 
-	"go-login-crud/internal/handler"
-	"go-login-crud/internal/repository"
+	"login-crud/internal/cache"
+	"login-crud/internal/handler"
+	"login-crud/internal/repository"
 )
 
-func setupHandler() *handler.UserHandler {
-	return handler.NewUserHandler(repository.NewInMemory())
+func newTestHandler() *handler.UserHandler {
+	repo := repository.NewInMemoryUserRepo()
+	c := cache.NewInMemoryUserCache()
+	return handler.NewUserHandler(repo, c)
 }
 
-func TestCreateUserHandler(t *testing.T) {
-	h := setupHandler()
-	body := `{"username":"testuser","password":"testpass"}`
-	req := httptest.NewRequest("POST", "/users", strings.NewReader(body))
-	rec := httptest.NewRecorder()
-	h.Create(rec, req)
+func request(h *handler.UserHandler, method, path, body string) *httptest.ResponseRecorder {
+	var req *http.Request
+	req = httptest.NewRequest(method, path, strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
 
-	if rec.Code != http.StatusCreated {
-		t.Errorf("expected 201, got %d", rec.Code)
+	// Extract path values for pattern matching
+	if strings.HasPrefix(path, "/users/") {
+		idStr := strings.TrimPrefix(path, "/users/")
+		req.SetPathValue("id", idStr)
 	}
 
-	var resp map[string]any
-	json.NewDecoder(rec.Body).Decode(&resp)
-	if resp["username"] != "testuser" {
-		t.Errorf("expected username testuser, got %v", resp["username"])
+	w := httptest.NewRecorder()
+
+	// Route manually based on method + path
+	switch {
+	case method == "POST" && path == "/register":
+		h.Register(w, req)
+	case method == "POST" && path == "/login":
+		h.Login(w, req)
+	case method == "GET" && path == "/users":
+		h.ListUsers(w, req)
+	case method == "GET" && strings.HasPrefix(path, "/users/"):
+		h.GetUser(w, req)
+	case method == "PUT" && strings.HasPrefix(path, "/users/"):
+		h.UpdateUser(w, req)
+	case method == "DELETE" && strings.HasPrefix(path, "/users/"):
+		h.DeleteUser(w, req)
+	default:
+		w.WriteHeader(http.StatusNotFound)
 	}
-	if _, ok := resp["password"]; ok {
-		t.Error("password field should not appear in JSON response")
-	}
+	return w
 }
 
-func TestCreateUserHandlerMissingFields(t *testing.T) {
-	h := setupHandler()
-	body := `{"username":""}`
-	req := httptest.NewRequest("POST", "/users", strings.NewReader(body))
-	rec := httptest.NewRecorder()
-	h.Create(rec, req)
-
-	if rec.Code != http.StatusBadRequest {
-		t.Errorf("expected 400, got %d", rec.Code)
+func parseBody(t *testing.T, w *httptest.ResponseRecorder) map[string]interface{} {
+	t.Helper()
+	var m map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &m)
+	if err != nil {
+		t.Fatalf("failed to parse response body: %v", err)
 	}
+	return m
 }
 
-func TestGetUserHandler(t *testing.T) {
-	h := setupHandler()
-	createBody := `{"username":"alice","password":"pass"}`
-	creq := httptest.NewRequest("POST", "/users", strings.NewReader(createBody))
-	crec := httptest.NewRecorder()
-	h.Create(crec, creq)
-
-	var created map[string]any
-	json.NewDecoder(crec.Body).Decode(&created)
-	id := created["id"].(string)
-
-	req := httptest.NewRequest("GET", "/users/"+id, nil)
-	req.SetPathValue("id", id)
-	rec := httptest.NewRecorder()
-	h.Get(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", rec.Code)
+func TestRegisterUser(t *testing.T) {
+	h := newTestHandler()
+	w := request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", w.Code)
 	}
-
-	var resp map[string]any
-	json.NewDecoder(rec.Body).Decode(&resp)
-	if resp["username"] != "alice" {
-		t.Errorf("expected username alice, got %v", resp["username"])
+	body := parseBody(t, w)
+	if body["username"] != "alice" {
+		t.Errorf("expected username alice, got %v", body["username"])
 	}
 }
 
-func TestGetUserHandlerNotFound(t *testing.T) {
-	h := setupHandler()
-	req := httptest.NewRequest("GET", "/users/nonexistent", nil)
-	req.SetPathValue("id", "nonexistent")
-	rec := httptest.NewRecorder()
-	h.Get(rec, req)
-
-	if rec.Code != http.StatusNotFound {
-		t.Errorf("expected 404, got %d", rec.Code)
+func TestRegisterDuplicateUsername(t *testing.T) {
+	h := newTestHandler()
+	request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
+	w := request(h, "POST", "/register", `{"username":"alice","password":"other"}`)
+	if w.Code != http.StatusConflict {
+		t.Errorf("expected 409, got %d", w.Code)
 	}
 }
 
-func TestUpdateUserHandler(t *testing.T) {
-	h := setupHandler()
-	createBody := `{"username":"bob","password":"pass"}`
-	creq := httptest.NewRequest("POST", "/users", strings.NewReader(createBody))
-	crec := httptest.NewRecorder()
-	h.Create(crec, creq)
-
-	var created map[string]any
-	json.NewDecoder(crec.Body).Decode(&created)
-	id := created["id"].(string)
-
-	updateBody := `{"username":"bob_updated"}`
-	ureq := httptest.NewRequest("PUT", "/users/"+id, strings.NewReader(updateBody))
-	ureq.SetPathValue("id", id)
-	urec := httptest.NewRecorder()
-	h.Update(urec, ureq)
-
-	if urec.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", urec.Code)
+func TestLoginSuccess(t *testing.T) {
+	h := newTestHandler()
+	request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
+	w := request(h, "POST", "/login", `{"username":"alice","password":"secret"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
 	}
-
-	var resp map[string]any
-	json.NewDecoder(urec.Body).Decode(&resp)
-	if resp["username"] != "bob_updated" {
-		t.Errorf("expected username bob_updated, got %v", resp["username"])
+	body := parseBody(t, w)
+	if body["message"] != "login successful" {
+		t.Errorf("unexpected message: %v", body["message"])
 	}
 }
 
-func TestDeleteUserHandler(t *testing.T) {
-	h := setupHandler()
-	createBody := `{"username":"carol","password":"pass"}`
-	creq := httptest.NewRequest("POST", "/users", strings.NewReader(createBody))
-	crec := httptest.NewRecorder()
-	h.Create(crec, creq)
-
-	var created map[string]any
-	json.NewDecoder(crec.Body).Decode(&created)
-	id := created["id"].(string)
-
-	dreq := httptest.NewRequest("DELETE", "/users/"+id, nil)
-	dreq.SetPathValue("id", id)
-	drec := httptest.NewRecorder()
-	h.Delete(drec, dreq)
-
-	if drec.Code != http.StatusNoContent {
-		t.Errorf("expected 204, got %d", drec.Code)
+func TestLoginInvalidCredentials(t *testing.T) {
+	h := newTestHandler()
+	request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
+	w := request(h, "POST", "/login", `{"username":"alice","password":"wrong"}`)
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("expected 401, got %d", w.Code)
 	}
 }
 
-func TestLoginHandler(t *testing.T) {
-	h := setupHandler()
-	createBody := `{"username":"dave","password":"secret"}`
-	creq := httptest.NewRequest("POST", "/users", strings.NewReader(createBody))
-	crec := httptest.NewRecorder()
-	h.Create(crec, creq)
-
-	loginBody := `{"username":"dave","password":"secret"}`
-	lreq := httptest.NewRequest("POST", "/login", strings.NewReader(loginBody))
-	lrec := httptest.NewRecorder()
-	h.Login(lrec, lreq)
-
-	if lrec.Code != http.StatusOK {
-		t.Errorf("expected 200, got %d", lrec.Code)
+func TestListUsers(t *testing.T) {
+	h := newTestHandler()
+	request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
+	request(h, "POST", "/register", `{"username":"bob","password":"pass"}`)
+	w := request(h, "GET", "/users", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var users []map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &users)
+	if err != nil {
+		t.Fatalf("failed to parse users list: %v", err)
+	}
+	if len(users) != 2 {
+		t.Errorf("expected 2 users, got %d", len(users))
 	}
 }
 
-func TestLoginHandlerInvalid(t *testing.T) {
-	h := setupHandler()
-	createBody := `{"username":"dave","password":"secret"}`
-	creq := httptest.NewRequest("POST", "/users", strings.NewReader(createBody))
-	crec := httptest.NewRecorder()
-	h.Create(crec, creq)
+func TestGetUser(t *testing.T) {
+	h := newTestHandler()
+	request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
 
-	loginBody := `{"username":"dave","password":"wrong"}`
-	lreq := httptest.NewRequest("POST", "/login", strings.NewReader(loginBody))
-	lrec := httptest.NewRecorder()
-	h.Login(lrec, lreq)
-
-	if lrec.Code != http.StatusUnauthorized {
-		t.Errorf("expected 401, got %d", lrec.Code)
+	w := request(h, "GET", "/users/1", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	body := parseBody(t, w)
+	if body["username"] != "alice" {
+		t.Errorf("expected username alice, got %v", body["username"])
 	}
 }
 
-func TestPasswordNotInJSONResponse(t *testing.T) {
-	repo := repository.NewInMemory()
-	repo.Create("frank", "secret")
-	h2 := handler.NewUserHandler(repo)
+func TestGetUserNotFound(t *testing.T) {
+	h := newTestHandler()
+	w := request(h, "GET", "/users/999", "")
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+}
 
-	createBody := `{"username":"frank","password":"secret"}`
-	req := httptest.NewRequest("POST", "/users", strings.NewReader(createBody))
-	rec := httptest.NewRecorder()
-	h2.Create(rec, req)
+func TestUpdateUser(t *testing.T) {
+	h := newTestHandler()
+	request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
+	w := request(h, "PUT", "/users/1", `{"username":"bob"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	body := parseBody(t, w)
+	if body["username"] != "bob" {
+		t.Errorf("expected username bob, got %v", body["username"])
+	}
+}
 
-	var resp map[string]any
-	json.NewDecoder(rec.Body).Decode(&resp)
-	if _, ok := resp["password"]; ok {
-		t.Error("password key should not appear in JSON response")
+func TestDeleteUser(t *testing.T) {
+	h := newTestHandler()
+	request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
+	w := request(h, "DELETE", "/users/1", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	body := parseBody(t, w)
+	if body["deleted"] != true {
+		t.Errorf("expected deleted true, got %v", body["deleted"])
+	}
+}
+
+func TestDeleteUserNotFound(t *testing.T) {
+	h := newTestHandler()
+	w := request(h, "DELETE", "/users/999", "")
+	if w.Code != http.StatusNotFound {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestPasswordNotExposedInJSON(t *testing.T) {
+	h := newTestHandler()
+	w := request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("expected 201, got %d", w.Code)
+	}
+	body := parseBody(t, w)
+	if _, exists := body["password"]; exists {
+		t.Error("password field should not be present in JSON response")
+	}
+}
+
+func TestUserJSONMarshallingHidesPassword(t *testing.T) {
+	repo := repository.NewInMemoryUserRepo()
+	c := cache.NewInMemoryUserCache()
+	h := handler.NewUserHandler(repo, c)
+	request(h, "POST", "/register", `{"username":"alice","password":"secret"}`)
+
+	w := request(h, "GET", "/users/1", "")
+	var raw map[string]interface{}
+	err := json.Unmarshal(w.Body.Bytes(), &raw)
+	if err != nil {
+		t.Fatalf("failed to parse: %v", err)
+	}
+	if _, exists := raw["password"]; exists {
+		t.Error("password key must not appear in JSON output")
 	}
 }

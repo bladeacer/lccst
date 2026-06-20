@@ -67,7 +67,8 @@ infrastructure configuration. Do not alter, upgrade, or dynamically modify globa
 * **Node.js / TS Environment:** Engine: Node.js >= 18, pnpm >= 11.3.0. Typings are pre-cached.
   Invoke testing via `pnpm test`. Never run bare global installations.
 * **Python Environment:** Version 3.13.11, Manager: uv >= 0.4. Run tests exclusively via `uv run
-  pytest`. Virtual environments are kept hermetic.
+  pytest`. Virtual environments are kept hermetic. Note that the system `python3` binary defaults to
+  3.14.5; always use `uv run python3` to lock to the 3.13.11 `.venv` version.
 
 ### Automated Grading Matrix (The Rubric)
 The benchmarking engine runs static file analyses to calculate the final Robustness Score.
@@ -98,7 +99,10 @@ Where `<agent-tag>` matches the agent directory name, e.g.:
 python3 playground/benchmarks/run_benchmark.py opencode-deepseek-v4-flash-free --install-deps
 ```
 
-The `--install-deps` flag installs dependencies (pnpm for React timer) before benchmarking.
+The `--install-deps` flag installs dependencies (npm, not pnpm, for React timer) before benchmarking.
+Post-install, test commands (`npx --no-install jest`) resolve from `node_modules/.bin`. The
+`allow-builds=unrs-resolver` `.npmrc` directive is ignored by npm; pre-install with `pnpm install`
+if pnpm-specific build approval is needed.
 
 ### What Gets Measured
 
@@ -233,6 +237,7 @@ configurations.
 | TimerDisplay double-render via useState | Component wraps time in state, causing initial render to show stale `0` | Render `formatTime(time)` directly from props. Remove local state. |
 | jest-dom v6 `toHaveTextContent` ts-jest type error | ts-jest diagnostics fail: `Property toHaveTextContent does not exist` | Assert on `.textContent` property instead: `expect(el.textContent).toBe("...")`. |
 | Benchmark under-counts guided source files | Scanner picks only `.ts`/`.tsx` source and `.test.ts`/`.test.tsx` test files; config files (package.json, tsconfig, jest.config, .npmrc) are invisible to metrics | Place all functional source under `src/` and all tests under `tests/` with correct extensions. Config-only files do not count toward robustness. |
+| `.ts` extension blindness for feature detection | Pure `.ts` utility modules (`Timer.ts`, `formatTime.ts`) are invisible to the benchmark scanner, which only matches `skill-guided/src/*.tsx` and `skill-guided/tests/*.tsx` | Give all source and test files the `.tsx` extension even if they contain no JSX. Feature detection (typing, error handling) only scans matched files. |
 
 ### Python uv & Test Isolation Constraints
 
@@ -261,6 +266,7 @@ rate-limiter mocking strategy, and email regex false positives.
 | `DISABLE_RATE_LIMIT` env var not visible at import time | Setting env var inside a test function/fixture is too late: module-level code reads `os.environ` at import | Set `os.environ["DISABLE_RATE_LIMIT"] = "1"` at the TOP of the test file, before the server import, then use `# noqa: E402` on the import line. |
 | Server fixture not consumed by test functions | Test suite defines a session-scoped `server` fixture that starts the HTTP server, but tests call `urlopen()` directly without accepting the fixture parameter — server never starts | Every test function that makes HTTP requests must accept the `server_url` fixture as a parameter. The fixture must bind to port 0 (dynamic allocation) and report the assigned port back. |
 | Module-level state shared between test thread and server thread | The `users` dict is cleared by an autouse fixture, but the server thread holds the same module reference — shared mutable state causes flaky ordering if `clear_users` runs mid-request | The autouse fixture clears `users` before each test via `users.clear()`. This works only when server and test run in the same process (thread-based server). Do NOT fork a subprocess for the server. |
+| `python3` version mismatch with clean-room spec | `python3 --version` reports 3.14.5 but the clean-room env specifies 3.13.11. Running `pytest` directly (not via `uv run`) picks the wrong interpreter | Always invoke tests via `uv run python3 -m pytest ...`. The `uv run` prefix locks execution to the 3.13.11 `.venv` interpreter created by `uv sync`. |
 
 ### Go Module Layout & Test Isolation Constraints
 
@@ -288,6 +294,7 @@ When executing the Go Login CRUD subproject, agents loop on `package main` impor
 | Cached test results hide fixes | `go test ./tests/ -v` returns cached PASS after code changes | Append `-count=1` to force uncached execution: `go test ./tests/ -v -count=1`. |
 | Module path mismatch across files | One internal file imports path with wrong layout or missing prefixes | Audit all import statements to match the single module path declared in `go.mod`. |
 | `httptest.NewRequest` + `SetPathValue` not called for path parameters | Handler uses `r.PathValue("id")` which returns empty string if path value not set on the test request | Call `req.SetPathValue("id", "...")` after constructing the test request when using Go 1.22+ routing patterns. |
+| Benchmark error-handling regex does not match `if err := ...; err != nil` | The benchmark scans for the contiguous substring `if\s+err\s*!=\s*nil`. Go's idiomatic `if err := call(); err != nil {` separates `if err` from `!= nil` by the pre-call statement, so the regex never fires | Use the two-line form: `err := call(); if err != nil { ... }`. The regex matches `if err != nil` only when `err` and `!=` are adjacent in the same statement. |
 
 ## Traceability
 

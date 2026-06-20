@@ -3,36 +3,30 @@ package main
 import (
 	"log"
 	"net/http"
-	"os"
-	"strings"
-	"time"
 
-	"go-login-crud/internal/handler"
-	"go-login-crud/internal/middleware"
-	"go-login-crud/internal/repository"
+	"login-crud/internal/cache"
+	"login-crud/internal/handler"
+	"login-crud/internal/middleware"
+	"login-crud/internal/repository"
 )
 
 func main() {
-	repo := repository.NewInMemory()
-	userHandler := handler.NewUserHandler(repo)
+	repo := repository.NewInMemoryUserRepo()
+	c := cache.NewInMemoryUserCache()
+	h := handler.NewUserHandler(repo, c)
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /register", h.Register)
+	mux.HandleFunc("POST /login", h.Login)
+	mux.HandleFunc("GET /users", h.ListUsers)
+	mux.HandleFunc("GET /users/{id}", h.GetUser)
+	mux.HandleFunc("PUT /users/{id}", h.UpdateUser)
+	mux.HandleFunc("DELETE /users/{id}", h.DeleteUser)
 
-	mux.HandleFunc("POST /users", userHandler.Create)
-	mux.HandleFunc("GET /users/{id}", userHandler.Get)
-	mux.HandleFunc("PUT /users/{id}", userHandler.Update)
-	mux.HandleFunc("DELETE /users/{id}", userHandler.Delete)
-	mux.HandleFunc("POST /login", userHandler.Login)
+	var wrapped http.Handler = mux
+	wrapped = middleware.CORS(wrapped)
+	wrapped = middleware.ContentType(wrapped)
+	wrapped = middleware.Logging(wrapped)
 
-	rl := middleware.NewRateLimiter(100, time.Minute)
-	var h http.Handler = rl.Middleware(mux)
-	h = middleware.Logging(h)
-
-	addr := ":8080"
-	if a := strings.TrimSpace(os.Getenv("ADDR")); a != "" {
-		addr = a
-	}
-
-	log.Printf("server listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, h))
+	log.Fatal(http.ListenAndServe(":8000", wrapped))
 }

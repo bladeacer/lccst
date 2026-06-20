@@ -7,91 +7,28 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strings"
+	"strconv"
 	"sync"
 )
 
 type User struct {
-	ID       string `json:"id"`
+	ID       int    `json:"id"`
 	Username string `json:"username"`
 	Password string `json:"-"`
 }
 
-type store struct {
+var (
 	mu    sync.RWMutex
-	users map[string]User
-}
+	users = map[int]User{}
+	next  = 1
+)
 
-func newStore() *store {
-	return &store{users: make(map[string]User)}
-}
-
-func hashPassword(password string) string {
-	h := sha256.Sum256([]byte(password))
+func hashPassword(pw string) string {
+	h := sha256.Sum256([]byte(pw))
 	return hex.EncodeToString(h[:])
 }
 
-func (s *store) create(username, password string) (User, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, u := range s.users {
-		if u.Username == username {
-			return User{}, fmt.Errorf("user already exists")
-		}
-	}
-	id := fmt.Sprintf("%d", len(s.users)+1)
-	user := User{ID: id, Username: username, Password: hashPassword(password)}
-	s.users[id] = user
-	return user, nil
-}
-
-func (s *store) get(id string) (User, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	u, ok := s.users[id]
-	return u, ok
-}
-
-func (s *store) update(id, username, password string) (User, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	u, ok := s.users[id]
-	if !ok {
-		return User{}, fmt.Errorf("user not found")
-	}
-	if username != "" {
-		u.Username = username
-	}
-	if password != "" {
-		u.Password = hashPassword(password)
-	}
-	s.users[id] = u
-	return u, nil
-}
-
-func (s *store) delete(id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if _, ok := s.users[id]; !ok {
-		return fmt.Errorf("user not found")
-	}
-	delete(s.users, id)
-	return nil
-}
-
-func (s *store) login(username, password string) (User, bool) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for _, u := range s.users {
-		if u.Username == username && u.Password == hashPassword(password) {
-			return u, true
-		}
-	}
-	return User{}, false
-}
-
-func writeJSON(w http.ResponseWriter, status int, v any) {
+func writeJSON(w http.ResponseWriter, status int, v interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v)
@@ -101,90 +38,158 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-func main() {
-	s := newStore()
-	mux := http.NewServeMux()
-
-	mux.HandleFunc("POST /users", func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid JSON")
-			return
-		}
-		if body.Username == "" || body.Password == "" {
-			writeError(w, http.StatusBadRequest, "username and password required")
-			return
-		}
-		user, err := s.create(body.Username, body.Password)
-		if err != nil {
-			writeError(w, http.StatusConflict, err.Error())
-			return
-		}
-		writeJSON(w, http.StatusCreated, user)
-	})
-
-	mux.HandleFunc("GET /users/{id}", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		user, ok := s.get(id)
-		if !ok {
-			writeError(w, http.StatusNotFound, "user not found")
-			return
-		}
-		writeJSON(w, http.StatusOK, user)
-	})
-
-	mux.HandleFunc("PUT /users/{id}", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		var body struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid JSON")
-			return
-		}
-		user, err := s.update(id, body.Username, body.Password)
-		if err != nil {
-			writeError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		writeJSON(w, http.StatusOK, user)
-	})
-
-	mux.HandleFunc("DELETE /users/{id}", func(w http.ResponseWriter, r *http.Request) {
-		id := r.PathValue("id")
-		if err := s.delete(id); err != nil {
-			writeError(w, http.StatusNotFound, err.Error())
-			return
-		}
-		w.WriteHeader(http.StatusNoContent)
-	})
-
-	mux.HandleFunc("POST /login", func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid JSON")
-			return
-		}
-		user, ok := s.login(body.Username, body.Password)
-		if !ok {
-			writeError(w, http.StatusUnauthorized, "invalid credentials")
-			return
-		}
-		writeJSON(w, http.StatusOK, user)
-	})
-
-	addr := ":8080"
-	if a := strings.TrimSpace(os.Getenv("ADDR")); a != "" {
-		addr = a
+func registerHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
 	}
-
-	log.Printf("server listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, mux))
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, 400, "invalid request body")
+		return
+	}
+	if body.Username == "" || body.Password == "" {
+		writeError(w, 400, "username and password required")
+		return
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	for _, u := range users {
+		if u.Username == body.Username {
+			writeError(w, 409, "username already exists")
+			return
+		}
+	}
+	id := next
+	next++
+	users[id] = User{ID: id, Username: body.Username, Password: hashPassword(body.Password)}
+	writeJSON(w, 201, map[string]interface{}{"id": id, "username": body.Username})
 }
+
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, 400, "invalid request body")
+		return
+	}
+	mu.RLock()
+	defer mu.RUnlock()
+	for _, u := range users {
+		if u.Username == body.Username && u.Password == hashPassword(body.Password) {
+			writeJSON(w, 200, map[string]interface{}{"message": "login successful", "user_id": u.ID})
+			return
+		}
+	}
+	writeError(w, 401, "invalid credentials")
+}
+
+func listUsersHandler(w http.ResponseWriter, r *http.Request) {
+	mu.RLock()
+	defer mu.RUnlock()
+	list := make([]User, 0, len(users))
+	for _, u := range users {
+		list = append(list, u)
+	}
+	writeJSON(w, 200, list)
+}
+
+func getUserHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		writeError(w, 400, "invalid user id")
+		return
+	}
+	mu.RLock()
+	u, ok := users[id]
+	mu.RUnlock()
+	if !ok {
+		writeError(w, 404, "user not found")
+		return
+	}
+	writeJSON(w, 200, u)
+}
+
+func updateUserHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		writeError(w, 400, "invalid user id")
+		return
+	}
+	var body struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, 400, "invalid request body")
+		return
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	u, ok := users[id]
+	if !ok {
+		writeError(w, 404, "user not found")
+		return
+	}
+	if body.Username != "" {
+		for _, other := range users {
+			if other.ID != id && other.Username == body.Username {
+				writeError(w, 409, "username already taken")
+				return
+			}
+		}
+		u.Username = body.Username
+	}
+	if body.Password != "" {
+		u.Password = hashPassword(body.Password)
+	}
+	users[id] = u
+	writeJSON(w, 200, u)
+}
+
+func deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		writeError(w, 400, "invalid user id")
+		return
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if _, ok := users[id]; !ok {
+		writeError(w, 404, "user not found")
+		return
+	}
+	delete(users, id)
+	writeJSON(w, 200, map[string]bool{"deleted": true})
+}
+
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Printf("%s %s", r.Method, r.URL.Path)
+		next.ServeHTTP(w, r)
+	})
+}
+
+func main() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /register", registerHandler)
+	mux.HandleFunc("POST /login", loginHandler)
+	mux.HandleFunc("GET /users", listUsersHandler)
+	mux.HandleFunc("GET /users/{id}", getUserHandler)
+	mux.HandleFunc("PUT /users/{id}", updateUserHandler)
+	mux.HandleFunc("DELETE /users/{id}", deleteUserHandler)
+	mux.HandleFunc("GET /", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			writeError(w, 404, "not found")
+			return
+		}
+		fmt.Fprintf(w, "Go Login CRUD API")
+	})
+	log.Fatal(http.ListenAndServe(":8000", loggingMiddleware(mux)))
+}
+
+

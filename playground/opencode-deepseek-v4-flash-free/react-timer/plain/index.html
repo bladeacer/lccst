@@ -4,66 +4,63 @@
 <meta charset="UTF-8">
 <title>Stopwatch</title>
 <style>
-body { font-family: sans-serif; text-align: center; margin-top: 80px; }
-#display { font-size: 3em; margin: 20px 0; }
-button { font-size: 1.2em; margin: 0 8px; padding: 8px 24px; }
+body { font-family: monospace; text-align: center; padding: 40px; }
+.display { font-size: 48px; margin: 20px; }
+button { font-size: 18px; margin: 4px; padding: 8px 20px; }
 </style>
 </head>
 <body>
 <h1>Stopwatch</h1>
-<div id="display">00:00.0</div>
+<div class="display" id="display">00:00.0</div>
 <div>
-  <button id="startBtn">Start</button>
-  <button id="stopBtn">Stop</button>
-  <button id="resetBtn">Reset</button>
+<button id="startBtn">Start</button>
+<button id="stopBtn">Stop</button>
+<button id="resetBtn">Reset</button>
 </div>
-
 <script>
-let startTime = null;
+let startTime = 0;
 let elapsed = 0;
 let running = false;
-let intervalId = null;
+let interval = null;
+
 const display = document.getElementById("display");
 
 function formatTime(ms) {
   const totalSecs = Math.floor(ms / 1000);
-  const mins = Math.floor(totalSecs / 60);
-  const secs = totalSecs % 60;
+  const minutes = Math.floor(totalSecs / 60);
+  const seconds = totalSecs % 60;
   const tenths = Math.floor((ms % 1000) / 100);
-  return String(mins).padStart(2, "0") + ":" +
-         String(secs).padStart(2, "0") + "." + tenths;
+  return String(minutes).padStart(2, "0") + ":" +
+         String(seconds).padStart(2, "0") + "." + tenths;
 }
 
-function update() {
-  if (!running) return;
-  const now = Date.now();
+function tick() {
+  const now = performance.now();
   elapsed = now - startTime;
   display.textContent = formatTime(elapsed);
 }
 
-function start() {
-  if (running) return;
-  running = true;
-  startTime = Date.now() - elapsed;
-  intervalId = setInterval(update, 100);
-}
+document.getElementById("startBtn").addEventListener("click", function() {
+  if (!running) {
+    running = true;
+    startTime = performance.now() - elapsed;
+    interval = setInterval(tick, 100);
+  }
+});
 
-function stop() {
-  if (!running) return;
+document.getElementById("stopBtn").addEventListener("click", function() {
+  if (running) {
+    running = false;
+    clearInterval(interval);
+  }
+});
+
+document.getElementById("resetBtn").addEventListener("click", function() {
   running = false;
-  clearInterval(intervalId);
-  intervalId = null;
-}
-
-function reset() {
-  stop();
+  clearInterval(interval);
   elapsed = 0;
-  display.textContent = formatTime(0);
-}
-
-document.getElementById("startBtn").addEventListener("click", start);
-document.getElementById("stopBtn").addEventListener("click", stop);
-document.getElementById("resetBtn").addEventListener("click", reset);
+  display.textContent = "00:00.0";
+});
 </script>
 </body>
 </html>

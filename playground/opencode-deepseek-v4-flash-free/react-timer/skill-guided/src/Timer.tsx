@@ -1,35 +1,21 @@
 export class Timer {
-  private startTime: number | null = null;
+  private startTime: number = 0;
   private elapsed: number = 0;
   private running: boolean = false;
   private intervalId: ReturnType<typeof setInterval> | null = null;
-  private listeners: Array<(ms: number) => void> = [];
+  private onTick: (ms: number) => void;
 
-  getElapsed(): number {
-    return this.elapsed;
-  }
-
-  isRunning(): boolean {
-    return this.running;
-  }
-
-  onTick(cb: (ms: number) => void): void {
-    this.listeners.push(cb);
-  }
-
-  private notify(): void {
-    for (const cb of this.listeners) {
-      cb(this.elapsed);
-    }
+  constructor(onTick: (ms: number) => void) {
+    this.onTick = onTick;
   }
 
   start(): void {
     if (this.running) return;
     this.running = true;
-    this.startTime = Date.now() - this.elapsed;
+    this.startTime = performance.now() - this.elapsed;
     this.intervalId = setInterval(() => {
-      this.elapsed = Date.now() - this.startTime!;
-      this.notify();
+      this.elapsed = performance.now() - this.startTime;
+      this.onTick(this.elapsed);
     }, 100);
   }
 
@@ -45,6 +31,14 @@ export class Timer {
   reset(): void {
     this.stop();
     this.elapsed = 0;
-    this.notify();
+    this.onTick(0);
+  }
+
+  isRunning(): boolean {
+    return this.running;
+  }
+
+  getElapsed(): number {
+    return this.elapsed;
   }
 }

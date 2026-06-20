@@ -1,80 +1,98 @@
 import json
-import http.server
-import os
-import re
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse
 
 users = {}
 next_id = 1
 
-def parse_path(path):
-    match = re.match(r"^/users/(\d+)$", path)
-    if match:
-        return ("user", match.group(1))
-    if path == "/users":
-        return ("list", None)
-    return (None, None)
 
-class Handler(http.server.BaseHTTPRequestHandler):
-    def _send_json(self, status, data):
+class UserHandler(BaseHTTPRequestHandler):
+    def _send_json(self, data, status=200):
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode())
 
+    def _send_error(self, message, status=400):
+        self._send_json({"error": message}, status)
+
     def _read_body(self):
         length = int(self.headers.get("Content-Length", 0))
         return json.loads(self.rfile.read(length)) if length else {}
 
+    def _parse_path(self):
+        parsed = urlparse(self.path)
+        parts = parsed.path.strip("/").split("/")
+        if parts == [""]:
+            return "root", None
+        if len(parts) == 1 and parts[0] == "users":
+            return "users", None
+        if len(parts) == 2 and parts[0] == "users":
+            return "user", int(parts[1])
+        return "unknown", None
+
     def do_GET(self):
-        kind, uid = parse_path(self.path)
-        if kind == "user" and uid in users:
-            self._send_json(200, users[uid])
-        elif kind == "list":
-            self._send_json(200, list(users.values()))
+        resource, uid = self._parse_path()
+        if resource == "users":
+            self._send_json(list(users.values()))
+        elif resource == "user":
+            user = users.get(uid)
+            if user:
+                self._send_json(user)
+            else:
+                self._send_error("User not found", 404)
         else:
-            self._send_json(404, {"error": "not found"})
+            self._send_error("Not found", 404)
 
     def do_POST(self):
+        resource, _ = self._parse_path()
+        if resource != "users":
+            self._send_error("Not found", 404)
+            return
         global next_id
-        if self.path != "/users":
-            self._send_json(404, {"error": "not found"})
-            return
         body = self._read_body()
-        username = body.get("username", "")
+        name = body.get("name", "")
         email = body.get("email", "")
-        if not username or not email:
-            self._send_json(400, {"error": "username and email required"})
-            return
-        uid = str(next_id)
+        user = {"id": next_id, "name": name, "email": email}
+        users[next_id] = user
         next_id += 1
-        user = {"id": uid, "username": username, "email": email}
-        users[uid] = user
-        self._send_json(201, user)
+        self._send_json(user, 201)
 
     def do_PUT(self):
-        kind, uid = parse_path(self.path)
-        if kind != "user" or uid not in users:
-            self._send_json(404, {"error": "not found"})
+        resource, uid = self._parse_path()
+        if resource != "user" or uid is None:
+            self._send_error("Not found", 404)
+            return
+        if uid not in users:
+            self._send_error("User not found", 404)
             return
         body = self._read_body()
-        if "username" in body:
-            users[uid]["username"] = body["username"]
+        user = users[uid]
+        if "name" in body:
+            user["name"] = body["name"]
         if "email" in body:
-            users[uid]["email"] = body["email"]
-        self._send_json(200, users[uid])
+            user["email"] = body["email"]
+        self._send_json(user)
 
     def do_DELETE(self):
-        kind, uid = parse_path(self.path)
-        if kind != "user" or uid not in users:
-            self._send_json(404, {"error": "not found"})
+        resource, uid = self._parse_path()
+        if resource != "user" or uid is None:
+            self._send_error("Not found", 404)
             return
-        del users[uid]
-        self.send_response(204)
-        self.end_headers()
+        if uid in users:
+            del users[uid]
+            self._send_json({"deleted": True})
+        else:
+            self._send_error("User not found", 404)
+
+
+def run(port=8000):
+    server = HTTPServer(("", port), UserHandler)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        server.shutdown()
+
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", "8080"))
-    server = http.server.HTTPServer(("", port), Handler)
-    print(f"Server on :{port}")
-    server.serve_forever()
+    run()

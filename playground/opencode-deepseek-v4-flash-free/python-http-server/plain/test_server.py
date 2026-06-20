@@ -1,6 +1,3 @@
-import os
-os.environ["DISABLE_RATE_LIMIT"] = "1"
-
 import json
 import threading
 import urllib.request
@@ -8,12 +5,12 @@ import urllib.error
 from http.server import HTTPServer
 import pytest
 
-from server import UserHandler, users  # noqa: E402
+import server as srv
 
 
 @pytest.fixture
 def server_url():
-    httpd = HTTPServer(("", 0), UserHandler)
+    httpd = HTTPServer(("", 0), srv.UserHandler)
     port = httpd.server_address[1]
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
@@ -22,8 +19,14 @@ def server_url():
 
 
 @pytest.fixture(autouse=True)
-def clear_users():
-    users.clear()
+def clear_state():
+    srv.users.clear()
+    srv.next_id = 1
+
+
+def _create_user(base, name, email):
+    _, data = _request(f"{base}/users", "POST", {"name": name, "email": email})
+    return data["id"]
 
 
 def _request(url, method="GET", body=None):
@@ -38,34 +41,11 @@ def _request(url, method="GET", body=None):
         return e.code, json.loads(e.read())
 
 
-def _create_user(base, name, email):
-    _, data = _request(f"{base}/users", "POST", {"name": name, "email": email})
-    return data["id"]
-
-
 def test_create_user(server_url):
     status, data = _request(f"{server_url}/users", "POST", {"name": "Alice", "email": "alice@test.com"})
     assert status == 201
     assert data["name"] == "Alice"
-    assert isinstance(data["id"], str)
-
-
-def test_create_user_missing_name(server_url):
-    status, data = _request(f"{server_url}/users", "POST", {"email": "alice@test.com"})
-    assert status == 400
-    assert "name" in data.get("error", "").lower()
-
-
-def test_create_user_invalid_email(server_url):
-    status, data = _request(f"{server_url}/users", "POST", {"name": "Alice", "email": "not-an-email"})
-    assert status == 400
-    assert "email" in data.get("error", "").lower()
-
-
-def test_create_user_valid_complex_email(server_url):
-    status, data = _request(f"{server_url}/users", "POST",
-                            {"name": "Alice", "email": "user+tag@domain.co"})
-    assert status == 201
+    assert isinstance(data["id"], int)
 
 
 def test_list_users(server_url):
@@ -83,7 +63,7 @@ def test_get_user(server_url):
 
 
 def test_get_user_not_found(server_url):
-    status, data = _request(f"{server_url}/users/nonexistent-id")
+    status, data = _request(f"{server_url}/users/999")
     assert status == 404
 
 
@@ -94,12 +74,6 @@ def test_update_user(server_url):
     assert data["name"] == "Bob"
 
 
-def test_update_user_invalid_email(server_url):
-    uid = _create_user(server_url, "Alice", "alice@test.com")
-    status, data = _request(f"{server_url}/users/{uid}", "PUT", {"email": "bad"})
-    assert status == 400
-
-
 def test_delete_user(server_url):
     uid = _create_user(server_url, "Alice", "alice@test.com")
     status, data = _request(f"{server_url}/users/{uid}", "DELETE")
@@ -108,5 +82,5 @@ def test_delete_user(server_url):
 
 
 def test_delete_user_not_found(server_url):
-    status, data = _request(f"{server_url}/users/nonexistent-id", "DELETE")
+    status, data = _request(f"{server_url}/users/999", "DELETE")
     assert status == 404

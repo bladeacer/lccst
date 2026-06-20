@@ -23,7 +23,7 @@ Prompt your agent with the following:
 You are executing inside a clean sandbox for the LCCST Playground Benchmark. 
 Our goal is to implement the mentioned subprojects.
 
-The rules in `./skill.md` (Protocol Specification v2.1) are fully active for this run.
+The rules in `./skill.md` are fully active for this run.
 Please parse and strictly reference `playground/README.md` and `playground/guide.md` 
 for specific architectural constraints, file topology expectations, and implementation details.
 
@@ -32,7 +32,16 @@ for specific architectural constraints, file topology expectations, and implemen
 2. Task Scope: [e.g., Build a complete REST HTTP user CRUD system with an in-memory database]
 3. Structural Mandate: Follow strict decoupling, typing, and structural boundaries as dictated by the playground guide matrix.
 
-Run the `/init` workspace scan command now to audit the workspace setup, then output your pre-flight architectural plan before writing any code.
+### Pre-Flight Sandbox Boundary Rule
+Before executing the `/init` workspace scan, looking at the directory layout, or running any inspection commands (do not run `ls`, `find`, or open files):
+* You are operating strictly inside the `playground/{agent-name}-{model-name}/[target-project-dir]` directory relative to the project root.
+* You are explicitly commanded to execute a **blind deletion pass**. Immediately invoke your filesystem tools to completely wipe (`rm -rf` equivalent) the `plain/` and `skill-guided/` directories under this target project path without reading or listing their contents first.
+* This execution ensures zero data leakage or structural hints enter your context history, preserving a true, unpolluted clean-room canvas.
+* CRITICAL BOUNDARY: Do not touch, read, or delete any files or directories outside your specific `playground/{agent-name}-{model-name}/` path scope.
+
+Once the blind deletion pass is executed, you may run the `/init` workspace scan command to audit the fresh sandbox setup, then output your pre-flight architectural plan before writing any code.
+
+Run the `/init` workspace scan command now to audit the fresh sandbox setup, then output your pre-flight architectural plan before writing any code.
 ```
 
 ## Benchmarking

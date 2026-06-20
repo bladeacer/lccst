@@ -1,8 +1,7 @@
 [project]
-name = "python-http-server"
-version = "1.0.0"
-description = "Skill-guided Python HTTP server with CRUD"
+name = "http-server"
+version = "0.1.0"
 requires-python = ">=3.10"
 
 [dependency-groups]
-dev = ["pytest>=8"]
+dev = ["pytest"]

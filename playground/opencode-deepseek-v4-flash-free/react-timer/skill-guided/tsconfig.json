@@ -6,10 +6,10 @@
     "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
-    "declaration": true,
-    "outDir": "dist",
-    "rootDir": "src",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "rootDir": ".",
+    "types": ["jest"]
   },
-  "include": ["src"]
+  "include": ["src/**/*", "tests/**/*"]
 }

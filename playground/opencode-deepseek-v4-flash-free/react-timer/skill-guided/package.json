@@ -1,21 +1,22 @@
 {
   "name": "react-timer",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "test": "jest"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.6.3",
-    "@testing-library/react": "^16.1.0",
-    "@types/jest": "^29.5.14",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@testing-library/react": "^16.0.0",
+    "@types/jest": "^29.5.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "ts-jest": "^29.2.5",
-    "typescript": "^5.4.5"
+    "ts-jest": "^29.2.0",
+    "typescript": "^5.4.0"
+  },
+  "dependencies": {
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0"
   }
 }

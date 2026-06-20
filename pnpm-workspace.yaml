@@ -1,6 +1,9 @@
 packages:
-  - "playground/opencode-deepseek-v4-flash-free/react-timer/skill-guided"
+  - "playground/*/*/skill-guided"
+  - "playground/benchmarks"
 
 onlyBuiltDependencies:
-  - esbuild
   - unrs-resolver
+
+allowBuilds:
+  esbuild: false
