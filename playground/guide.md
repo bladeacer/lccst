@@ -11,6 +11,7 @@ playground/
   guide.md                          # This file
   benchmarks/
     run_benchmark.py                # Agent-agnostic benchmark script
+    pyproject.toml                  # Benchmark Python deps (tiktoken, etc.)
     {agent-name}-{model-name}/      # Per-agent output (auto-created)
       benchmark-report.md
   {agent-name}-{model-name}/        # Per-agent implementations
@@ -38,7 +39,7 @@ playground/
 
 ### 2. React Timer
 - **Plain**: Vanilla HTML + JS stopwatch with start/stop/reset
-- **Skill-guided**: TypeScript + TSX—Timer class and `TimerDisplay` React component with `formatTime()` utility
+- **Skill-guided**: TypeScript (`.ts`/`.tsx`) — Timer class and `TimerDisplay` React component with `formatTime()` utility
 - **Tests**: Jest + ts-jest + @testing-library/react, both logic tests and component render test
 
 ### 3. Go Login CRUD
@@ -56,6 +57,11 @@ playground/
 ### Running the Benchmark
 
 ```bash
+# Install benchmark deps once
+cd playground/benchmarks
+uv sync                           # installs tiktoken for accurate token counts
+cd ../..
+
 # From repository root:
 python3 playground/benchmarks/run_benchmark.py <agent-tag> [--install-deps]
 ```
@@ -67,7 +73,7 @@ python3 playground/benchmarks/run_benchmark.py opencode-deepseek-v4-flash-free
 python3 playground/benchmarks/run_benchmark.py opencode-deepseek-v4-flash-free --install-deps
 ```
 
-The `--install-deps` flag installs dependencies (npm for React timer) before benchmarking.
+The `--install-deps` flag installs dependencies (pnpm for React timer) before benchmarking.
 
 ### What Gets Measured
 
@@ -91,10 +97,10 @@ The `--install-deps` flag installs dependencies (npm for React timer) before ben
 
 1. **Set up the workspace**: Create `playground/{your-agent-tag}/` with the three project directories
 2. **Generate plain implementations**: Without consulting skill.md, write minimal working code for each project
-3. **Generate skill-guided implementations**: With skill.md loaded, write structured, typed, tested code; use modern manifests (pyproject.toml, tsconfig, go.mod)
+3. **Generate skill-guided implementations**: With skill.md loaded, write structured, typed, tested code; use modern manifests (pyproject.toml, tsconfig, go.mod), TypeScript (`.ts`/`.tsx`) not plain JS
 4. **Install dependencies**:
-   - Python: `uv sync` or `pip install -e ".[dev]"` in `python-http-server/skill-guided/`
-   - Node: `npm install` in `react-timer/skill-guided/`
+   - Python: `uv sync` in `python-http-server/skill-guided/`
+   - Node: `pnpm install` in `react-timer/skill-guided/`
    - Go: no external deps beyond stdlib
 5. **Run the benchmark**: `python3 playground/benchmarks/run_benchmark.py {your-agent-tag} --install-deps`
 6. **Read the report**: `playground/benchmarks/{your-agent-tag}/benchmark-report.md`
@@ -116,7 +122,7 @@ The `--install-deps` flag installs dependencies (npm for React timer) before ben
 
 - Python 3.10+
 - Go 1.21+
-- Node.js 18+ / npm 9+
-- `uv` (recommended) or `pip` for Python dependency management
-- pytest (`uv run pytest` or `pip install pytest`)
-- (Optional) tiktoken (`pip install tiktoken`) for accurate token counts
+- Node.js 18+ / pnpm 9+
+- `uv` for Python dependency management (benchmark + project deps)
+- tiktoken (`uv sync` in `playground/benchmarks/` to install)
+- pytest (`uv run pytest` or part of `uv sync`)

@@ -2,47 +2,46 @@ package tests
 
 import (
 	"testing"
+	"go-login-crud-skill/internal/cache"
 	"time"
-
-	"skill-guided-login-crud/internal/cache"
 )
 
-func TestSessionSetAndGet(t *testing.T) {
-	c := cache.NewInMemorySessionCache(1 * time.Hour)
-	token := c.Set(42)
-	sess, ok := c.Get(token)
+func TestCacheSetGet(t *testing.T) {
+	c := cache.NewCache(time.Minute)
+	c.Set("key1", "value1")
+	val, ok := c.Get("key1")
 	if !ok {
-		t.Fatal("expected to get session")
+		t.Error("expected ok")
 	}
-	if sess.UserID != 42 {
-		t.Fatalf("expected user ID 42, got %d", sess.UserID)
+	if val != "value1" {
+		t.Errorf("expected value1, got %v", val)
 	}
 }
 
-func TestSessionExpiry(t *testing.T) {
-	c := cache.NewInMemorySessionCache(0)
-	token := c.Set(1)
-	_, ok := c.Get(token)
+func TestCacheGetMissing(t *testing.T) {
+	c := cache.NewCache(time.Minute)
+	_, ok := c.Get("nonexistent")
 	if ok {
-		t.Fatal("expected session to be expired")
+		t.Error("expected not ok for missing key")
 	}
 }
 
-func TestSessionDelete(t *testing.T) {
-	c := cache.NewInMemorySessionCache(1 * time.Hour)
-	token := c.Set(1)
-	c.Delete(token)
-	_, ok := c.Get(token)
+func TestCacheDelete(t *testing.T) {
+	c := cache.NewCache(time.Minute)
+	c.Set("key1", "value1")
+	c.Delete("key1")
+	_, ok := c.Get("key1")
 	if ok {
-		t.Fatal("expected session to be deleted")
+		t.Error("expected not ok after delete")
 	}
 }
 
-func TestCleanup(t *testing.T) {
-	c := cache.NewInMemorySessionCache(0)
-	c.Set(1)
-	c.Set(2)
-	c.Cleanup()
-	// verify no sessions via Get - limited because cleanup is best-effort
-	// but we can test that Cleanup doesn't panic
+func TestCacheExpiration(t *testing.T) {
+	c := cache.NewCache(50 * time.Millisecond)
+	c.Set("key1", "value1")
+	time.Sleep(100 * time.Millisecond)
+	_, ok := c.Get("key1")
+	if ok {
+		t.Error("expected not ok after expiration")
+	}
 }

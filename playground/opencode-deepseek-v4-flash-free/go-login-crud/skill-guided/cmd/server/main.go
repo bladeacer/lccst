@@ -1,43 +1,47 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
-
-	"skill-guided-login-crud/internal/cache"
-	"skill-guided-login-crud/internal/handler"
-	"skill-guided-login-crud/internal/middleware"
-	"skill-guided-login-crud/internal/repository"
 )
 
 func main() {
-	userRepo := repository.NewInMemoryUserRepository()
-	sessionCache := cache.NewInMemorySessionCache(1 * time.Hour)
-	userHandler := handler.NewUserHandler(userRepo, sessionCache)
-	authMw := middleware.AuthMiddleware(sessionCache)
+	app, err := NewApp()
+	if err != nil {
+		log.Fatalf("Failed to create app: %v", err)
+	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/register", userHandler.Register)
-	mux.HandleFunc("/login", userHandler.Login)
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "18080"
+	}
 
-	protected := http.NewServeMux()
-	protected.HandleFunc("/users", userHandler.ListUsers)
-	protected.HandleFunc("/users/", func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			userHandler.GetUser(w, r)
-		case http.MethodPut:
-			userHandler.UpdateUser(w, r)
-		case http.MethodDelete:
-			userHandler.DeleteUser(w, r)
-		default:
-			http.Error(w, `{"error":"Method not allowed"}`, http.StatusMethodNotAllowed)
+	srv := &http.Server{
+		Addr:         ":" + port,
+		Handler:      app.Routes(),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  30 * time.Second,
+	}
+
+	go func() {
+		log.Printf("Starting server on :%s", port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Server error: %v", err)
 		}
-	})
-	mux.Handle("/users", authMw(protected))
-	mux.Handle("/users/", authMw(protected))
+	}()
 
-	log.Println("Server on :18080")
-	log.Fatal(http.ListenAndServe(":18080", mux))
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	srv.Shutdown(ctx)
 }

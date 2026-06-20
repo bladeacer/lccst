@@ -17,11 +17,22 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Re-exec via uv if available and tiktoken not yet importable
 try:
     import tiktoken
-    ENCODER = tiktoken.get_encoding("cl100k_base")
 except ImportError:
+    if not any(a == "--uv" for a in sys.argv):
+        try:
+            subprocess.run(
+                ["uv", "run", "python3", __file__, *sys.argv[1:], "--uv"],
+                check=True, cwd=Path(__file__).resolve().parent,
+            )
+            sys.exit(0)
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            pass
     ENCODER = None
+else:
+    ENCODER = tiktoken.get_encoding("cl100k_base")
 
 PLAYGROUND = Path(__file__).resolve().parent.parent
 
@@ -31,16 +42,16 @@ PROJECTS = {
         "plain_prefix": "plain",
         "guided_prefix": "skill-guided",
         "test_cmd_plain": None,
-        "test_cmd_guided": ["python3", "-m", "pytest", "skill-guided/tests/", "-v", "--tb=short"],
-        "test_env_guided": {"DISABLE_RATE_LIMIT": "1"},
-        "test_cwd_guided": None,
+        "test_cmd_guided": ["uv", "run", "python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
+        "test_env_guided": {"DISABLE_RATE_LIMIT": "1", "VIRTUAL_ENV": ""},
+        "test_cwd_guided": "skill-guided",
     },
     "react-timer": {
         "patterns": ["plain/*.html", "plain/*.js", "skill-guided/src/*.tsx", "skill-guided/tests/*.tsx"],
         "plain_prefix": "plain",
         "guided_prefix": "skill-guided",
         "test_cmd_plain": None,
-        "test_cmd_guided": ["node", "node_modules/.bin/jest", "--no-coverage"],
+        "test_cmd_guided": ["npx", "--no-install", "jest", "--no-coverage"],
         "test_cwd_guided": "skill-guided",
         "test_env_guided": {},
     },
@@ -135,6 +146,7 @@ def run_tests(project_dir, test_cmd, test_cwd=None, test_env=None):
     full_dir = PLAYGROUND / project_dir
     cwd = str(full_dir / test_cwd) if test_cwd else str(full_dir)
     env = {**os.environ, **(test_env or {})}
+    env.pop("VIRTUAL_ENV", None)
     try:
         result = subprocess.run(
             test_cmd,

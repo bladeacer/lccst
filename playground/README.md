@@ -5,6 +5,9 @@ Benchmarking harness for measuring the impact of skill-guided vs plain code gene
 ## Quick Start
 
 ```bash
+# Install benchmark deps (tiktoken for accurate token counts)
+cd playground/benchmarks && uv sync && cd ../..
+
 # Run the benchmark for the current agent
 python3 playground/benchmarks/run_benchmark.py opencode-deepseek-v4-flash-free --install-deps
 
@@ -17,7 +20,7 @@ cat playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report.md
 | Project | Plain (no skill) | Skill-guided |
 |---------|:-:|:-:|
 | Python HTTP Server | Single-file CRUD | Typed, validated, rate-limited, pyproject.toml |
-| React Timer | HTML + JS stopwatch | TSX component + Timer class, Jest tests |
+| React Timer | HTML + JS stopwatch | TypeScript (`.ts`/`.tsx`), Timer + React component, Jest |
 | Go Login CRUD | Monolithic main.go | Layered architecture, interfaces, middleware |
 
 ## Methodology

@@ -1,0 +1,13 @@
+[project]
+name = "lccst-benchmarks"
+version = "1.0.0"
+description = "LCCST playground benchmarking suite"
+requires-python = ">=3.10"
+dependencies = [
+    "tiktoken>=0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+]

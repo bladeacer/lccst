@@ -1,29 +1,19 @@
 package model
 
 type User struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"-"`
-	Email    string `json:"email"`
-}
-
-type CreateUserRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Email    string `json:"email"`
-}
-
-type LoginRequest struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-}
-
-type UpdateUserRequest struct {
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
 	Email string `json:"email"`
 }
 
-type LoginResponse struct {
-	Token string `json:"token"`
+type CreateUserRequest struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+type UpdateUserRequest struct {
+	Name  *string `json:"name,omitempty"`
+	Email *string `json:"email,omitempty"`
 }
 
 type ErrorResponse struct {

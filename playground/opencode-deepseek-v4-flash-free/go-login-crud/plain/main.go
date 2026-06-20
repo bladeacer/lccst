@@ -1,244 +1,132 @@
 package main
 
 import (
-	"crypto/sha256"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
+)
+
+var (
+	users   []User
+	nextID  = 1
+	mu      sync.Mutex
 )
 
 type User struct {
-	ID       int    `json:"id"`
-	Username string `json:"username"`
-	Password string `json:"-"`
-	Email    string `json:"email"`
-}
-
-type Session struct {
-	Token   string
-	UserID  int
-	Expires time.Time
-}
-
-var (
-	mu         sync.RWMutex
-	users      = []User{}
-	nextID     = 1
-	sessions   = map[string]Session{}
-)
-
-func hashPassword(pwd string) string {
-	h := sha256.Sum256([]byte(pwd))
-	return fmt.Sprintf("%x", h)
-}
-
-func generateToken() string {
-	h := sha256.Sum256([]byte(fmt.Sprintf("%d", time.Now().UnixNano())))
-	return fmt.Sprintf("%x", h)
-}
-
-func jsonError(w http.ResponseWriter, msg string, code int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
-}
-
-func authMiddleware(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		token := r.Header.Get("Authorization")
-		if token == "" || !strings.HasPrefix(token, "Bearer ") {
-			jsonError(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		token = strings.TrimPrefix(token, "Bearer ")
-		mu.RLock()
-		sess, ok := sessions[token]
-		mu.RUnlock()
-		if !ok || time.Now().After(sess.Expires) {
-			if ok {
-				mu.Lock()
-				delete(sessions, token)
-				mu.Unlock()
-			}
-			jsonError(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
-		next(w, r)
-	}
-}
-
-func register(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var u User
-	if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-		jsonError(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-	if u.Username == "" || u.Password == "" || u.Email == "" {
-		jsonError(w, "Username, password, email required", http.StatusBadRequest)
-		return
-	}
-	mu.Lock()
-	u.ID = nextID
-	nextID++
-	u.Password = hashPassword(u.Password)
-	users = append(users, u)
-	mu.Unlock()
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(u)
-}
-
-func login(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	var creds struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
-		jsonError(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-	mu.RLock()
-	var found *User
-	for i := range users {
-		if users[i].Username == creds.Username {
-			found = &users[i]
-			break
-		}
-	}
-	mu.RUnlock()
-	if found == nil || found.Password != hashPassword(creds.Password) {
-		jsonError(w, "Invalid credentials", http.StatusUnauthorized)
-		return
-	}
-	token := generateToken()
-	mu.Lock()
-	sessions[token] = Session{Token: token, UserID: found.ID, Expires: time.Now().Add(1 * time.Hour)}
-	mu.Unlock()
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{"token": token})
-}
-
-func listUsers(w http.ResponseWriter, r *http.Request) {
-	mu.RLock()
-	result := make([]User, len(users))
-	copy(result, users)
-	mu.RUnlock()
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(result)
-}
-
-func getUser(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/users/"))
-	if err != nil {
-		jsonError(w, "Invalid ID", http.StatusBadRequest)
-		return
-	}
-	mu.RLock()
-	var found *User
-	for i := range users {
-		if users[i].ID == id {
-			found = &users[i]
-			break
-		}
-	}
-	mu.RUnlock()
-	if found == nil {
-		jsonError(w, "Not found", http.StatusNotFound)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(found)
-}
-
-func updateUser(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/users/"))
-	if err != nil {
-		jsonError(w, "Invalid ID", http.StatusBadRequest)
-		return
-	}
-	var updates struct {
-		Email string `json:"email"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&updates); err != nil {
-		jsonError(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-	mu.Lock()
-	var found *User
-	for i := range users {
-		if users[i].ID == id {
-			found = &users[i]
-			break
-		}
-	}
-	if found != nil && updates.Email != "" {
-		found.Email = updates.Email
-	}
-	mu.Unlock()
-	if found == nil {
-		jsonError(w, "Not found", http.StatusNotFound)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(found)
-}
-
-func deleteUser(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.Atoi(strings.TrimPrefix(r.URL.Path, "/users/"))
-	if err != nil {
-		jsonError(w, "Invalid ID", http.StatusBadRequest)
-		return
-	}
-	mu.Lock()
-	idx := -1
-	for i := range users {
-		if users[i].ID == id {
-			idx = i
-			break
-		}
-	}
-	if idx >= 0 {
-		users = append(users[:idx], users[idx+1:]...)
-	}
-	mu.Unlock()
-	if idx < 0 {
-		jsonError(w, "Not found", http.StatusNotFound)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]bool{"deleted": true})
+	ID    int    `json:"id"`
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
 func main() {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/register", register)
-	mux.HandleFunc("/login", login)
-	mux.HandleFunc("/users", authMiddleware(listUsers))
-	mux.HandleFunc("/users/", authMiddleware(func(w http.ResponseWriter, r *http.Request) {
-		switch r.Method {
-		case http.MethodGet:
-			getUser(w, r)
-		case http.MethodPut:
-			updateUser(w, r)
-		case http.MethodDelete:
-			deleteUser(w, r)
-		default:
-			jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+	mux.HandleFunc("/health", handleHealth)
+	mux.HandleFunc("/users", handleUsers)
+	mux.HandleFunc("/users/", handleUserByID)
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "18080"
+	}
+
+	log.Printf("Starting server on :%s", port)
+	log.Fatal(http.ListenAndServe(":"+port, mux))
+}
+
+func handleHealth(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, 200, map[string]string{"status": "ok"})
+}
+
+func handleUsers(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		mu.Lock()
+		defer mu.Unlock()
+		writeJSON(w, 200, users)
+	case http.MethodPost:
+		var u User
+		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+			writeJSON(w, 400, map[string]string{"error": "Invalid JSON"})
+			return
 		}
-	}))
-	log.Println("Server on :18080")
-	log.Fatal(http.ListenAndServe(":18080", mux))
+		mu.Lock()
+		u.ID = nextID
+		nextID++
+		users = append(users, u)
+		mu.Unlock()
+		writeJSON(w, 201, u)
+	default:
+		writeJSON(w, 405, map[string]string{"error": "Method not allowed"})
+	}
+}
+
+func handleUserByID(w http.ResponseWriter, r *http.Request) {
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/users/"), "/")
+	if len(parts) == 0 || parts[0] == "" {
+		writeJSON(w, 404, map[string]string{"error": "Not found"})
+		return
+	}
+
+	id, err := strconv.Atoi(parts[0])
+	if err != nil {
+		writeJSON(w, 400, map[string]string{"error": "Invalid user ID"})
+		return
+	}
+
+	switch r.Method {
+	case http.MethodGet:
+		mu.Lock()
+		defer mu.Unlock()
+		for _, u := range users {
+			if u.ID == id {
+				writeJSON(w, 200, u)
+				return
+			}
+		}
+		writeJSON(w, 404, map[string]string{"error": "Not found"})
+	case http.MethodPut:
+		var updated User
+		if err := json.NewDecoder(r.Body).Decode(&updated); err != nil {
+			writeJSON(w, 400, map[string]string{"error": "Invalid JSON"})
+			return
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		for i, u := range users {
+			if u.ID == id {
+				if updated.Name != "" {
+					users[i].Name = updated.Name
+				}
+				if updated.Email != "" {
+					users[i].Email = updated.Email
+				}
+				writeJSON(w, 200, users[i])
+				return
+			}
+		}
+		writeJSON(w, 404, map[string]string{"error": "Not found"})
+	case http.MethodDelete:
+		mu.Lock()
+		defer mu.Unlock()
+		for i, u := range users {
+			if u.ID == id {
+				users = append(users[:i], users[i+1:]...)
+				writeJSON(w, 200, map[string]bool{"deleted": true})
+				return
+			}
+		}
+		writeJSON(w, 404, map[string]string{"error": "Not found"})
+	default:
+		writeJSON(w, 405, map[string]string{"error": "Method not allowed"})
+	}
+}
+
+func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(data)
 }

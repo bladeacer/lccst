@@ -1,3 +1,3 @@
-module skill-guided-login-crud
+module go-login-crud-skill
 
-go 1.26
+go 1.21
