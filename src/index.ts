@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const server = new McpServer({
   name: "lccst-locust",
-  version: "2.2.0"
+  version: "2.3.0"
 });
 
 // Enforce type contract constraints directly on prompt payload generation
