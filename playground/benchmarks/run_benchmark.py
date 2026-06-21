@@ -206,24 +206,29 @@ def main():
             "guided": {**measured["guided_totals"], "files": measured["guided"], "robustness": compute_robustness_score(test_result, measured["guided"], measured["guided_totals"], proj_name), "test_result": test_result},
         }
 
-    # Extract dynamic indices
     skill_ver = extract_skill_version()
     art_path = PLAYGROUND / "benchmarks" / "runtime-telemetry.json"
     
     art_data = {"total_prompt_tokens": 0, "total_completion_tokens": 0, "total_tokens": 0, "turns": 0, "active_mcps": []}
     if art_path.exists():
-        try: art_data = json.loads(art_path.read_text())
-        except Exception: pass
+        try: 
+            art_data = json.loads(art_path.read_text())
+        except Exception: 
+            pass
 
-    # Build report layout matching your criteria
     report_content = generate_markdown(results, agent_tag, skill_ver, art_data)
     
-    # Save directly to the versioned layout requested: /playground/benchmarks/{agent}-{model}/benchmark-report-{skill-ver}.md
+    # Target directory adjustment to point inside the permanent benchmarks directory
     report_dir = PLAYGROUND / "benchmarks" / agent_tag
     report_dir.mkdir(parents=True, exist_ok=True)
     report_file = report_dir / f"benchmark-report-{skill_ver}.md"
     
     report_file.write_text(report_content)
+    
+    old_file = report_dir / "benchmark-report.md"
+    if old_file.exists():
+        old_file.unlink()
+
     print(f"\nReport generated and archived cleanly at: {report_file}")
 
 def generate_markdown(results, agent_tag, skill_ver, art_data):
@@ -238,7 +243,7 @@ def generate_markdown(results, agent_tag, skill_ver, art_data):
 
     mcp_string = ", ".join(art_data.get("active_mcps", [])) if art_data.get("active_mcps") else "None detected"
 
-    return f"""# LCCST Playground Benchmark Report
+    md = f"""# LCCST Playground Benchmark Report
 
 **Agent Configuration:** {agent_tag}
 **Active Ecosystem MCPs:** `{mcp_string}`
@@ -254,4 +259,32 @@ def generate_markdown(results, agent_tag, skill_ver, art_data):
 | Agent Runtime Tokens (ART) | — | {art_data['total_tokens']} | {art_data['total_prompt_tokens']} prompt / {art_data['total_completion_tokens']} completion ({art_data['turns']} turns) |
 
 ## Robustness Metrics
+
+| Project Submodule Target | Strategy Variant | Lines | Tokens | Unit Test Standing | Robustness Score |
+|---|---|:-:|:-:|:-:|:-:|
 """
+
+    for name, data in results.items():
+        p_status = "Skipped"
+        g_status = "PASSED" if data["guided"]["test_result"]["passed"] else f"FAILED (code {data['guided']['test_result']['exit_code']})"
+        
+        md += f"""| **{name}** | Plain Strategy | {data['plain']['total_lines']} | {data['plain']['total_tokens']} | `{p_status}` | **{data['plain']['robustness']}%** |\n"""
+        md += f"""| | Skill-Guided | {data['guided']['total_lines']} | {data['guided']['total_tokens']} | `{g_status}` | **{data['guided']['robustness']}%** |\n"""
+
+    md += "\n## Feature Matrix Completeness\n\n"
+    md += "| Project Target | Strategy | Explicit Typing | Security Measures | Robustness Guardrails | Test Assertions |\n"
+    md += "|---|---|:-:|:-:|:-:|:-:|\n"
+
+    for name, data in results.items():
+        for var in ("plain", "guided"):
+            feat = data[var]["features_aggregate"]
+            t = "✅" if feat["has_typing"] else "❌"
+            s = "✅" if feat["has_security"] else "❌"
+            e = "✅" if feat["has_error_handling"] else "❌"
+            a = "✅" if feat["has_test_assertion"] else "❌"
+            md += f"| {name} | {var.capitalize()} | {t} | {s} | {e} | {a} |\n"
+
+    return md
+
+if __name__ == "__main__":
+    main()

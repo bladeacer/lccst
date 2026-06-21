@@ -10,13 +10,25 @@ and robustness.
 
 ```
 playground/
-  guide.md                          # This file
+  README.md                         # Benchmark lifecycle documentation
+  agent-prompt.md                   # Clean-room instrumentation prompt template
+  guide.md                          # This file (methodology matrix)
   benchmarks/
-    run_benchmark.py                # Agent-agnostic benchmark script
-    pyproject.toml                  # Benchmark Python deps (tiktoken, etc.)
-    {agent-name}-{model-name}/      # Per-agent output (auto-created)
-      benchmark-report.md
-  {agent-name}-{model-name}/        # Per-agent implementations
+    run_benchmark.py                # FCT parser & unified report compiler
+    runner.py                       # Network proxy capture daemon wrapper
+    track_runtime.py                # Low-level network API loop listener
+    pyproject.toml                  # Python token benchmark tooling bundle
+    uv.lock                         # Locked Python environment tree
+    mcp-telemetry/                  # Custom JSON-RPC tool companion
+      package.json                  # Node engine dependency definitions
+      tsconfig.json                 # Core TypeScript compiler configuration
+      src/
+        index.ts                    # Low-level Server instance logic
+      build/
+        index.js                    # Compiled stdio runtime endpoint
+    {agent-name}-{model-name}/      # Preserved benchmarking artifacts
+  {agent-name}-{model-name}/        # Isolated sandboxed workspace root
+    runtime-telemetry.json          # Shared runtime telemetry data
     python-http-server/
       plain/                        # Minimal unguided execution root
       skill-guided/                 # Decoupled, typed execution root

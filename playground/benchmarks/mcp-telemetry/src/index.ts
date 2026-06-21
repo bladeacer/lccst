@@ -22,7 +22,7 @@ function updateMetrics(promptTokens: number, completionTokens: number): void {
       total_completion_tokens: 0,
       total_tokens: 0,
       turns: 0,
-      active_mcps: ["lccst-mcp-telemetry"]
+      active_mcps: ["lccst-telemetry"]
     };
 
     const targetDir = path.dirname(TELEMETRY_FILE);
@@ -46,8 +46,8 @@ function updateMetrics(promptTokens: number, completionTokens: number): void {
     data.total_tokens += (promptTokens + completionTokens);
     data.turns += 1;
 
-    if (!data.active_mcps.includes("lccst-mcp-telemetry")) {
-      data.active_mcps.push("lccst-mcp-telemetry");
+    if (!data.active_mcps.includes("lccst-telemetry")) {
+      data.active_mcps.push("lccst-telemetry");
     }
 
     fs.writeFileSync(TELEMETRY_FILE, JSON.stringify(data, null, 2));
@@ -58,7 +58,7 @@ function updateMetrics(promptTokens: number, completionTokens: number): void {
 
 // Using the low-level base class guarantees perfect transport type assignment
 const server = new Server(
-  { name: "lccst-mcp-telemetry", version: "1.0.0" },
+  { name: "lccst-telemetry", version: "1.0.0" },
   { capabilities: { tools: {} } }
 );
 
