@@ -112,4 +112,3 @@ The framework evaluates data across two distinct metrics:
 2. **Execution Cost Overhead (ART):** Direct token usage transaction records captured in `runtime-telemetry.json` by the active JSON-RPC stdio channel during model context switching loops.
 
 See [`guide.md`](guide.md) for detailed methodology and implementation specifics.
-```
