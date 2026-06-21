@@ -37,9 +37,9 @@ const filesToUpdate = [
   },
   {
     filePath: path.join(rootDir, "playground/benchmarks/mcp-telemetry/package.json"),
-    regex: /version:\s*"\d+\.\d+\.\d+"/,
-    replacement: `version: "${targetVersion}"`
-  }
+    regex: /"version":\s*"\d+\.\d+\.\d+"/,
+    replacement: `"version": "${targetVersion}"`
+  },
 ];
 
 let errorsOccurred = false;

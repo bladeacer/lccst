@@ -103,48 +103,63 @@ Two distinct token metrics are tracked:
 * **ART (Agent Runtime Tokens):** Cumulative prompt + completion tokens consumed
   during the agent loop (captured via the `track_runtime.py` proxy).
 
+### Verification Matrix & Baseline Benchmarks
+
+The baseline metrics below were captured using our automated evaluation harness.
+The data highlights the concrete performance delta observed between unguided 
+generation and structured protocol compliance.
+
+Two distinct token metrics are tracked:
+* **FCT (File-Content Tokens):** Static token footprint of final source files
+  (measured via `tiktoken` post-run).
+* **ART (Agent Runtime Tokens):** Cumulative prompt + completion tokens consumed
+  during the agent loop (captured via the `track_runtime.py` proxy).
+
 Scores are fully normalised to a 100-point scale using project-specific
 evaluation profiles. Each target subproject is graded exclusively on features
 relevant to its architectural domain (for instance, front-end presentation 
 components are not penalised for a lack of database encryption patterns).
 
-### opencode-deepseek-v4-flash-free
+#### opencode-deepseek-v4-flash-free
 
-| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT | ART |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | ---: | ---: |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **Python HTTP Server** | 48/100 | **100/100** | 11/11 Passed | 2,125 | - |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **React Timer** | 22/100 | **100/100** | 9/9 Passed | 845 | - |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **Go Login CRUD** | 65/100 | **100/100** | 12/12 Passed | 4,048 | - |
-| **Summary** | | | | **Workspace Average** | **45/100** | **100/100** | **32/32 Total** | **7,018** | **N/A** |
+| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain/Guided) | ART (Plain/Guided) |
+| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.3` | `lccst-telemetry, headroom` | **Python HTTP Server** | 48/100 | **100/100** | PASSED | 642 / 2,601 | 10,033 / 40,650 |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.3` | `lccst-telemetry, headroom` | **React Timer** | 22/100 | **100/100** | PASSED | 516 / 926 | 8,064 / 14,471 |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.3` | `lccst-telemetry, headroom` | **Go Login CRUD** | 49/100 | **100/100** | PASSED | 1,077 / 5,334 | 16,831 / 83,371 |
+| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,235 / 8,861** | **34,928 / 138,492** |
 
 ### Core Architectural Insights
 
-* **The Token Trade-Off (FCT):** The skill-guided protocol introduces an
-  expected +133% file-content token overhead (+4,001 FCT across the workspace
-  suite). This focused context investment translates into typed interfaces,
-  explicit error boundaries, and comprehensive unit testing.
-* **Agent Runtime Tokens (ART):** ART tracks the cumulative prompt + completion
-  tokens consumed across the multi-turn agent loop, captured via the
-  `track_runtime.py` proxy. This metric isolates agent-loop efficiency from
-  file-payload bloat. Lower ART values indicate that environment documentation
-  (e.g., `guide.md`) prevents expensive debugging cycles.
+* **The Token Trade-Off (FCT):** The skill-guided protocol introduces a deliberate
+  **+296%** file-content token overhead (+6,626 FCT across the workspace suite). 
+  This expanded structural footprint directly funds explicit typing interfaces, robust 
+  error-handling pipelines, and mandatory unit testing modules.
+* **Agent Runtime Tokens (ART):** The harness tracked a total runtime investment of
+  **173,420 tokens** over 13 development turns. The cost distribution reveals that 
+  building the foundational scaffolding for the complex `go-login-crud` module accounted 
+  for nearly half (**48%**) of the total workspace execution overhead (83,371 tokens), 
+  preventing multi-turn regression loops through targeted planning.
 * **Profile-Aware Calibration:** Adjusting the scoring harness to use domain
   isolation profiles prevents metric flatlining. By eliminating security bias
   from purely declarative UI modules (React timer), the framework accurately
-  tracks valid modular scaling victories without rewarding hallucinated
-  compliance features.
-* **Deterministic Tool Integration:** Organising the run via a Headroom MCP 
-  server acts as an essential system buffer layer. By handling file operations
-  and local compiler steps natively, it completely isolates the core language
-  model context from syntax drift during file staging sequences.
+  tracks valid modular scaling victories (achieving a true 100% standing) without 
+  penalizing a lack of database encryption patterns.
+* **Deterministic Tool Integration:** Structuring the session with the active 
+  `lccst-telemetry` MCP server ensures bulletproof compliance checkpointing. By capturing 
+  every token transaction directly via the JSON-RPC channel on each development loop, the 
+  framework maintains a perfect trace of development costs without altering the code runtime.
+
+> Note: `headroom` is implicitly used but not mentioned by the benchmark generation logic.
 
 Full verification traces are logged natively at:  
-`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report.md`
+[`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.3.md`](`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.3.md`)
 
 ### Adding Benchmarks for Other Models
 
 Feel free to clone the repository and contribute your agent-specific metrics
-to the main matrix.
+to the main matrix. Refer to the [playground README](./playground/README.md)
+for further details.
 
 ---
 

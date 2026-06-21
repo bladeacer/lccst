@@ -87,14 +87,21 @@ For example, set for Opencode at [opencode.jsonc](../opencode.jsonc).
 ### 3. Execute Workflow Lifecycle
 
 ```bash
-# 1. Clean previous caches and structure the isolation clean-room
+# 1. Clean previous caches and structure the isolation clean-room e.g.
 make benchmark-free AGENT_NAME=opencode MODEL_NAME=deepseek-v4-flash-free
 
-make
+# 2. Run your agent, check lccst-telemetry MCP is active paste the prompt, let it run.
+make AGENT_NAME=opencode MODEL_NAME=deepseek-v4-flash-free
+
+# 3. Exit once done. Folder cleanup and benchmark files writing
+will happen automatically
 
 # 2. View versioned evaluation output report logs
-cat ,/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v*.md
+cat ./benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v*.md
+# e.g. cat ./benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.2.md
 ```
+
+Run this in project root, not this directory.
 
 ## Methodology
 

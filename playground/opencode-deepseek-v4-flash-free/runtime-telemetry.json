@@ -1,0 +1,17 @@
+{
+  "status": "all_completed",
+  "projects": {
+    "python-http-server": {
+      "plain": {"tests_passed": 0},
+      "skill-guided": {"tests_passed": 18}
+    },
+    "react-timer": {
+      "plain": {"tests_passed": 0},
+      "skill-guided": {"tests_passed": 11}
+    },
+    "go-login-crud": {
+      "plain": {"tests_passed": 0},
+      "skill-guided": {"tests_passed": 24}
+    }
+  }
+}

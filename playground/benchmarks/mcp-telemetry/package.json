@@ -1,10 +1,10 @@
 {
-  "name": "lccst-mcp-telemetry",
-  "version": "1.0.0",
+  "name": "lccst-telemetry",
+  "version": "2.3.0",
   "private": true,
   "type": "module",
   "bin": {
-    "lccst-mcp-telemetry": "./build/index.js"
+    "lccst-telemetry": "./build/index.js"
   },
   "scripts": {
     "build": "tsc",
