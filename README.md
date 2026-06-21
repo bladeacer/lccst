@@ -95,7 +95,13 @@ three reference projects (Python HTTP server, React timer, Go login CRUD).
 
 The baseline metrics below were captured using our automated evaluation harness.
 The data highlights the concrete performance delta observed between unguided 
-generation and structured protocol compliance. 
+generation and structured protocol compliance.
+
+Two distinct token metrics are tracked:
+* **FCT (File-Content Tokens):** Static token footprint of final source files
+  (measured via `tiktoken` post-run).
+* **ART (Agent Runtime Tokens):** Cumulative prompt + completion tokens consumed
+  during the agent loop (captured via the `track_runtime.py` proxy).
 
 Scores are fully normalised to a 100-point scale using project-specific
 evaluation profiles. Each target subproject is graded exclusively on features
@@ -104,19 +110,24 @@ components are not penalised for a lack of database encryption patterns).
 
 ### opencode-deepseek-v4-flash-free
 
-| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **Python HTTP Server** | 48/100 | **100/100** | 11/11 Passed |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **React Timer** | 22/100 | **100/100** | 9/9 Passed |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **Go Login CRUD** | 65/100 | **100/100** | 12/12 Passed |
-| **Summary** | | | | **Workspace Average** | **45/100** | **100/100** | **32/32 Total** |
+| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT | ART |
+| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | ---: | ---: |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **Python HTTP Server** | 48/100 | **100/100** | 11/11 Passed | 2,125 | - |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **React Timer** | 22/100 | **100/100** | 9/9 Passed | 845 | - |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.2` | Headroom MCP | **Go Login CRUD** | 65/100 | **100/100** | 12/12 Passed | 4,048 | - |
+| **Summary** | | | | **Workspace Average** | **45/100** | **100/100** | **32/32 Total** | **7,018** | **N/A** |
 
 ### Core Architectural Insights
 
-* **The Token Trade-Off:** The skill-guided protocol introduces an expected
-  +133% token overhead (+4,001 tokens total across the workspace suite). This
-  focused context investment directly translates into ironclad interface types,
-  explicit error boundary catches, and comprehensive unit testing suites.
+* **The Token Trade-Off (FCT):** The skill-guided protocol introduces an
+  expected +133% file-content token overhead (+4,001 FCT across the workspace
+  suite). This focused context investment translates into typed interfaces,
+  explicit error boundaries, and comprehensive unit testing.
+* **Agent Runtime Tokens (ART):** ART tracks the cumulative prompt + completion
+  tokens consumed across the multi-turn agent loop, captured via the
+  `track_runtime.py` proxy. This metric isolates agent-loop efficiency from
+  file-payload bloat. Lower ART values indicate that environment documentation
+  (e.g., `guide.md`) prevents expensive debugging cycles.
 * **Profile-Aware Calibration:** Adjusting the scoring harness to use domain
   isolation profiles prevents metric flatlining. By eliminating security bias
   from purely declarative UI modules (React timer), the framework accurately
@@ -139,17 +150,17 @@ to the main matrix.
 
 ## Installation
 
+### Option A: Model Context Protocol (MCP) Server Setup
+
+> **Minimum effort, maximum yield.**
+
 To clone only the latest commit state and save setup overhead, use a shallow
 clone:
 
 ```bash
-git clone --depth 1 https://github.com/bladeaccer/lccst
+git clone --depth 1 https://github.com/bladeacer/lccst
 cd lccst
 ```
-
-### Option A: Model Context Protocol (MCP) Server Setup
-
-> **Minimum effort, maximum yield.**
 
 For AI runners that support automated standard I/O communication daemons
 (e.g., Claude Code, Cursor, Cline, Windsurf, Codex, Pi, OpenCode, Gemini CLI /

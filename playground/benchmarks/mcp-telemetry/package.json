@@ -1,0 +1,21 @@
+{
+  "name": "lccst-mcp-telemetry",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "lccst-mcp-telemetry": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./build/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.6.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.4.0"
+  }
+}
