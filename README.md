@@ -153,7 +153,7 @@ components are not penalised for a lack of database encryption patterns).
 > Note: `headroom` is implicitly used but not mentioned by the benchmark generation logic.
 
 Full verification traces are logged natively at:  
-[`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.3.md`](`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.3.md`)
+[`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.3.md`](playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.3.md)
 
 ### Adding Benchmarks for Other Models
 
