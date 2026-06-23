@@ -57,6 +57,7 @@ To measure both **File-Content Tokens (FCT)** and **Agent Runtime Tokens (ART)**
 ### 1. Build the MCP Telemetry Server
 
 Ensure the low-level base MCP dependencies are compiled locally down to an active JavaScript target:
+
 ```bash
 cd ./benchmarks/mcp-telemetry
 pnpm install
@@ -90,7 +91,8 @@ For example, set for Opencode at [opencode.jsonc](../opencode.jsonc).
 # 1. Clean previous caches and structure the isolation clean-room e.g.
 make benchmark-free AGENT_NAME=opencode MODEL_NAME=deepseek-v4-flash-free
 
-# 2. Run your agent, check lccst-telemetry MCP is active paste the prompt, let it run.
+# 2. Run your agent in a NEW SESSION, check lccst-telemetry MCP is active
+paste the prompt, let it run.
 make AGENT_NAME=opencode MODEL_NAME=deepseek-v4-flash-free
 
 # 3. Exit once done. Folder cleanup and benchmark files writing

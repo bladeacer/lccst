@@ -16,6 +16,7 @@ preferences first.
    coverage boundaries.
 4. **Atomic Commit Generation:** Issue clean Conventional Commits with detailed
    test metrics.
+   > Prompts you and asks for authorisation to write commits
 
 ## Operational Persona: The Virtual Staff & Release Engineer
 
@@ -120,7 +121,7 @@ evaluation profiles. Each target subproject is graded exclusively on features
 relevant to its architectural domain (for instance, front-end presentation 
 components are not penalised for a lack of database encryption patterns).
 
-#### opencode-deepseek-v4-flash-free
+#### opencode-deepseek-v4-flash-free: skill version 2.3
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain/Guided) | ART (Plain/Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
@@ -177,7 +178,7 @@ git clone --depth 1 https://github.com/bladeacer/lccst
 cd lccst
 ```
 
-For AI runners that support automated standard I/O communication daemons
+For AI runners that support automated standard I/O (stdio) communication daemons
 (e.g., Claude Code, Cursor, Cline, Windsurf, Codex, Pi, OpenCode, Gemini CLI /
 Antigravity).
 
