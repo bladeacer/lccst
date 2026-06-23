@@ -13,10 +13,11 @@ preferences first.
 1. **Discover & Format:** Run lints and compilers via a strict Tooling Ladder.
 2. **Hunk Clustering:** Group workspace diffs into isolated, atomic units.
 3. **Targeted Testing:** Verify changes and enforce strict, ecosystem-aware
-   coverage boundaries.
+coverage boundaries.
 4. **Atomic Commit Generation:** Issue clean Conventional Commits with detailed
-   test metrics.
-   > Prompts you and asks for authorisation to write commits
+test metrics. 
+> Note: The agent explicitly prompts and requests authorization before
+writing commits.
 
 ## Operational Persona: The Virtual Staff & Release Engineer
 
@@ -41,6 +42,7 @@ philosophical balance. It is built to run standalone or alongside token-cutters.
 | **Locust (LCCST)** | **Payload Integrity** | **Enforces typing, lints, and tests.** |
 
 ### The Token Investment Philosophy
+
 The project name itself embodies this duality: **LCCST** stands as a direct pun
 on **Low Cost** asset management while algorithmically executing **Locality
 Clustering** over your workspace tree.
@@ -104,43 +106,33 @@ Two distinct token metrics are tracked:
 * **ART (Agent Runtime Tokens):** Cumulative prompt + completion tokens consumed
   during the agent loop (captured via the `track_runtime.py` proxy).
 
-### Verification Matrix & Baseline Benchmarks
-
-The baseline metrics below were captured using our automated evaluation harness.
-The data highlights the concrete performance delta observed between unguided 
-generation and structured protocol compliance.
-
-Two distinct token metrics are tracked:
-* **FCT (File-Content Tokens):** Static token footprint of final source files
-  (measured via `tiktoken` post-run).
-* **ART (Agent Runtime Tokens):** Cumulative prompt + completion tokens consumed
-  during the agent loop (captured via the `track_runtime.py` proxy).
-
 Scores are fully normalised to a 100-point scale using project-specific
 evaluation profiles. Each target subproject is graded exclusively on features
 relevant to its architectural domain (for instance, front-end presentation 
 components are not penalised for a lack of database encryption patterns).
 
-#### opencode-deepseek-v4-flash-free: skill version 2.3
+For more details, see [playground/README.md](/playground/README.md).
+
+#### opencode-deepseek-v4-flash-free: skill version 2.5
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain/Guided) | ART (Plain/Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.3` | `lccst-telemetry, headroom` | **Python HTTP Server** | 48/100 | **100/100** | PASSED | 642 / 2,601 | 10,033 / 40,650 |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.3` | `lccst-telemetry, headroom` | **React Timer** | 22/100 | **100/100** | PASSED | 516 / 926 | 8,064 / 14,471 |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.3` | `lccst-telemetry, headroom` | **Go Login CRUD** | 49/100 | **100/100** | PASSED | 1,077 / 5,334 | 16,831 / 83,371 |
-| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,235 / 8,861** | **34,928 / 138,492** |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.5` | `lccst-telemetry` | **Python HTTP Server** | 48/100 | **100/100** | PASSED | 582 / 1,765 | 1,099 / 3,336 |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.5` | `lccst-telemetry` | **React Timer** | 22/100 | **100/100** | PASSED | 385 / 943 | 727 / 1,782 |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.5` | `lccst-telemetry` | **Go Login CRUD** | 65/100 | **100/100** | PASSED | 1,138 / 4,405 | 2,150 / 8,335 |
+| **Summary** | | | | **Workspace Totals / Avg** | **45/100** | **100/100** | **3/3 Passed** | **2,105 / 7,113** | **3,976 / 13,453** |
 
 ### Core Architectural Insights
 
 * **The Token Trade-Off (FCT):** The skill-guided protocol introduces a deliberate
-  **+296%** file-content token overhead (+6,626 FCT across the workspace suite). 
-  This expanded structural footprint directly funds explicit typing interfaces, robust 
-  error-handling pipelines, and mandatory unit testing modules.
+  **+238%** file-content token overhead (+5,008 FCT across the workspace suite). 
+  This represents a streamlined footprint optimization over v2.3, directly funding explicit 
+  typing interfaces, robust error-handling pipelines, and mandatory unit testing modules.
 * **Agent Runtime Tokens (ART):** The harness tracked a total runtime investment of
-  **173,420 tokens** over 13 development turns. The cost distribution reveals that 
-  building the foundational scaffolding for the complex `go-login-crud` module accounted 
-  for nearly half (**48%**) of the total workspace execution overhead (83,371 tokens), 
-  preventing multi-turn regression loops through targeted planning.
+  **13,453 tokens** for the guided routines over the active development cycles. The cost 
+  distribution reveals that building the foundational scaffolding for the complex `go-login-crud` 
+  module accounted for over **61%** of the guided runtime investment (8,335 tokens), blocking 
+  multi-turn regression loops before execution.
 * **Profile-Aware Calibration:** Adjusting the scoring harness to use domain
   isolation profiles prevents metric flatlining. By eliminating security bias
   from purely declarative UI modules (React timer), the framework accurately
@@ -151,10 +143,10 @@ components are not penalised for a lack of database encryption patterns).
   every token transaction directly via the JSON-RPC channel on each development loop, the 
   framework maintains a perfect trace of development costs without altering the code runtime.
 
-> Note: `headroom` is implicitly used but not mentioned by the benchmark generation logic.
+> Note: Detailed metric partitioning, line count growth, and feature completeness matrices are available in the comprehensive playground breakdown. `headroom` MCP is used for all benchmarks but not mentioned by the benchmarking.
 
 Full verification traces are logged natively at:  
-[`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.3.md`](playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.3.md)
+[`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.5 (Standalone Single-File System).md`](/playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.5%20%28Standalone%20Single-File%20System%29.md)
 
 ### Adding Benchmarks for Other Models
 

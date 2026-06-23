@@ -5,7 +5,7 @@ export const payload = {
   params: {
     protocolVersion: "2024-11-05",
     capabilities: {},
-    clientInfo: { name: "lccst-test-harness", version: "2.4.0" }
+    clientInfo: { name: "lccst-test-harness", version: "2.5.0" }
   }
 };
 
