@@ -18,8 +18,8 @@ preferences first.
 coverage boundaries.
 4. **Atomic Commit Generation:** Issue clean Conventional Commits with detailed
 test metrics. 
-> Note: The agent explicitly prompts and requests authorization before
-writing commits.
+> Note: The agent explicitly prompts for manual confirmation or
+requires explicit pre-authorisation before writing to your history.
 
 ## Operational Persona: The Virtual Staff & Release Engineer
 
@@ -58,9 +58,11 @@ silent runtime type failures.
 
 ## Core Philosophy
 
-* **User Preference Overrides:** Your explicit instructions and preferred
-  patterns always come first. If any rule in this protocol clashes with your
-  desired workflow, the system automatically prioritises your choice.
+* **User Preference Overrides:** Your explicit preferred design patterns and
+  target logic always take priority when defining application payloads. However,
+  the core safety gates of the pipeline--including atomic hunk isolation, the
+  Tooling Ladder, and strict test-pass verification--are non-negotiable workspace
+  invariants designed to prevent structural regressions.
 * **Streamlined Initialisation:** Use the `/init` command on startup to kick
   off immediate, automated codebase scans, helping you audit repository health
   and catch architectural documentation gaps before any changes begin.
@@ -79,9 +81,10 @@ silent runtime type failures.
   automatically adapts to both monolithic and modular/versioned changelog
   layouts using SemVer rules.
 * **Quality over Velocity:** Prioritise structural integrity and complete test
-  verification over raw execution speed. Spending extra LLM tokens and time
-  to run the Tooling Ladder is an explicit design choice to prevent technical
-  debt downstream.
+  verification over raw execution speed. Version 2.7.0 enforces strict Mode Gating:
+  it maintains an ultra-lean token footprint during passive `/audit` scans, reserving
+  heavy completion token investment exclusively for the execution loop where full
+  verification overhead is justified.
 * **Granularity over Convenience:** Reject the temptation to bundle multi-domain
   fixes into single execution blocks. Locust applies strict **Locality
   Clustering** to group workspace diffs by their functional domain boundaries.
@@ -115,26 +118,26 @@ components are not penalised for a lack of database encryption patterns).
 
 For more details, see [playground/README.md](/playground/README.md).
 
-#### opencode-deepseek-v4-flash-free: skill version 2.5
+#### opencode-deepseek-v4-flash-free: skill version 2.7.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain/Guided) | ART (Plain/Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.5` | `lccst-telemetry` | **Python HTTP Server** | 48/100 | **100/100** | PASSED | 582 / 1,765 | 1,099 / 3,336 |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.5` | `lccst-telemetry` | **React Timer** | 22/100 | **100/100** | PASSED | 385 / 943 | 727 / 1,782 |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.5` | `lccst-telemetry` | **Go Login CRUD** | 65/100 | **100/100** | PASSED | 1,138 / 4,405 | 2,150 / 8,335 |
-| **Summary** | | | | **Workspace Totals / Avg** | **45/100** | **100/100** | **3/3 Passed** | **2,105 / 7,113** | **3,976 / 13,453** |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.7.0` | `lccst-telemetry` | **Python HTTP Server** | 48/100 | **100/100** | PASSED | 590 / 2,256 | 2,317 / 8,866 |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.7.0` | `lccst-telemetry` | **React Timer** | 22/100 | **100/100** | PASSED | 569 / 829 | 2,236 / 3,258 |
+| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.7.0` | `lccst-telemetry` | **Go Login CRUD** | 49/100 | **100/100** | PASSED | 715 / 3,951 | 2,809 / 15,534 |
+| **Summary** | | | | **Workspace Totals / Avg** | **39.6/100** | **100/100** | **3/3 Passed** | **1,874 / 7,036** | **7,362 / 27,658** |
 
 ### Core Architectural Insights
 
 * **The Token Trade-Off (FCT):** The skill-guided protocol introduces a deliberate
-  **+238%** file-content token overhead (+5,008 FCT across the workspace suite). 
-  This represents a streamlined footprint optimization over v2.3, directly funding explicit 
-  typing interfaces, robust error-handling pipelines, and mandatory unit testing modules.
+  **+275%** file-content token overhead (+5,162 FCT across the workspace suite). 
+  This represents a highly optimized, state-gated boundary configuration over v2.6, directly
+  funding explicit typing interfaces, robust error-handling, and mandatory unit testing.
 * **Agent Runtime Tokens (ART):** The harness tracked a total runtime investment of
-  **13,453 tokens** for the guided routines over the active development cycles. The cost 
+  **27,658 tokens** for the guided routines over the active development cycles. The cost 
   distribution reveals that building the foundational scaffolding for the complex `go-login-crud` 
-  module accounted for over **61%** of the guided runtime investment (8,335 tokens), blocking 
-  multi-turn regression loops before execution.
+  module accounted for **56.1%** of the guided runtime investment (15,534 tokens), completely
+  isolating structural errors during the gated plan-to-execute transition.
 * **Profile-Aware Calibration:** Adjusting the scoring harness to use domain
   isolation profiles prevents metric flatlining. By eliminating security bias
   from purely declarative UI modules (React timer), the framework accurately
@@ -150,7 +153,7 @@ For more details, see [playground/README.md](/playground/README.md).
 > `headroom` MCP is used for all benchmarks but not mentioned by the benchmarking. Follow their setup instructions.
 
 Full verification traces are logged natively at:  
-[`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.5 (Standalone Single-File System).md`](/playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.5%20%28Standalone%20Single-File%20System%29.md)
+[`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.7.0.md`](./playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.7.0.md)
 
 ### Adding Benchmarks for Other Models
 
