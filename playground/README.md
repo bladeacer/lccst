@@ -23,21 +23,14 @@ Prompt your agent with the full prompt in [agent-prompt.md](./agent-prompt.md).
 
 ### Setup
 
-Install `headroom` and `codegraph` MCP.
+Install `headroom` MCP.
 
-They are used for all benchmarks but not mentioned by the benchmarking.
+It is used for all benchmarks but not mentioned by the benchmarking.
 Follow their setup instructions.
-
-- [codegraph repo](https://github.com/colbymchenry/codegraph)
-
-> After installation and connecting to MCP for your agent, run `codegraph init`
-> at the repository root
 
 - [headroom repo](https://github.com/chopratejas/headroom)
 
-`headroom` is used to save on token usage while still preserving context,
-while `codegraph` is used to index the codebase so the agent focuses less
-on file reading and more on implementation during benchmarks.
+`headroom` is used to save on token usage while still preserving context.
 
 ## Benchmarking & Token Telemetry
 

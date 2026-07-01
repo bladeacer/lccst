@@ -173,9 +173,10 @@ def extract_skill_version():
     if skill_path.is_file():
         try:
             first = skill_path.read_text().split("\n")[0]
-            if "v" in first: 
-                return f"v{first.split('v')[-1].strip().rstrip(':')}"
-        except Exception: 
+            m = re.search(r"v(\d+\.\d+(?:\.\d+)?)", first)
+            if m:
+                return f"v{m.group(1)}"
+        except Exception:
             pass
     return "unknown"
 
@@ -357,10 +358,10 @@ def generate_markdown(results, agent_tag, skill_ver, art_data):
     for name, data in results.items():
         for var in ("plain", "guided"):
             feat = data[var]["features_aggregate"]
-            t = "✅" if feat["has_typing"] else "❌"
-            s = "✅" if feat["has_security"] else "❌"
-            e = "✅" if feat["has_error_handling"] else "❌"
-            a = "✅" if feat["has_test_assertion"] else "❌"
+            t = "(+)" if feat["has_typing"] else "(-)"
+            s = "(+)" if feat["has_security"] else "(-)"
+            e = "(+)" if feat["has_error_handling"] else "(-)"
+            a = "(+)" if feat["has_test_assertion"] else "(-)"
             md += f"| {name} | {var.capitalize()} | {t} | {s} | {e} | {a} |\n"
 
     return md

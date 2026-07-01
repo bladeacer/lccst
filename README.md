@@ -147,7 +147,7 @@ For more details, see [playground/README.md](/playground/README.md).
 
 > Note: Detailed metric partitioning, line count growth, and feature completeness matrices are available in the comprehensive playground breakdown. 
 > 
-> `headroom` and `codegraph` MCP is used for all benchmarks but not mentioned by the benchmarking. Follow their setup instructions.
+> `headroom` MCP is used for all benchmarks but not mentioned by the benchmarking. Follow their setup instructions.
 
 Full verification traces are logged natively at:  
 [`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.5 (Standalone Single-File System).md`](/playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.5%20%28Standalone%20Single-File%20System%29.md)

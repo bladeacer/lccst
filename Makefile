@@ -16,7 +16,7 @@ benchmark-free: clean-telemetry
 	# Run from root so opencode.jsonc is loaded naturally, targeting the sandbox folder path
 	$(AGENT_NAME) playground/$(AGENT_MODEL)
 
-	@echo "\n[Harness] OpenCode exited. Parsing compiled outputs and runtime telemetry logs..."
+	@echo "[Harness] OpenCode exited. Parsing compiled outputs and runtime telemetry logs..."
 	python3 $(BENCH_DIR)/run_benchmark.py $(AGENT_MODEL) --install-deps
 
 	@echo "[Harness] Run complete. Purging transient workspace files..."
