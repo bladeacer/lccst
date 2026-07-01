@@ -1,5 +1,7 @@
 # LCCST (Locust)
 
+![Logo poster](./logo-poster.png)
+
 An algorithmic workspace gatekeeper that decomposes complex codebase changes
 into isolated, test-verified, atomic Git commits while rigorously enforcing
 architectural cohesion and SOLID invariants.
@@ -143,7 +145,9 @@ For more details, see [playground/README.md](/playground/README.md).
   every token transaction directly via the JSON-RPC channel on each development loop, the 
   framework maintains a perfect trace of development costs without altering the code runtime.
 
-> Note: Detailed metric partitioning, line count growth, and feature completeness matrices are available in the comprehensive playground breakdown. `headroom` MCP is used for all benchmarks but not mentioned by the benchmarking.
+> Note: Detailed metric partitioning, line count growth, and feature completeness matrices are available in the comprehensive playground breakdown. 
+> 
+> `headroom` and `codegraph` MCP is used for all benchmarks but not mentioned by the benchmarking. Follow their setup instructions.
 
 Full verification traces are logged natively at:  
 [`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.5 (Standalone Single-File System).md`](/playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.5%20%28Standalone%20Single-File%20System%29.md)
@@ -256,9 +260,14 @@ It's an AI skill, AI assistance was used in the making of this project.
 Architectural, design decisions and ensuring the code works as intended was
 done by a human.
 
-## Credits & Inspiration
+## Credits
 
 Locust was heavily inspired by [ponytail](https://github.com/DietrichGebert/ponytail).
+
+The logo and posters uses
+[the Iceberg Dark colour scheme by cocopon](https://cocopon.github.io/iceberg.vim/).
+
+[IBM Plex Mono](https://github.com/IBM/plex) was used for typography.
 
 ## License
 
