@@ -126,17 +126,17 @@ missing encryption patterns).
 
 <!-- BENCHMARK_RESULTS_START -->
 
-#### opencode-deepseek-v4-flash-free: skill version v2.7.0
+#### opencode-deepseek-v4-flash-free: skill version v2.8.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `v2.7.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 590 | 2,256 | 2,317 | 8,866 |
-| **opencode** | `deepseek-v4-flash-free` | `v2.7.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 569 | 829 | 2,236 | 3,258 |
-| **opencode** | `deepseek-v4-flash-free` | `v2.7.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 715 | 3,951 | 2,809 | 15,534 |
-| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,874** | **7,036** | **7,362** | **27,658** |
+| **opencode** | `deepseek-v4-flash-free` | `v2.8.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 655 | 2,229 | 2,639 | 8,984 |
+| **opencode** | `deepseek-v4-flash-free` | `v2.8.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 508 | 770 | 2,046 | 3,102 |
+| **opencode** | `deepseek-v4-flash-free` | `v2.8.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 1,191 | 5,079 | 4,800 | 20,479 |
+| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,354** | **8,078** | **9,485** | **32,565** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
-> Skill-guided implementation used **+275%** more FCT and **+276%** more ART compared to plain implementation across the workspace suite.
+> Skill-guided implementation used **+243%** more FCT and **+243%** more ART compared to plain implementation across the workspace suite.
 
 <!-- BENCHMARK_RESULTS_END -->
 

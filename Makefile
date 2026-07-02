@@ -1,4 +1,4 @@
-.PHONY: bench-all benchmark-free clean-telemetry
+.PHONY: benchmark-free bench-update clean-telemetry
 
 PORT         ?= 8080
 AGENT_NAME   ?= opencode
@@ -9,10 +9,6 @@ BENCH_DIR    := playground/benchmarks
 PROMPT_FILE  := playground/agent-prompt.md
 
 # Default target: regenerate README table from existing benchmark reports
-bench-all:
-	@echo "[Harness] Aggregating latest benchmark reports..."
-	python3 scripts/update_readme_benchmarks.py
-
 benchmark-free: clean-telemetry
 	@echo "[Harness] Structuring isolation clean-room for $(AGENT_MODEL)..."
 	@mkdir -p playground/$(AGENT_MODEL)
@@ -31,6 +27,12 @@ benchmark-free: clean-telemetry
 	@rm -rf playground/$(AGENT_MODEL)/react-timer
 	@echo "[Harness] Report preserved cleanly."
 	@echo "[Harness] Standalone benchmark logs and versioned markdown reports preserved cleanly."
+
+	$(MAKE) bench-update
+
+bench-update:
+	@echo "[Harness] Aggregating latest benchmark reports..."
+	python3 scripts/update_readme_benchmarks.py
 
 clean-telemetry:
 	@echo "[Harness] Flushing trace telemetry caches..."
