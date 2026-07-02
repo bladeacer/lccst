@@ -101,59 +101,57 @@ three reference projects (Python HTTP server, React timer, Go login CRUD).
 
 ### Verification Matrix & Baseline Benchmarks
 
-The baseline metrics below were captured using our automated evaluation harness.
-The data highlights the concrete performance delta observed between unguided 
-generation and structured protocol compliance.
+The baseline metrics below were captured using our automated evaluation
+harness. The data highlights the concrete performance delta observed
+between unguided generation and structured protocol compliance.
 
 Two distinct token metrics are tracked:
-* **FCT (File-Content Tokens):** Static token footprint of final source files
-  (measured via `tiktoken` post-run).
-* **ART (Agent Runtime Tokens):** Cumulative prompt + completion tokens consumed
-  during the agent loop (captured via the `track_runtime.py` proxy).
+* **FCT (File-Content Tokens):** Static token footprint of final source
+  files (measured via `tiktoken` post-run).
+* **ART (Agent Runtime Tokens):** Cumulative prompt + completion tokens
+  consumed during the agent loop (captured via the `track_runtime.py`
+  proxy).
 
-Scores are fully normalised to a 100-point scale using project-specific
-evaluation profiles. Each target subproject is graded exclusively on features
-relevant to its architectural domain (for instance, front-end presentation 
-components are not penalised for a lack of database encryption patterns).
+Scores are fully normalised to a 100-point scale using domain-specific
+evaluation profiles. Each subproject is graded on features relevant to
+its architectural domain (e.g., UI components are not penalised for
+missing encryption patterns).
 
-For more details, see [playground/README.md](/playground/README.md).
+<!-- BENCHMARK_RESULTS_START -->
 
-#### opencode-deepseek-v4-flash-free: skill version 2.7.0
+#### opencode-deepseek-v4-flash-free: skill version v2.7.0
 
-| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain/Guided) | ART (Plain/Guided) |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.7.0` | `lccst-telemetry` | **Python HTTP Server** | 48/100 | **100/100** | PASSED | 590 / 2,256 | 2,317 / 8,866 |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.7.0` | `lccst-telemetry` | **React Timer** | 22/100 | **100/100** | PASSED | 569 / 829 | 2,236 / 3,258 |
-| **opencode** | `deepseek-v4-flash-free` | `skill.md v2.7.0` | `lccst-telemetry` | **Go Login CRUD** | 49/100 | **100/100** | PASSED | 715 / 3,951 | 2,809 / 15,534 |
-| **Summary** | | | | **Workspace Totals / Avg** | **39.6/100** | **100/100** | **3/3 Passed** | **1,874 / 7,036** | **7,362 / 27,658** |
+| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **opencode** | `deepseek-v4-flash-free` | `v2.7.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 590 | 2,256 | 2,317 | 8,866 |
+| **opencode** | `deepseek-v4-flash-free` | `v2.7.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 569 | 829 | 2,236 | 3,258 |
+| **opencode** | `deepseek-v4-flash-free` | `v2.7.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 715 | 3,951 | 2,809 | 15,534 |
+| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,874** | **7,036** | **7,362** | **27,658** |
+
+> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
+
+<!-- BENCHMARK_RESULTS_END -->
+
+> ART is captured per-subproject via the `lccst-telemetry` MCP server,
+> giving a perfect trace of agent development costs. See the
+> [methodology guide](playground/README.md) for the full breakdown.
 
 ### Core Architectural Insights
 
-* **The Token Trade-Off (FCT):** The skill-guided protocol introduces a deliberate
-  **+275%** file-content token overhead (+5,162 FCT across the workspace suite). 
-  This represents a highly optimized, state-gated boundary configuration over v2.6, directly
-  funding explicit typing interfaces, robust error-handling, and mandatory unit testing.
-* **Agent Runtime Tokens (ART):** The harness tracked a total runtime investment of
-  **27,658 tokens** for the guided routines over the active development cycles. The cost 
-  distribution reveals that building the foundational scaffolding for the complex `go-login-crud` 
-  module accounted for **56.1%** of the guided runtime investment (15,534 tokens), completely
+* **The Token Trade-Off (FCT):** The skill-guided protocol introduces a
+  deliberate file-content token overhead (see FCT columns above) to fund
+  explicit typing, robust error-handling, and mandatory unit testing.
+* **Agent Runtime Tokens (ART):** The harness tracks a runtime investment
+  across skill-guided development cycles. The heaviest subproject (noted in
+  the table above) typically accounts for the largest share of guided ART,
   isolating structural errors during the gated plan-to-execute transition.
-* **Profile-Aware Calibration:** Adjusting the scoring harness to use domain
-  isolation profiles prevents metric flatlining. By eliminating security bias
-  from purely declarative UI modules (React timer), the framework accurately
-  tracks valid modular scaling victories (achieving a true 100% standing) without 
-  penalizing a lack of database encryption patterns.
-* **Deterministic Tool Integration:** Structuring the session with the active 
-  `lccst-telemetry` MCP server ensures bulletproof compliance checkpointing. By capturing 
-  every token transaction directly via the JSON-RPC channel on each development loop, the 
-  framework maintains a perfect trace of development costs without altering the code runtime.
 
-> Note: Detailed metric partitioning, line count growth, and feature completeness matrices are available in the comprehensive playground breakdown. 
-> 
-> `headroom` MCP is used for all benchmarks but not mentioned by the benchmarking. Follow their setup instructions.
-
-Full verification traces are logged natively at:  
-[`playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.7.0.md`](./playground/benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v2.7.0.md)
+> Note: Detailed metric partitioning, line count growth, and feature
+> completeness matrices are available in the comprehensive playground
+> breakdown. See individual reports for per-version traces.
+>
+> `headroom` MCP is used for all benchmarks. Follow their setup
+> instructions.
 
 ### Adding Benchmarks for Other Models
 

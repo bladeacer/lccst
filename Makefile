@@ -1,4 +1,4 @@
-.PHONY: benchmark-free clean-telemetry
+.PHONY: bench-all benchmark-free clean-telemetry
 
 PORT         ?= 8080
 AGENT_NAME   ?= opencode
@@ -7,6 +7,11 @@ AGENT_MODEL  := $(AGENT_NAME)-$(MODEL_NAME)
 
 BENCH_DIR    := playground/benchmarks
 PROMPT_FILE  := playground/agent-prompt.md
+
+# Default target: regenerate README table from existing benchmark reports
+bench-all:
+	@echo "[Harness] Aggregating latest benchmark reports..."
+	python3 scripts/update_readme_benchmarks.py
 
 benchmark-free: clean-telemetry
 	@echo "[Harness] Structuring isolation clean-room for $(AGENT_MODEL)..."
