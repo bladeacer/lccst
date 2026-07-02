@@ -56,6 +56,13 @@ Tooling Ladder) to eliminate the exponentially higher downstream costs of
 debugging broken production builds, untangling messy Git histories, or fixing
 silent runtime type failures.
 
+> **Higher token consumption is the intended tradeoff.** Our benchmarks
+> consistently show +200-300% more FCT and ART for skill-guided implementations.
+> This overhead is not waste -- it funds explicit type safety, security
+> boundaries, error handling, and complete test coverage that plain generations
+> systematically omit. Every extra token is an investment against the 10x cost
+> of finding these defects in production.
+
 ## Core Philosophy
 
 * **User Preference Overrides:** Your explicit preferred design patterns and
@@ -81,7 +88,7 @@ silent runtime type failures.
   automatically adapts to both monolithic and modular/versioned changelog
   layouts using SemVer rules.
 * **Quality over Velocity:** Prioritise structural integrity and complete test
-  verification over raw execution speed. Version 2.7.0 enforces strict Mode Gating:
+  verification over raw execution speed. Version 2.8.0 enforces strict Mode Gating:
   it maintains an ultra-lean token footprint during passive `/audit` scans, reserving
   heavy completion token investment exclusively for the execution loop where full
   verification overhead is justified.
@@ -129,6 +136,7 @@ missing encryption patterns).
 | **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,874** | **7,036** | **7,362** | **27,658** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
+> Skill-guided implementation used **+275%** more FCT and **+276%** more ART compared to plain implementation across the workspace suite.
 
 <!-- BENCHMARK_RESULTS_END -->
 

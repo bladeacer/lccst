@@ -1,4 +1,4 @@
-# LCCST (Locust): Protocol Specification v2.7.0
+# LCCST (Locust): Protocol Specification v2.8.0
 [Deterministic Workspace Gatekeeper Protocol - Enforce Structurally]
 
 ## 1. Mandate & Operational Persona
@@ -69,6 +69,9 @@ The following are non-negotiable requirements for all skill-guided implementatio
   high completion-token overhead exclusively for Active Execution (Phase 1 through Phase 4), where
   rigorous formatting constraints, structured logging, and full file evaluations are explicitly
   justified by a 100% unit-test pass guarantee.
+* **Mode Gating Transition:** Explicitly remain in Read/Plan Mode until the user issues a target
+  feature instruction or confirms an audit summary. Upon receipt of a directional change command,
+  unlatch Read/Plan restrictions and transition fully into Active Execution (Section 4).
 
 ### Docs, Changelogs & Licensing
 * **In-line Contracts:** Write structured, engine-readable docstrings matching native language
@@ -91,7 +94,8 @@ Determine local validation engines by executing this language-agnostic ladder:
    in project manifests (`uv run pytest`, `pnpm test`, `go test`, etc.).
 3. **Global Binaries:** Invoke system-path language compilers, linters, and native testing engines.
 4. **Fallback Static Analysis:** Use internal LLM analysis + transient test scripts. Run via local
-   runtime, assert results, document coverage, and clean up files before staging.
+   runtime, assert results, and document coverage. Enforce an absolute cleanup requirement: use
+   a try/finally execution mentality to delete all transient files before evaluating git status.
 
 ### Test Framework Selection
 Discover and run the testing framework designated for the active project. Enforce standard local
@@ -111,7 +115,8 @@ Iterate until `git status` reports a clean working directory:
 * **Phase 3: Targeted Testing:** Execute targeted test suites based on project configuration. Ensure
   tests cover modified lines and maintain/expand coverage. On failure, capture stderr, unstage,
   audit the test suite files for outdated assertions, fix, and return to Phase 1. If the same
-  failure persists after audit, request manual human layout guidance.
+  failure persists after a maximum of 2 sequential audit loops, immediately save the unreconciled
+  logs to MEMORY.md, halt execution, and request manual human layout guidance.
 * **Phase 4: Atomic Commit:** Generate a Conventional Commit after user approval or on their
   behalf if pre-authorized.
     * *Header:* Under 50 chars (e.g., `feat(auth): add token verification`).

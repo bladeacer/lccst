@@ -96,7 +96,7 @@ function updateMetrics(
 
 const server = new McpServer({
   name: "lccst-telemetry",
-  version: "2.7.0"
+  version: "2.8.0"
 });
 
 // Drop to base handlers to use plain objects without signature errors

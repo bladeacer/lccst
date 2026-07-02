@@ -315,6 +315,13 @@ def fmt_int(n: int) -> str:
     return f"{n:,}"
 
 
+def pct_delta(a: int, b: int) -> str:
+    """Return signed percentage string from a to b."""
+    if a == 0:
+        return "0"
+    return f"{((b - a) / a * 100):+.0f}"
+
+
 def generate_table(reports: list[BenchmarkReport]) -> str:
     """Generate the markdown benchmark table content."""
     parts: list[str] = []
@@ -378,9 +385,19 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
         )
         parts.append(summary)
         parts.append("")
+        fp = report.total_fct_plain
+        fg = report.total_fct_guided
+        ap = report.total_art_plain
+        ag = report.total_art_guided
         parts.append(
             f"> **Highest ART subproject:** `{heavy}` "
             f"consumed the most guided runtime tokens."
+        )
+        parts.append(
+            f"> Skill-guided implementation used **{pct_delta(fp, fg)}%** "
+            f"more FCT and **{pct_delta(ap, ag)}%** more ART "
+            f"compared to plain implementation across the "
+            f"workspace suite."
         )
         parts.append("")
 
