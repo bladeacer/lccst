@@ -150,6 +150,18 @@ missing encryption patterns).
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
 > Skill-guided implementation used **+107%** more FCT and **+107%** more ART compared to plain implementation across the workspace suite.
 
+#### opencode-big-pickle: skill version v2.8.0
+
+| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **opencode** | `big-pickle` | `v2.8.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **84/100** | PASSED | 610 | 2,210 | 3,575 | 12,952 |
+| **opencode** | `big-pickle` | `v2.8.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 384 | 685 | 2,250 | 4,014 |
+| **opencode** | `big-pickle` | `v2.8.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 823 | 4,621 | 4,823 | 27,086 |
+| **Summary** | | | | **Workspace Totals / Avg** | **34/100** | **95/100** | **3/3 Passed** | **1,817** | **7,516** | **10,648** | **44,052** |
+
+> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
+> Skill-guided implementation used **+314%** more FCT and **+314%** more ART compared to plain implementation across the workspace suite.
+
 <!-- BENCHMARK_RESULTS_END -->
 
 > ART is captured per-subproject via the `lccst-telemetry` MCP server,

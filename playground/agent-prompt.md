@@ -23,8 +23,10 @@ Once the blind deletion pass is executed, run the `/init` workspace scan command
 ## Operational Constraints
 
 1. **Incremental Implementation**: Complete one project type at a time (e.g., implement `python-http-server` plain mode first, call telemetry checkpoint, then implement its skill-guided variant, call telemetry checkpoint, then run its tests). Do not proceed to the next project until the current one is completely finished.
-2. **Turn-Based Telemetry Checkpointing**: At the end of every individual development phase or project completion turn, you MUST explicitly invoke the `log_turn_telemetry` tool passing:
+2. **Turn-Based Telemetry Checkpointing**: At the conclusion of EVERY single individual development phase or project completion turn, you MUST explicitly invoke the `log_turn_telemetry` tool passing:
    - `subproject`: ("python-http-server" | "react-timer" | "go-login-crud")
    - `variant`: ("plain" | "skill-guided")
    - `prompt_tokens`: <true_count>
    - `completion_tokens`: <true_count>
+   
+   *CRITICAL IMPLEMENTATION MANDATE:* The tool execution invocation MUST be the absolute final token generated in your response. Do not append trailing text, markdown formatting blocks, closing thoughts, or next-step summaries after the tool call. Ending the turn directly with this tool execution ensures your output aligns precisely with our benchmarking workflow requirements.
