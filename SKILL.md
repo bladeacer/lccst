@@ -1,4 +1,12 @@
-# LCCST (Locust): Protocol Specification v2.8.0
+---
+name: lccst
+description: A deterministic workspace gatekeeper that decomposes complex codebase changes into isolated, test-verified, atomic Git commits while rigorously enforcing architectural cohesion and SOLID invariants. Invoke when managing codebase health, tracking multi-file git diffs, running tests, or generating atomic commits.
+argument-hint: "[optional command or subproject]"
+disable-model-invocation: false
+user-invocable: true
+---
+
+# LCCST (Locust): Protocol Specification v2.8.1
 [Deterministic Workspace Gatekeeper Protocol - Enforce Structurally]
 
 ## 1. Mandate & Operational Persona

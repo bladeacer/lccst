@@ -239,14 +239,14 @@ not need background processes.
 
 Inject the specification directly via runtime file referencing:
 ```bash
-claude "Review the active git diff using the parameters in ./skill.md"
+claude "Review the active git diff using the parameters in ./SKILL.md"
 ```
 
 #### GitHub Copilot & OpenCode Agents
 
 Reference or pin the file within your conversational prompt context using `@` 
 or `#` shortcuts depending on your host interface:
-* Attach `#skill.md` or `@skill.md` into your chat input interface.
+* Attach `#SKILL.md` or `@SKILL.md` into your chat input interface.
 * Target Execution Prompt: `"Execute the protocol loop defined in this file
   over my uncommitted workspace changes."`
 
@@ -255,13 +255,13 @@ or `#` shortcuts depending on your host interface:
 Pipe the raw text content into initialization runs or supply it through custom
 extension layers:
 ```bash
-cat skill.md | your-agent-runner "Apply this system execution skill"
+cat SKILL.md | your-agent-runner "Apply this system execution skill"
 ```
 
 #### Project-Level Workspace Binding (Automated Rule Locking)
 
 To permanently bind an AI agent to the Locust framework constraints without
-typing manual prompt triggers, save or symlink `skill.md` directly into your
+typing manual prompt triggers, save or symlink `SKILL.md` directly into your
 repository root using the appropriate file target:
 * **Cursor IDE:** Save file as `.cursorrules` in your project root.
 * **Cline / VS Code AI Agents:** Save file as `.clinerules` in your project
@@ -271,7 +271,7 @@ repository root using the appropriate file target:
 #### Global Editor Profiles
 
 To apply these rules globally across all open development spaces on your
-machine, copy the raw content of `skill.md` and paste it inside your editor's
+machine, copy the raw content of `SKILL.md` and paste it inside your editor's
 global behavioural configuration field:
 * **Cursor:** Navigate to `Settings -> Features -> Rules for AI` and append
   the ruleset.
@@ -301,6 +301,8 @@ The logo and posters uses
 [the Iceberg Dark colour scheme by cocopon](https://cocopon.github.io/iceberg.vim/).
 
 [IBM Plex Mono](https://github.com/IBM/plex) was used for typography.
+
+The [Agent Skills specification](https://agentskills.io/specification).
 
 ## License
 

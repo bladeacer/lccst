@@ -169,7 +169,7 @@ def detect_tool_versions():
 
 
 def extract_skill_version():
-    skill_path = PLAYGROUND.parent / "skill.md"
+    skill_path = PLAYGROUND.parent / "SKILL.md"
     if skill_path.is_file():
         try:
             first = skill_path.read_text().split("\n")[0]

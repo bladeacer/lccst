@@ -6,7 +6,7 @@ import { fileURLToPath } from "url";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const server = new McpServer({
     name: "lccst-locust",
-    version: "2.8.0"
+    version: "2.8.1"
 });
 // Enforce type contract constraints directly on prompt payload generation
 server.registerPrompt("swarm", {
@@ -14,7 +14,7 @@ server.registerPrompt("swarm", {
 }, async () => {
     try {
         // Look one directory up from dist/index.js to find the project root asset
-        const skillPath = path.resolve(__dirname, "../skill.md");
+        const skillPath = path.resolve(__dirname, "../SKILL.md");
         const skillContent = fs.readFileSync(skillPath, "utf-8");
         return {
             messages: [

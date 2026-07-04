@@ -3,7 +3,7 @@
 ## Purpose
 
 Compare two implementation approaches: **plain** (no skill guidance) vs **skill-guided** (following a
-skill.md protocol) across three small projects. Measure token usage, code features, test results,
+SKILL.md protocol) across three small projects. Measure token usage, code features, test results,
 and robustness.
 
 ## Directory Structure
@@ -68,7 +68,7 @@ playground/
 ## Methodology
 
 The implementation methodology and procedural rules are inherited directly from the primary
-system architecture file located at `../skill.md`. 
+system architecture file located at `../SKILL.md`. 
 
 ### Clean-Room Environment Reference (The Answer Key)
 The playground runner provides strict target execution invariants to stop agents from looping on
@@ -84,7 +84,7 @@ infrastructure configuration. Do not alter, upgrade, or dynamically modify globa
 
 ### Automated Grading Matrix (The Rubric)
 The benchmarking engine runs static file analyses to calculate the final Robustness Score.
-Clean-room implementations must satisfy the design criteria matching the `../skill.md` protocol:
+Clean-room implementations must satisfy the design criteria matching the `../SKILL.md` protocol:
 
 | Assessment Criteria | Target Metrics for Max Score |
 |---------------------|------------------------------|
@@ -140,9 +140,9 @@ if pnpm-specific build approval is needed.
 
 1. **Set up the workspace**: Create `playground/{your-agent-tag}/` with the three project
    directories.
-2. **Generate plain implementations**: Without consulting skill.md, write minimal working code for
+2. **Generate plain implementations**: Without consulting SKILL.md, write minimal working code for
    each project.
-3. **Generate skill-guided implementations**: With skill.md loaded, write structured, typed,
+3. **Generate skill-guided implementations**: With SKILL.md loaded, write structured, typed,
    tested code; use modern manifests (pyproject.toml, tsconfig, go.mod), TypeScript (`.ts`/`.tsx`)
    not plain JS.
 4. **Install dependencies**:
@@ -315,7 +315,7 @@ When executing the Go Login CRUD subproject, agents loop on `package main` impor
 ## Traceability
 
 Each benchmark report includes:
-* The **skill.md version** listed at the top of the spec (`vX.Y`)
+* The **SKILL.md version** listed at the top of the spec (`vX.Y`)
 * The **agent tag** (name + model identifier)
 * **Python, pnpm, Go versions** detected at runtime
 * Full breakdown of tokens, lines, features per project

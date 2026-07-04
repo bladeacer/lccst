@@ -98,7 +98,7 @@ Run this in project root, not this directory.
 ## Methodology & Scoring Framework
 
 Each project contains two implementations: a minimal "plain" version and a
-structured "skill-guided" version following the protocol rules in `skill.md`.
+structured "skill-guided" version following the protocol rules in `SKILL.md`.
 
 The evaluation framework captures data across two metrics:
 1. **File Payload Footprint (FCT):** Structural robustness, syntax verbosity,

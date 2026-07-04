@@ -14,7 +14,7 @@ benchmark-free: clean-telemetry
 	@mkdir -p playground/$(AGENT_MODEL)
 
 	@echo "[Harness] Seeding workspace configurations into sandbox scope..."
-	@cp skill.md playground/$(AGENT_MODEL)/skill.md
+	@cp SKILL.md playground/$(AGENT_MODEL)/SKILL.md
 	@cp playground/README.md playground/$(AGENT_MODEL)/README.md
 	@cp playground/guide.md playground/$(AGENT_MODEL)/guide.md
 	
@@ -27,7 +27,7 @@ benchmark-free: clean-telemetry
 
 	@echo "[Harness] Run complete. Purging transient workspace files..."
 	# Clean the code subdirectories but leave the markdown report intact!
-	@rm -f playground/$(AGENT_MODEL)/skill.md
+	@rm -f playground/$(AGENT_MODEL)/SKILL.md
 	@rm -f playground/$(AGENT_MODEL)/README.md
 	@rm -f playground/$(AGENT_MODEL)/guide.md	
 	@rm -rf playground/$(AGENT_MODEL)/go-login-crud
