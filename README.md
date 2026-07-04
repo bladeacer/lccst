@@ -119,6 +119,10 @@ Two distinct token metrics are tracked:
   consumed during the agent loop (captured via the `track_runtime.py`
   proxy).
 
+> ART is captured per-subproject via the `lccst-telemetry` MCP server,
+> giving a perfect trace of agent development costs. See the
+> [methodology guide](playground/README.md) for the full breakdown.
+
 Scores are fully normalised to a 100-point scale using domain-specific
 evaluation profiles. Each subproject is graded on features relevant to
 its architectural domain (e.g., UI components are not penalised for
@@ -163,10 +167,6 @@ missing encryption patterns).
 > Skill-guided implementation used **+314%** more FCT and **+314%** more ART compared to plain implementation across the workspace suite.
 
 <!-- BENCHMARK_RESULTS_END -->
-
-> ART is captured per-subproject via the `lccst-telemetry` MCP server,
-> giving a perfect trace of agent development costs. See the
-> [methodology guide](playground/README.md) for the full breakdown.
 
 ### Core Architectural Insights
 
@@ -278,6 +278,32 @@ global behavioural configuration field:
 
 ---
 
+### Option C: Universal Package Registry Integration
+
+> **The package manager route. One command, multi-agent deployment.**
+
+For platforms and command-line interfaces that natively implement the
+decentralised **Agent Skills Standard** (e.g., Claude Code, Cursor,
+Windsurf, Roo Code, Gemini CLI, Codex). This directly registers the root-level
+`SKILL.md` file layout to your environment using the global skills infrastructure.
+
+Install the skill block directly from the public GitHub source path:
+
+```bash
+npx skills add bladeacer/lccst
+```
+
+#### Executing the Workspace Module
+
+Once mapped through the universal package engine, invoke the system
+execution pipeline smoothly via your terminal runner profile or active agent interface:
+
+```bash
+/lccst
+```
+
+---
+
 ## Development
 
 ### Developer Dependencies
@@ -286,6 +312,8 @@ global behavioural configuration field:
 |------|---------|---------|
 | pnpm | >= 9 | Package manager (engine + playground Node projects) |
 | TypeScript | >= 5.4 | Compiling engine source |
+
+Benchmarking has its own set of dependencies, see details in [playground README](/playground/README.md).
 
 ## LLM Usage Disclosure
 
