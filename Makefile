@@ -12,16 +12,24 @@ PROMPT_FILE  := playground/agent-prompt.md
 benchmark-free: clean-telemetry
 	@echo "[Harness] Structuring isolation clean-room for $(AGENT_MODEL)..."
 	@mkdir -p playground/$(AGENT_MODEL)
+
+	@echo "[Harness] Seeding workspace configurations into sandbox scope..."
+	@cp skill.md playground/$(AGENT_MODEL)/skill.md
+	@cp playground/README.md playground/$(AGENT_MODEL)/README.md
+	@cp playground/guide.md playground/$(AGENT_MODEL)/guide.md
 	
 	@echo "[Harness] Starting interactive agent terminal session..."
-	# Run from root so opencode.jsonc is loaded naturally, targeting the sandbox folder path
+	# Run from root so configuration is loaded naturally, targeting the sandbox folder path
 	$(AGENT_NAME) playground/$(AGENT_MODEL)
 
-	@echo "[Harness] OpenCode exited. Parsing compiled outputs and runtime telemetry logs..."
+	@echo "[Harness] Agent exited. Parsing compiled outputs and runtime telemetry logs..."
 	python3 $(BENCH_DIR)/run_benchmark.py $(AGENT_MODEL) --install-deps
 
 	@echo "[Harness] Run complete. Purging transient workspace files..."
 	# Clean the code subdirectories but leave the markdown report intact!
+	@rm -f playground/$(AGENT_MODEL)/skill.md
+	@rm -f playground/$(AGENT_MODEL)/README.md
+	@rm -f playground/$(AGENT_MODEL)/guide.md	
 	@rm -rf playground/$(AGENT_MODEL)/go-login-crud
 	@rm -rf playground/$(AGENT_MODEL)/python-http-server
 	@rm -rf playground/$(AGENT_MODEL)/react-timer

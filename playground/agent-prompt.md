@@ -1,8 +1,8 @@
 You are executing inside a clean, instrumented sandbox for the LCCST Playground Benchmark. 
 Our goal is to implement the mentioned subprojects under live operational monitoring.
 
-The rules in../../skill.md are fully active for this run.
-Please parse and strictly reference ../../playground/README.md and ../../playground/guide.md 
+The rules in ./skill.md are fully active for this run.
+Please parse and strictly reference ./README.md and ./guide.md 
 for specific architectural constraints, file topology expectations, and implementation details.
 
 ### Target Specifications
@@ -12,7 +12,7 @@ for specific architectural constraints, file topology expectations, and implemen
 
 ### Pre-Flight Sandbox Boundary & Telemetry Constraints
 Before executing the `/init` workspace scan, looking at the directory layout, or running any inspection commands (do not run `ls`, `find`, `git status`, `git diff`, `git log`, or open files):
-* You are operating strictly inside the isolated workspace directory `playground/opencode-deepseek-v4-flash-free/` relative to the repository root. All relative path references to global resources require navigating up two directories (`../../`).
+* You are operating strictly inside the isolated workspace directory seeded specifically for this evaluation run. All protocol and orchestration files (`skill.md`, `README.md`, `guide.md`) are located directly within your active root folder (`./`).
 * You are explicitly commanded to execute a **blind deletion pass**. Immediately wipe (`rm -rf` equivalent) any existing `plain/` and `skill-guided/` folders inside your current directory without reading, listing, or querying version control metadata first.
 * SYSTEM ENVIRONMENT NOTICE (MCP TELEMETRY): An active MCP server `lccst-telemetry` is plugged directly into your execution context. You are explicitly required to invoke the `log_turn_telemetry` tool at the conclusion of every single loop step. You MUST supply the `subproject` target name, the active strategy `variant` mode, along with prompt and completion counts to maintain benchmarking validity.
 * CRITICAL INTEGRITY RULE: You do not need to configure any network settings or proxies. Simply interact with your native models normally.

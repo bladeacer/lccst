@@ -138,6 +138,18 @@ missing encryption patterns).
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
 > Skill-guided implementation used **+243%** more FCT and **+243%** more ART compared to plain implementation across the workspace suite.
 
+#### opencode-mimo-v2.5-free: skill version v2.8.0
+
+| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **opencode** | `mimo-v2.5-free` | `v2.8.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 1,621 | 2,684 | 5,207 | 8,622 |
+| **opencode** | `mimo-v2.5-free` | `v2.8.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 735 | 1,506 | 2,360 | 4,837 |
+| **opencode** | `mimo-v2.5-free` | `v2.8.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 2,452 | 5,756 | 7,877 | 18,497 |
+| **Summary** | | | | **Workspace Totals / Avg** | **34/100** | **100/100** | **3/3 Passed** | **4,808** | **9,946** | **15,444** | **31,956** |
+
+> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
+> Skill-guided implementation used **+107%** more FCT and **+107%** more ART compared to plain implementation across the workspace suite.
+
 <!-- BENCHMARK_RESULTS_END -->
 
 > ART is captured per-subproject via the `lccst-telemetry` MCP server,

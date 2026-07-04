@@ -36,7 +36,7 @@ Follow their setup instructions.
 
 To measure both **File-Content Tokens (FCT)** and **Agent Runtime Tokens (ART)**,
 the benchmark must be executed through the orchestration framework. This
-connects your local `opencode.jsonc` runtime context to our decoupled
+connects your local agent configuration to our decoupled
 telemetry tracker.
 
 ### 1. Build the MCP Telemetry Server
@@ -50,16 +50,15 @@ pnpm install
 pnpm run build
 ```
 
-### 2. Configure `opencode.jsonc`
+### 2. Configure your agent
 Inject the local custom server reference mapping into your workspace
 configuration block. Use the two-level step-out (`../../`) array
 configuration to bridge the subproject runtimes safely:
 
-For example, set for Opencode at [opencode.jsonc](../opencode.jsonc).
+For example, in your agent's configuration file:
 
 ```json
 {
-  "$schema": "[https://opencode.ai/config.json](https://opencode.ai/config.json)",
   "mcp": {
     "lccst-telemetry": {
       "type": "local",
@@ -77,17 +76,21 @@ For example, set for Opencode at [opencode.jsonc](../opencode.jsonc).
 
 ```bash
 # 1. Clean previous caches and structure the isolation clean-room e.g.
-make benchmark-free AGENT_NAME=opencode MODEL_NAME=deepseek-v4-flash-free
+make benchmark-free AGENT_NAME=your-agent MODEL_NAME=your-model
 
 # 2. Run your agent in a NEW SESSION, check lccst-telemetry MCP is active
 # paste the prompt, let it run.
-make AGENT_NAME=opencode MODEL_NAME=deepseek-v4-flash-free
+# You can set values to override the defaults used in the Makefile
+make AGENT_NAME=your-agent MODEL_NAME=your-model
 
 # 3. Exit once done. Folder cleanup and benchmark files writing
 # will happen automatically
 
-# 2. View versioned evaluation output report logs
-cat ./benchmarks/opencode-deepseek-v4-flash-free/benchmark-report-v*.md
+# 4. View versioned evaluation output report logs
+cat ./benchmarks/${AGENT_NAME}-${MODEL_NAME}/benchmark-report-v*.md
+
+# 5. Aggregated results in README (project root)
+cat README.md
 ```
 
 Run this in project root, not this directory.
