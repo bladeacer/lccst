@@ -292,7 +292,7 @@ def pick_top_n(
     ],
     n: int = 3,
 ) -> list[BenchmarkReport]:
-    """Pick top N agent-models by performance metric."""
+    """Pick top N agent-models by performance and token efficiency."""
     latest: list[BenchmarkReport] = []
     for versions in reports_map.values():
         if not versions:
@@ -300,10 +300,19 @@ def pick_top_n(
         versions.sort(key=lambda x: x[0], reverse=True)
         latest.append(versions[0][1])
 
+    if not latest:
+        return []
+
+    max_guided = max(r.avg_guided_score for r in latest) or 1
+    max_fct = max(r.total_fct_guided for r in latest) or 1
+    max_art = max(r.total_art_guided for r in latest) or 1
+
     latest.sort(
         key=lambda r: (
-            r.avg_guided_score, r.avg_plain_score,
-            -r.total_art_guided,
+            r.avg_guided_score / max_guided * 50
+            + r.avg_plain_score / max_guided * 10
+            - (r.total_fct_guided / max_fct) * 20
+            - (r.total_art_guided / max_art) * 20
         ),
         reverse=True,
     )

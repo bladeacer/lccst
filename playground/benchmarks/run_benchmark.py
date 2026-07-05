@@ -172,8 +172,11 @@ def extract_skill_version():
     skill_path = PLAYGROUND.parent / "SKILL.md"
     if skill_path.is_file():
         try:
-            first = skill_path.read_text().split("\n")[0]
-            m = re.search(r"v(\d+\.\d+(?:\.\d+)?)", first)
+            content = skill_path.read_text()
+            m = re.search(r'version:\s*"(\d+\.\d+(?:\.\d+)?)"', content)
+            if m:
+                return f"v{m.group(1)}"
+            m = re.search(r"v(\d+\.\d+(?:\.\d+)?)", content)
             if m:
                 return f"v{m.group(1)}"
         except Exception:
@@ -184,11 +187,10 @@ def extract_skill_version():
 def load_merged_telemetry(agent_tag):
     """Discovers and merges token metrics across all possible file locations."""
     art_data = {
-        "total_prompt_tokens": 0, "total_completion_tokens": 0, 
+        "total_prompt_tokens": 0, "total_completion_tokens": 0,
         "total_tokens": 0, "turns": 0, "active_mcps": [], "breakdown": {}
     }
-    
-    # Absolute deep path lookup for duplicated or misrouted configurations
+
     search_paths = [
         PLAYGROUND / "benchmarks" / "runtime-telemetry.json",
         PLAYGROUND / agent_tag / "runtime-telemetry.json"
@@ -197,7 +199,6 @@ def load_merged_telemetry(agent_tag):
     if agent_dir.exists():
         search_paths.extend(list(agent_dir.rglob("runtime-telemetry.json")))
 
-    # Deduplicate matching target paths securely
     for path_loc in sorted(set(search_paths)):
         if not path_loc.is_file():
             continue
@@ -207,30 +208,54 @@ def load_merged_telemetry(agent_tag):
                 continue
             for k in ["total_prompt_tokens", "total_completion_tokens", "total_tokens", "turns"]:
                 if k in loaded and isinstance(loaded[k], (int, float)):
-                    art_data[k] = max(art_data[k], int(loaded[k]))
+                    art_data[k] += int(loaded[k])
             if "active_mcps" in loaded and isinstance(loaded["active_mcps"], list):
                 art_data["active_mcps"] = list(set(art_data["active_mcps"] + loaded["active_mcps"]))
-            if "breakdown" in loaded and isinstance(loaded["breakdown"], dict) and loaded["breakdown"]:
-                art_data["breakdown"].update(loaded["breakdown"])
+            if "breakdown" in loaded and isinstance(loaded["breakdown"], dict):
+                loaded_breakdown = loaded["breakdown"]
+                for proj, variants in loaded_breakdown.items():
+                    if not isinstance(variants, dict):
+                        continue
+                    if proj not in art_data["breakdown"]:
+                        art_data["breakdown"][proj] = {}
+                    for variant, metrics in variants.items():
+                        if not isinstance(metrics, dict):
+                            continue
+                        if variant not in art_data["breakdown"][proj]:
+                            art_data["breakdown"][proj][variant] = {"prompt_tokens": 0, "completion_tokens": 0}
+                        art_data["breakdown"][proj][variant]["prompt_tokens"] += metrics.get("prompt_tokens", 0)
+                        art_data["breakdown"][proj][variant]["completion_tokens"] += metrics.get("completion_tokens", 0)
         except Exception:
             pass
-            
+
     return art_data
 
 
 def synthesize_missing_breakdown(art_data, results):
     """Allocates global metrics across subprojects based on code payload sizes."""
-    has_breakdown = art_data.get("breakdown")
-    has_meaningful_vals = has_breakdown and any(sum(v.values()) > 0 for v in art_data["breakdown"].values() if isinstance(v, dict))
-    
-    if has_meaningful_vals or art_data["total_tokens"] <= 0:
+    existing_breakdown = art_data.get("breakdown", {})
+    expected_projects = set(PROJECTS.keys())
+
+    has_matching_breakdown = (
+        existing_breakdown
+        and expected_projects.intersection(existing_breakdown.keys())
+        and any(
+            sum(m.values()) > 0
+            for v in existing_breakdown.values()
+            if isinstance(v, dict)
+            for m in v.values()
+            if isinstance(m, dict)
+        )
+    )
+
+    if has_matching_breakdown or art_data["total_tokens"] <= 0:
         return
 
-    synthetic = {}
     total_fct = sum(r["plain"]["total_tokens"] + r["guided"]["total_tokens"] for r in results.values())
     if total_fct <= 0:
         return
 
+    synthetic = {}
     rem_prompt = art_data["total_prompt_tokens"]
     rem_completion = art_data["total_completion_tokens"]
     proj_keys = list(PROJECTS.keys())
@@ -238,7 +263,7 @@ def synthesize_missing_breakdown(art_data, results):
     for p_idx, proj in enumerate(proj_keys):
         synthetic[proj] = {"plain": {}, "skill-guided": {}}
         variants = [("plain", "plain"), ("skill-guided", "guided")]
-        
+
         for v_idx, (var_name, res_key) in enumerate(variants):
             share = results[proj][res_key]["total_tokens"] / total_fct
             if p_idx == len(proj_keys) - 1 and v_idx == len(variants) - 1:
@@ -248,7 +273,7 @@ def synthesize_missing_breakdown(art_data, results):
                 c_tok = int(art_data["total_completion_tokens"] * share)
                 rem_prompt -= p_tok
                 rem_completion -= c_tok
-                
+
             synthetic[proj][var_name] = {"prompt_tokens": p_tok, "completion_tokens": c_tok}
 
     art_data["breakdown"] = synthetic
