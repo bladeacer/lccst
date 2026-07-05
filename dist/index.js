@@ -62,7 +62,10 @@ const DEFAULT_STATE = {
 };
 export class SwarmState {
     filePath;
-    constructor(root) { this.filePath = path.resolve(root, ".lccst_state"); }
+    constructor(root) {
+        this.filePath = path.resolve(root, ".lccst", "state.json");
+        fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+    }
     read() {
         try {
             if (fs.existsSync(this.filePath)) {

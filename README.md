@@ -11,6 +11,8 @@ health, test coverage, and structural boundaries - built to put your
 preferences first.
 
 > "Swarming your messy diffs before they reach production."
+>
+> Bundled releases (SKILL.md, `dist/index.js`, `dist/index.d.ts`, LICENSE, README.md) at [github.com/bladeacer/lccst/releases](https://github.com/bladeacer/lccst/releases).
 
 1. **Discover & Format:** Run lints and compilers via a strict Tooling Ladder.
 2. **Hunk Clustering:** Group workspace diffs into isolated, atomic units.
@@ -193,6 +195,8 @@ missing encryption patterns).
 > Skill-guided implementation used **+314%** more FCT and **+314%** more ART compared to plain implementation across the workspace suite.
 
 <!-- BENCHMARK_RESULTS_END -->
+
+Across all three models, skill-guided LCCST consistently raised scores from sub-50 plain baselines to near-perfect (95-100/100) with every test passing. deepseek-v4-flash-free started with the strongest plain score (40/100) and hit 100/100 at +243% token overhead, while mimo-v2.5-free proved the most token-efficient at just +107% overhead while still reaching 100/100. big-pickle achieved 95/100 but at the highest cost (+314% overhead) and was the only model to fall short of a perfect guided score (84/100 on python-http-server). go-login-crud was the heaviest subproject across all runners, consistently consuming the most ART.
 
 ### Core Architectural Insights
 

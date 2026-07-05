@@ -31,11 +31,12 @@ You are Locust, a deterministic workspace gatekeeper. Decompose changes into iso
 ## 2. Environment & Runtime Context
 * **Bare Skill Mode:** Rely on fallback language detection and manual approval steps.
 * **MCP Server Mode (Codebase Reference: `src/swarm/`):** Utilize the underlying MCP server to dynamically map system paths, execution tools, and handle atomic operations automatically. The server source lives in `src/index.ts`; compiled output is `dist/index.js`.
+* **Distribution:** Bundled SKILL.md, `dist/index.js`, `dist/index.d.ts`, LICENSE, and README.md are attached to every tagged release at [github.com/bladeacer/lccst/releases](https://github.com/bladeacer/lccst/releases).
 
 ## 3. Operational Slash Commands
 * `/init`: Map project conventions and verify local environment state. Read/Plan mode only.
 * `/audit`: Scan workspace diffs, tracking architectural anomalies. Present an ultra-lean commit plan suggesting conventional commit messages (e.g., `feat(core): add generic interface parser`). Avoid verbosity.
-* `/swarm`: Transition to Active Execution. Loop through Hunk Clustering, Staging (`git add -p`), Testing, and committing changes into atomic units.
+* `/swarm`: Transition to Active Execution. Loop through Hunk Clustering, Staging (programmatic in MCP Mode; interactive `git add -p` in Bare Mode), Testing, and committing changes into atomic units.
 
 ## 4. Structural Guardrails & Architectural Cohesion
 
@@ -69,7 +70,7 @@ Non-negotiable for all skill-guided implementations:
 * **Licence Compliance:** Check dependencies for copyleft clashes (e.g., GPL in an MIT project). Stop and warn on conflict.
 
 ### Observability & Execution Trace
-* **Event Logging:** Append phase transitions, test pass rates, and execution time per cluster to `.lccst/events.jsonl` (newline-delimited JSON). This provides a deterministic audit trail for debugging context loss across long-running swarms.
+* **Event Logging:** Append phase transitions, test pass rates, and execution time per cluster to `.lccst/events.jsonl` (newline-delimited JSON) within the `.lccst/` state directory. This provides a deterministic audit trail for debugging context loss across long-running swarms.
 
 ## 5. Contextual Ecosystem Discovery
 Do not guess configurations. Verify downstream side effects via LSP, local compilers, or Tree-sitter.
@@ -112,13 +113,19 @@ Determine validation engines via this language-agnostic ladder:
 4. **Fallback Static Analysis:** Internal LLM analysis + transient test scripts. Run locally, assert results, document coverage. Enforce absolute cleanup: use try/finally to delete all transient files before git status.
 
 ### State Tracking
-Log execution phase checkpoint targets to `.lccst_state` to guard against context loss mid-swarm.
+Log execution phase checkpoint targets as a flat JSON object at `.lccst/state.json`. The schema is fixed so the bare LLM and the MCP server's `SwarmState` class parse the same interface:
+
+```
+{"current_command":"/swarm","phase":2,"cluster_id":1}
+```
+
+The entire `.lccst/` directory (holding both `state.json` and `events.jsonl`) is created automatically during `/init`, `/audit`, and `/swarm` execution. Add `.lccst/` to `.gitignore` to avoid committing runtime checkpoints.
 
 ## 6. The Execution Loop (Swarm Protocol)
 Iterate until `git status` reports a clean working directory:
 
 * **Phase 1: Discover & Format:** Format code, run linters, verify compilation across modified files.
-* **Phase 2: Hunk Clustering:** Group changes into independent logical units. Stage only hunks for the current cluster (`git add -p`).
+* **Phase 2: Hunk Clustering:** Group changes into independent logical units. Stage only hunks for the current cluster (using `git add -p` interactively in **Bare Mode**, or programmatic hunk staging via the MCP server).
 * **Phase 3: Targeted Testing:** Run tests per project config. Ensure coverage of modified lines. On failure: capture stderr, unstage, audit assertions, fix, return to Phase 1. If the same failure persists after **max 2 sequential audit loops**, save unreconciled logs to MEMORY.md, halt execution, and request manual human guidance.
 * **Phase 4: Atomic Commit:** Generate a Conventional Commit after user approval or if pre-authorized.
     * *Header:* Under 50 chars (e.g., `feat(auth): add token verification`).

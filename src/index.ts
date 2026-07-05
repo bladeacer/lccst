@@ -68,7 +68,7 @@ export function scanEnvironment(root: string): EnvReport {
   return { project, tools, conventions };
 }
 
-// ─── State persistence (.lccst_state) ────────────────────────────
+// ─── State persistence (.lccst/state.json) ────────────────────────
 export interface SwarmStateData {
   phase: string;
   clusters: string[];
@@ -83,7 +83,10 @@ const DEFAULT_STATE: SwarmStateData = {
 
 export class SwarmState {
   private filePath: string;
-  constructor(root: string) { this.filePath = path.resolve(root, ".lccst_state"); }
+  constructor(root: string) {
+    this.filePath = path.resolve(root, ".lccst", "state.json");
+    fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+  }
 
   read(): SwarmStateData {
     try {

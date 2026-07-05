@@ -25,5 +25,5 @@ No additional files are needed at runtime.
 |------------------|--------------------------------------------------------|
 | `detectProject`  | Manifest discovery + Tooling Ladder                    |
 | `scanEnvironment`| Full env scan (tools, conventions, project type)       |
-| `SwarmState`     | `.lccst_state` file-backed persistence                 |
+| `SwarmState`     | `.lccst/state.json` file-backed persistence                 |
 | `clusterHunks`   | Git diff → cluster grouping for atomic commits         |

@@ -333,7 +333,7 @@ No files are mutated during this phase. The plan is for human review.
 ## State Persistence
 
 During multi-file execution branches, the protocol logs phase checkpoints
-to `.lccst_state` at the project root. This file-backed mechanism guards
+to `.lccst/state.json` at the project root. This file-backed mechanism guards
 against context loss mid-swarm:
 
 ```json

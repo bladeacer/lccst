@@ -96,7 +96,7 @@ withTempDir((dir) => {
   assert(s3.phase === "swarm", "partial update preserves phase");
 
   state.clear();
-  assert(!fs.existsSync(path.join(dir, ".lccst_state")), "clear removes file");
+  assert(!fs.existsSync(path.join(dir, ".lccst", "state.json")), "clear removes file");
 });
 
 // ── Summary ────────────────────────────────────────────────────
