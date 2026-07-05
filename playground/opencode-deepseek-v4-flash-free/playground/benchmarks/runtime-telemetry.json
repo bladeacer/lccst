@@ -1,9 +1,0 @@
-{
-  "total_prompt_tokens": 95050,
-  "total_completion_tokens": 26250,
-  "total_tokens": 121300,
-  "turns": 6,
-  "active_mcps": [
-    "lccst-telemetry"
-  ]
-}

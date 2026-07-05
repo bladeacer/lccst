@@ -293,8 +293,8 @@ def main():
     if "--install-deps" in sys.argv:
         react_dir = agent_dir / "react-timer" / "skill-guided"
         if (react_dir / "package.json").exists() and not (react_dir / "node_modules").exists():
-            print("Installing npm dependencies for react-timer...")
-            subprocess.run(["npm", "install"], cwd=str(react_dir), capture_output=True, text=True, timeout=120)
+            print("Installing pnpm dependencies for react-timer...")
+            subprocess.run(["pnpm", "install"], cwd=str(react_dir), capture_output=True, text=True, timeout=120)
 
     results = {}
     for proj_name, proj_info in PROJECTS.items():

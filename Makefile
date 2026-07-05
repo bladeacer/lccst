@@ -1,4 +1,4 @@
-.PHONY: help default build test tag release clean clean-telemetry bench-update benchmark-free bench-report bench-cleanup
+.PHONY: help default build test tag release clean clean-telemetry bench-update benchmark-free bench-report bench-cleanup telemetry-build benchmark-dryrun
 
 VERSION      ?= $(shell node -p "require('./package.json').version")
 AGENT_NAME   ?= opencode
@@ -20,6 +20,7 @@ help:
 	@echo "  make tag                Create and push git tag v$(VERSION)"
 	@echo "  make release            Alias for: make tag"
 	@echo "  make benchmark-free     Run full benchmark lifecycle"
+	@echo "  make benchmark-dryrun   Build MCPs & verify connectivity (no agent session)"
 	@echo "  make bench-report       Parse telemetry & generate report (no cleanup)"
 	@echo "  make bench-cleanup      Remove transient workspace files after report"
 	@echo "  make clean              Remove dist/ directory"
@@ -40,10 +41,10 @@ test:
 	pnpm run test
 
 test_swarm:
-	tsx scripts/test-swarm-unit.ts
+	pnpm tsx scripts/test-swarm-unit.ts
 
 test_mcp:
-	pnpm run build && tsx scripts/test-connection.ts
+	pnpm run build && pnpm tsx scripts/test-connection.ts
 
 tag:
 	@echo "[Release] Creating and pushing git tag v$(VERSION)..."
@@ -57,12 +58,18 @@ release: tag
 clean:
 	rm -rf dist
 
+TELEMETRY_MCP_DIR := playground/benchmarks/mcp-telemetry
+
+telemetry-build:
+	@echo "[Harness] Building telemetry MCP server..."
+	@cd $(TELEMETRY_MCP_DIR) && pnpm install --ignore-workspace && pnpm run build
+
 define GENERATE_OPECODE_CONFIG
 {
   "mcp": {
     "lccst-telemetry": {
       "type": "local",
-      "command": ["node", "${workspaceFolder}/playground/benchmarks/mcp-telemetry/build/index.js"],
+      "command": ["node", "$(CURDIR)/playground/benchmarks/mcp-telemetry/build/index.js"],
       "enabled": true
     }
   }
@@ -70,7 +77,7 @@ define GENERATE_OPECODE_CONFIG
 endef
 export GENERATE_OPECODE_CONFIG
 
-benchmark-free: clean-telemetry
+benchmark-free: clean-telemetry telemetry-build
 	@echo "[Harness] Structuring isolation clean-room for $(AGENT_MODEL)..."
 	@mkdir -p playground/$(AGENT_MODEL)
 	@echo "[Harness] Seeding workspace configurations into sandbox scope..."
@@ -105,6 +112,15 @@ bench-cleanup:
 	@rm -rf playground/$(AGENT_MODEL)/react-timer
 	@echo "[Harness] Workspace cleaned. Report preserved at $(BENCH_DIR)/$(AGENT_MODEL)/"
 	$(MAKE) bench-update
+
+benchmark-dryrun: telemetry-build
+	@echo "[Dry-Run] Building main MCP server..."
+	pnpm run build
+	@echo "[Dry-Run] Verifying main MCP server connectivity..."
+	@pnpm tsx scripts/test-connection.ts && echo "[Dry-Run] Main MCP server OK" || echo "[Dry-Run] Main MCP server FAILED"
+	@echo "[Dry-Run] Verifying telemetry MCP server connectivity..."
+	@printf '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"lccst-dryrun","version":"3.0.0"}}}\n' | timeout 5 node playground/benchmarks/mcp-telemetry/build/index.js 2>/dev/null | python3 -c "import sys,json; d=json.loads(sys.stdin.readline()); name=d.get('result',{}).get('serverInfo',{}).get('name',''); assert name=='lccst-telemetry', f'Expected lccst-telemetry, got {name}'; print(f'OK: {name} MCP connected')" && echo "[Dry-Run] Telemetry MCP server OK" || echo "[Dry-Run] Telemetry MCP server FAILED"
+	@echo "[Dry-Run] Done."
 
 bench-update:
 	@echo "[Harness] Aggregating latest benchmark reports..."

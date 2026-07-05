@@ -206,9 +206,9 @@ encryption patterns).
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **python-http-server** | 15/100 | **5/100** | FAILED | 0 | 0 | 0 | 0 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **react-timer** | 22/100 | **7/100** | FAILED | 0 | 0 | 0 | 0 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **go-login-crud** | 15/100 | **5/100** | FAILED | 0 | 0 | 0 | 0 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `None detected` | **python-http-server** | 15/100 | **5/100** | FAILED | 0 | 0 | 0 | 0 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `None detected` | **react-timer** | 22/100 | **7/100** | FAILED | 0 | 0 | 0 | 0 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `None detected` | **go-login-crud** | 15/100 | **5/100** | FAILED | 0 | 0 | 0 | 0 |
 | **Summary** | | | | **Workspace Totals / Avg** | **17/100** | **6/100** | **0/3 Passed** | **0** | **0** | **0** | **0** |
 
 > **Highest ART subproject:** `python-http-server` consumed the most guided runtime tokens.
