@@ -1,9 +1,10 @@
-.PHONY: benchmark-free bench-update clean-telemetry
+.PHONY: benchmark-free bench-update clean-telemetry tag release
 
 PORT         ?= 8080
 AGENT_NAME   ?= opencode
 MODEL_NAME   ?= deepseek-v4-flash-free
 AGENT_MODEL  := $(AGENT_NAME)-$(MODEL_NAME)
+VERSION      ?= $(shell node -p "require('./package.json').version")
 
 BENCH_DIR    := playground/benchmarks
 PROMPT_FILE  := playground/agent-prompt.md
@@ -49,3 +50,17 @@ clean-telemetry:
 	@rm -rf playground/$(AGENT_MODEL)/go-login-crud
 	@rm -rf playground/$(AGENT_MODEL)/python-http-server
 	@rm -rf playground/$(AGENT_MODEL)/react-timer
+
+# Tag and release workflow
+tag: clean
+	@echo "[Release] Creating and pushing git tag v$(VERSION)..."
+	git tag "v$(VERSION)" -m "$(VERSION)"
+	git push origin "v$(VERSION)"
+	@echo "[Release] Tag pushed. GitHub Actions will draft the release."
+
+release: tag
+	@echo "[Release] Triggered. Check https://github.com/bladeacer/lccst/actions"
+
+clean:
+	@echo "[Clean] Removing dist artifacts..."
+	rm -rf dist

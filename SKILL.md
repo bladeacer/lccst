@@ -44,8 +44,8 @@ You are Locust, a deterministic workspace gatekeeper. Decompose changes into iso
 * **Pre-Flight Planning:** Outline structural impacts before writing code. Notify the user if changes cross major subsystems or alter high file volumes.
 * **Atomic Commits:** One commit = one complete, isolated feature change spanning a minimum viable subset of files.
 * **Anti-God-Object Rule:** Prevent single files from tracking multiple domain responsibilities. *Exception:* Multi-method interfaces with one unified responsibility (e.g., an HTTP controller with handlers for a single route).
-* **Ecosystem Idioms & Strict Typing:** Write clean code matching target language paradigms. Enforce strict type safety; forbid type escapes (TypeScript `any`, Python `Any`/`ignore`) unless no alternative exists.
-* **Modern Tooling Defaults:** Use declarative ecosystem tooling (`uv` + `pyproject.toml`, `go mod`, `pnpm` + lockfile, `cargo`). Never bare global installs. Prefer hermetic lockfiles and workspace runners.
+* **Ecosystem Idioms & Strict Typing:** Write clean code matching target language paradigms. Enforce strict type safety; forbid type escapes unless no alternative exists.
+* **Modern Tooling Defaults:** Prefer declarative ecosystem tooling over bare global installs. Use hermetic lockfiles and workspace runners where available.
 
 ### Defensive Engineering & Core Security
 Non-negotiable for all skill-guided implementations:
@@ -64,12 +64,46 @@ Non-negotiable for all skill-guided implementations:
 * **Changelog Automation:** If a changelog convention is detected (monolithic `CHANGELOG.md` or versioned `release-x.y.z.md`), append delta records using SemVer. Flag breaking changes.
 * **Licence Compliance:** Check dependencies for copyleft clashes (e.g., GPL in an MIT project). Stop and warn on conflict.
 
-## 5. Proactive Semantic Discovery & Tooling Ladder
+### Observability & Execution Trace
+* **Event Logging:** Append phase transitions, test pass rates, and execution time per cluster to `.lccst/events.jsonl` (newline-delimited JSON). This provides a deterministic audit trail for debugging context loss across long-running swarms.
+
+## 5. Language-Agnostic Manifest Discovery & Tooling Ladder
 Do not guess configurations. Verify downstream side effects via LSP, local compilers, or Tree-sitter.
 
+### Manifest Discovery
+Scan for ANY project manifest file in the workspace root. The following list is representative but not exhaustive — detect whatever manifest is present:
+
+| Ecosystem | Manifest Files | Typical Test Command |
+|-----------|---------------|---------------------|
+| Python | `pyproject.toml`, `setup.py`, `setup.cfg`, `Pipfile`, `requirements.txt` | `uv run pytest`, `python -m pytest`, `nose2` |
+| Node.js | `package.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock` | `pnpm test`, `npm test`, `yarn test`, `bun test` |
+| Rust | `Cargo.toml` | `cargo test` |
+| Go | `go.mod`, `go.sum` | `go test ./...` |
+| C/C++ | `CMakeLists.txt`, `Makefile`, `meson.build`, `configure.ac`, `Cargo.toml` (for Rust components) | `cmake --build . && ctest`, `make test` |
+| Java/JVM | `pom.xml`, `build.gradle`, `build.gradle.kts`, `build.sbt` (Scala), `build.sc` (Mill) | `mvn test`, `gradle test`, `sbt test`, `mill test` |
+| Ruby | `Gemfile`, `*.gemspec` | `bundle exec rspec`, `bundle exec rake test` |
+| PHP | `composer.json` | `phpunit`, `vendor/bin/phpunit` |
+| Elixir | `mix.exs` | `mix test` |
+| Erlang | `rebar.config`, `erlang.mk` | `rebar3 ct`, `make test` |
+| Haskell | `*.cabal`, `stack.yaml`, `cabal.project` | `cabal test`, `stack test` |
+| OCaml | `dune-project`, `*.opam`, `Makefile` | `dune runtest`, `opam exec -- make test` |
+| Julia | `Project.toml` | `julia --project=. -e 'using Pkg; Pkg.test()'` |
+| R | `DESCRIPTION` | `R CMD check` |
+| Dart/Flutter | `pubspec.yaml` | `dart test`, `flutter test` |
+| .NET/C# | `*.csproj`, `*.sln`, `*.fsproj` | `dotnet test` |
+| Swift | `Package.swift` | `swift test` |
+| Lua | `*.rockspec`, `Makefile` | `luatest`, `busted` |
+| Perl | `Makefile.PL`, `Build.PL`, `cpanfile` | `make test`, `prove -lv t` |
+| Zig | `build.zig` | `zig build test` |
+| Nim | `*.nimble` | `nimble test` |
+| Crystal | `shard.yml` | `crystal spec` |
+| PureScript | `spago.dhall`, `psc-package.json` | `spago test` |
+| Nix | `flake.nix`, `default.nix`, `shell.nix` | `nix build`, `nix flake check` |
+
+### The Tooling Ladder
 Determine validation engines via this language-agnostic ladder:
 1. **LSP / Tree-sitter:** Track imports and side effects across files.
-2. **Native Project Scripts:** Run formatting/linting/testing via local package managers (`uv run pytest`, `pnpm test`, `go test`, etc.).
+2. **Native Project Scripts:** Run through the project's native package manager (`uv run pytest`, `cargo test`, `mix test`, `dotnet test`, `zig build test`, `dune runtest`, `nimble test`, etc.).
 3. **Global Binaries:** Invoke system-path compilers, linters, test runners.
 4. **Fallback Static Analysis:** Internal LLM analysis + transient test scripts. Run locally, assert results, document coverage. Enforce absolute cleanup: use try/finally to delete all transient files before git status.
 
@@ -77,9 +111,6 @@ Determine validation engines via this language-agnostic ladder:
 Discover and run the project's designated testing framework. Prefer standard local ecosystem runners.
 
 *Post-Ladder:* Trigger the workspace build/compilation pipeline. Zero unaddressed high-severity warnings or errors.
-
-### Manifest Discovery Order
-`pyproject.toml` -> `package.json` -> `Cargo.toml` -> `go.mod` -> `CMakeLists.txt` -> `Project.toml`
 
 ### State Tracking
 Log execution phase checkpoint targets to `.lccst_state` to guard against context loss mid-swarm.

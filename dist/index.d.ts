@@ -28,6 +28,7 @@ export declare class SwarmState {
     clear(): void;
     get path(): string;
 }
+export declare function logEvent(root: string, event: Record<string, unknown>): void;
 export interface Cluster {
     scope: string;
     files: string[];

@@ -87,6 +87,13 @@ export class SwarmState {
     }
     get path() { return this.filePath; }
 }
+// ─── Observability event logging (.lccst/events.jsonl) ──────────
+export function logEvent(root, event) {
+    const dir = path.resolve(root, ".lccst");
+    fs.mkdirSync(dir, { recursive: true });
+    const entry = { ...event, timestamp: Date.now() };
+    fs.appendFileSync(path.join(dir, "events.jsonl"), JSON.stringify(entry) + "\n");
+}
 export function clusterHunks(lines) {
     const files = lines.filter(l => l.includes("|")).map(l => l.split("|")[0].trim()).filter(Boolean);
     if (files.length === 0)
@@ -141,6 +148,7 @@ server.registerTool("init", {
     }
     const env = scanEnvironment(target);
     new SwarmState(target).write({ phase: "init" });
+    logEvent(target, { event: "init", project: env.project.type, manifest: env.project.manifest });
     const lines = [
         `Project type: ${env.project.type}`,
         `Manifest: ${env.project.manifest || "(none detected)"}`,
@@ -159,6 +167,7 @@ server.registerTool("audit", {
     const state = new SwarmState(ROOT);
     state.write({ phase: "audit" });
     let diff = "";
+    logEvent(ROOT, { event: "audit_start" });
     try {
         diff = execSync("git diff --cached --stat", { cwd: ROOT, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString();
         if (!diff.trim()) {
@@ -194,6 +203,7 @@ server.registerTool("swarm", {
     const state = new SwarmState(target);
     state.write({ phase: "swarm" });
     const project = detectProject(target);
+    logEvent(target, { event: "swarm_start", project: project.type, dryRun });
     if (!project.testCommand.length) {
         return { content: [{ type: "text", text: `No test runner detected for ${target}. Cannot execute swarm.` }] };
     }
