@@ -349,7 +349,7 @@ against context loss mid-swarm:
 }
 ```
 
-The state file is created by the `SwarmState` class in `swarm/state.ts` and
+The state file is created by the `SwarmState` class in `src/index.ts` and
 is automatically cleaned up on successful swarm completion.
 
 ## Traceability

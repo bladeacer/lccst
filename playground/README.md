@@ -11,8 +11,8 @@ LCCST can operate in two modes:
   The model follows the protocol manually (fallback language detection, manual
   approval steps).
 * **MCP server** — Run `node dist/index.js` to serve the protocol as tools.
-  The server source lives at `src/index.ts`; the execution library is under
-  `swarm/`.
+  The entire server is self-contained in `src/index.ts`, compiling to a single
+  distributable `dist/index.js`.
 
 ## Benchmark project dependencies
 

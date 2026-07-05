@@ -1,5 +1,4 @@
-import { detectProject, scanEnvironment } from "../src/swarm/ladder.js";
-import { SwarmState } from "../src/swarm/state.js";
+import { detectProject, scanEnvironment, SwarmState } from "../src/index.js";
 import fs from "fs";
 import path from "path";
 import os from "os";

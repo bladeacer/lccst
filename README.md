@@ -30,11 +30,13 @@ The protocol specification (`SKILL.md`) is loaded directly into the LLM's
 context window. The model follows the rules manually — detecting languages,
 running commands, and committing changes. No MCP server required.
 
-### MCP Server Mode (Reference: `/swarm`)
+### MCP Server Mode (Reference: `src/swarm/`)
 The MCP server at `src/index.ts` (built to `dist/index.js`) exposes the full
-protocol via tools and prompts. The server source and supporting execution
-library live under `swarm/`. AI agents can call the `/init`, `/audit`, and
-`/swarm` tools programmatically.
+protocol via tools and prompts — all logic is self-contained in a single
+distributable file. AI agents can call the `/init`, `/audit`, and `/swarm`
+tools programmatically.
+
+See [src/swarm/README.md](src/swarm/README.md) for more details.
 
 ```bash
 # Go Example
@@ -254,6 +256,45 @@ The MCP server exposes three tools for programmatic use:
 - **`init`** — Map project conventions and verify environment
 - **`audit`** — Scan workspace diffs and generate commit plan
 - **`swarm`** — Execute the full discovery-cluster-test-commit loop
+
+### OpenCode Setup
+
+OpenCode uses an `opencode.jsonc` file at the project root for MCP server
+configuration and skill registration.
+
+#### Registering the Main LCCST MCP Server
+
+Add the following to your `opencode.jsonc`:
+
+```jsonc
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "lccst": {
+      "type": "local",
+      "command": ["node", "/absolute/path/to/lccst/dist/index.js"],
+      "enabled": true
+    }
+  }
+}
+```
+
+#### Referencing as a Skill
+
+The `SKILL.md` file is an [Agent Skill](https://agentskills.io/specification).
+OpenCode automatically discovers skills named `SKILL.md` at the project root.
+To invoke Locust within a conversation, use the `/lccst` command or reference
+`@SKILL.md` in your prompt.
+
+#### Available Test Scripts
+
+```bash
+pnpm run build      # Compile TypeScript → dist/index.js
+pnpm run test       # Run all tests (22 unit + 6 integration)
+pnpm run test:swarm # Swarm library unit tests only
+pnpm run test:mcp   # MCP server integration tests only
+pnpm run bump 3.0.1 # Bump version across all files
+```
 
 ---
 
