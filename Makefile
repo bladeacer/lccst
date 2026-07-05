@@ -59,6 +59,7 @@ benchmark-free: clean-telemetry
 	@cp SKILL.md playground/$(AGENT_MODEL)/SKILL.md
 	@cp playground/README.md playground/$(AGENT_MODEL)/README.md
 	@cp playground/guide.md playground/$(AGENT_MODEL)/guide.md
+	@printf '{\n  "mcp": {\n    "lccst-telemetry": {\n      "type": "local",\n      "command": ["node", "../../playground/benchmarks/mcp-telemetry/build/index.js"],\n      "enabled": true\n    }\n  }\n}\n' > playground/$(AGENT_MODEL)/opencode.jsonc
 	@echo "[Harness] Starting interactive agent terminal session..."
 	$(AGENT_NAME) playground/$(AGENT_MODEL)
 	@echo "[Harness] Agent exited. Parsing compiled outputs and runtime telemetry logs..."
@@ -67,6 +68,7 @@ benchmark-free: clean-telemetry
 	@rm -f playground/$(AGENT_MODEL)/SKILL.md
 	@rm -f playground/$(AGENT_MODEL)/README.md
 	@rm -f playground/$(AGENT_MODEL)/guide.md
+	@rm -f playground/$(AGENT_MODEL)/opencode.jsonc
 	@rm -rf playground/$(AGENT_MODEL)/go-login-crud
 	@rm -rf playground/$(AGENT_MODEL)/python-http-server
 	@rm -rf playground/$(AGENT_MODEL)/react-timer
@@ -80,8 +82,9 @@ bench-update:
 
 clean-telemetry:
 	@echo "[Harness] Flushing trace telemetry caches..."
-	@rm -f playground/${AGENT_MODEL}/playground/benchmarks/runtime-telemetry.json
-	@rm -f playground/${AGENT_MODEL}/runtime-telemetry.json
+	@rm -f playground/$(AGENT_MODEL)/opencode.jsonc
+	@rm -f playground/$(AGENT_MODEL)/playground/benchmarks/runtime-telemetry.json
+	@rm -f playground/$(AGENT_MODEL)/runtime-telemetry.json
 	@rm -rf playground/$(AGENT_MODEL)/go-login-crud
 	@rm -rf playground/$(AGENT_MODEL)/python-http-server
 	@rm -rf playground/$(AGENT_MODEL)/react-timer

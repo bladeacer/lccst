@@ -1,15 +1,10 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "lccst": {
-      "type": "local",
-      "command": ["node", "${workspaceFolder}/dist/index.js"],
-      "enabled": true
-    },
     "lccst-telemetry": {
       "type": "local",
       "command": ["node", "${workspaceFolder}/playground/benchmarks/mcp-telemetry/build/index.js"],
-      "enabled": false
+      "enabled": true
     }
   }
 }
