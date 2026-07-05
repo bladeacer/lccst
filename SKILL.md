@@ -1,5 +1,9 @@
 ---
 name: lccst
+license: MIT
+metadata:
+  author: bladeacer
+  version: "3.0.0"
 description: "Deterministic workspace gatekeeper that decomposes complex codebase changes into isolated, test-verified, atomic Git commits."
 arguments:
   type: object
@@ -67,50 +71,45 @@ Non-negotiable for all skill-guided implementations:
 ### Observability & Execution Trace
 * **Event Logging:** Append phase transitions, test pass rates, and execution time per cluster to `.lccst/events.jsonl` (newline-delimited JSON). This provides a deterministic audit trail for debugging context loss across long-running swarms.
 
-## 5. Language-Agnostic Manifest Discovery & Tooling Ladder
+## 5. Contextual Ecosystem Discovery
 Do not guess configurations. Verify downstream side effects via LSP, local compilers, or Tree-sitter.
 
-### Manifest Discovery
-Scan for ANY project manifest file in the workspace root. The following list is representative but not exhaustive — detect whatever manifest is present:
+### Manifest Discovery (Contextual)
+Scan the workspace root for ANY recognizable build configuration or manifest file. Do not rely on a fixed lookup — reason about the file's purpose based on its name, extension, and content structure. Common patterns include, but are not limited to:
 
-| Ecosystem | Manifest Files | Typical Test Command |
-|-----------|---------------|---------------------|
-| Python | `pyproject.toml`, `setup.py`, `setup.cfg`, `Pipfile`, `requirements.txt` | `uv run pytest`, `python -m pytest`, `nose2` |
-| Node.js | `package.json`, `yarn.lock`, `pnpm-lock.yaml`, `bun.lock` | `pnpm test`, `npm test`, `yarn test`, `bun test` |
-| Rust | `Cargo.toml` | `cargo test` |
-| Go | `go.mod`, `go.sum` | `go test ./...` |
-| C/C++ | `CMakeLists.txt`, `Makefile`, `meson.build`, `configure.ac`, `Cargo.toml` (for Rust components) | `cmake --build . && ctest`, `make test` |
-| Java/JVM | `pom.xml`, `build.gradle`, `build.gradle.kts`, `build.sbt` (Scala), `build.sc` (Mill) | `mvn test`, `gradle test`, `sbt test`, `mill test` |
-| Ruby | `Gemfile`, `*.gemspec` | `bundle exec rspec`, `bundle exec rake test` |
-| PHP | `composer.json` | `phpunit`, `vendor/bin/phpunit` |
-| Elixir | `mix.exs` | `mix test` |
-| Erlang | `rebar.config`, `erlang.mk` | `rebar3 ct`, `make test` |
-| Haskell | `*.cabal`, `stack.yaml`, `cabal.project` | `cabal test`, `stack test` |
-| OCaml | `dune-project`, `*.opam`, `Makefile` | `dune runtest`, `opam exec -- make test` |
-| Julia | `Project.toml` | `julia --project=. -e 'using Pkg; Pkg.test()'` |
-| R | `DESCRIPTION` | `R CMD check` |
-| Dart/Flutter | `pubspec.yaml` | `dart test`, `flutter test` |
-| .NET/C# | `*.csproj`, `*.sln`, `*.fsproj` | `dotnet test` |
-| Swift | `Package.swift` | `swift test` |
-| Lua | `*.rockspec`, `Makefile` | `luatest`, `busted` |
-| Perl | `Makefile.PL`, `Build.PL`, `cpanfile` | `make test`, `prove -lv t` |
-| Zig | `build.zig` | `zig build test` |
-| Nim | `*.nimble` | `nimble test` |
-| Crystal | `shard.yml` | `crystal spec` |
-| PureScript | `spago.dhall`, `psc-package.json` | `spago test` |
-| Nix | `flake.nix`, `default.nix`, `shell.nix` | `nix build`, `nix flake check` |
+*Key-Value / TOML-based:* `pyproject.toml`, `Cargo.toml`, `Project.toml`, `mix.exs`, `shard.yml`, `pubspec.yaml`, `go.mod`
+*JSON-based:* `package.json`, `composer.json`, `*.csproj`, `build.gradle.kts`
+*DSL / Build files:* `CMakeLists.txt`, `Makefile`, `build.zig`, `dune-project`, `*.cabal`, `stack.yaml`, `Package.swift`, `build.sbt`, `rebar.config`, `flake.nix`
+*Script-based:* `setup.py`, `Build.PL`, `Makefile.PL`, `*.gemspec`
+*Lockfiles that imply ecosystems:* `yarn.lock`, `pnpm-lock.yaml`, `bun.lock`, `go.sum`, `Gemfile.lock`, `Cargo.lock`, `poetry.lock`
+
+Once a manifest is identified, infer the ecosystem and select the correct toolchain:
+- TOML manifests → look for `[build-system]`, `[dependencies]`, `[tool]` sections
+- JSON manifests → check `scripts`, `devDependencies`, `dependencies` fields
+- DSL manifests → inspect declared build targets, dependencies, test commands
+- Lockfiles → cross-reference with the manifest format to pin exact tool versions
+
+### Contextual Tooling Selection
+The user's stated task narrows the relevant tooling. For example:
+- *"Add a REST API route"* → prioritize web framework test runners, linters for the target language
+- *"Fix a type error"* → prioritize the type-checker / compiler
+- *"Update dependencies"* → prioritize the package manager's audit/update commands
+
+Cross-reference the discovered manifest with the task description to select the right tools. If the task is ambiguous, scan for all available manifests and test runners.
+
+*Example cross-references (illustrative, not exhaustive):*
+- `pyproject.toml` + task mentions "test" → `uv run pytest` or `python -m pytest`
+- `package.json` + task mentions "lint" → `pnpm run lint` or `npx eslint`
+- `Cargo.toml` + task mentions "build" → `cargo build`
+- `Makefile` present → prefer `make test` / `make check` / `make lint` convention
+- `go.mod` present → `go test ./...`, `go vet ./...`
 
 ### The Tooling Ladder
 Determine validation engines via this language-agnostic ladder:
 1. **LSP / Tree-sitter:** Track imports and side effects across files.
-2. **Native Project Scripts:** Run through the project's native package manager (`uv run pytest`, `cargo test`, `mix test`, `dotnet test`, `zig build test`, `dune runtest`, `nimble test`, etc.).
+2. **Native Project Scripts:** Run the project's native toolchain (discovered above).
 3. **Global Binaries:** Invoke system-path compilers, linters, test runners.
 4. **Fallback Static Analysis:** Internal LLM analysis + transient test scripts. Run locally, assert results, document coverage. Enforce absolute cleanup: use try/finally to delete all transient files before git status.
-
-### Test Framework Selection
-Discover and run the project's designated testing framework. Prefer standard local ecosystem runners.
-
-*Post-Ladder:* Trigger the workspace build/compilation pipeline. Zero unaddressed high-severity warnings or errors.
 
 ### State Tracking
 Log execution phase checkpoint targets to `.lccst_state` to guard against context loss mid-swarm.
