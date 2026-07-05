@@ -7,7 +7,7 @@
   "types": "dist/index.d.ts",
   "license": "MIT",
   "scripts": {
-    "build": "tsc",
+    "build": "esbuild src/index.ts --bundle --platform=node --target=es2022 --format=esm --outfile=dist/index.js && tsc --emitDeclarationOnly",
     "start": "node dist/index.js",
     "watch": "tsc --watch",
     "test:mcp": "pnpm run build && tsx scripts/test-connection.ts",
@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.19.43",
+    "esbuild": "^0.28.1",
     "tsx": "^4.22.4",
     "typescript": "^5.9.3"
   },

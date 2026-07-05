@@ -1,6 +1,5 @@
 node_modules
 .headroom
-dist/
 .lccst/
 __pycache__
 .pytest_cache
