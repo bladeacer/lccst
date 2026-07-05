@@ -18,27 +18,37 @@ const filesToUpdate = [
   {
     filePath: path.join(rootDir, "package.json"),
     regex: /"version":\s*"\d+\.\d+\.\d+"/,
-    replacement: `"version": "${targetVersion}"`
+    replacement: `"version": "${targetVersion}"`,
   },
   {
     filePath: path.join(rootDir, "src/index.ts"),
     regex: /version:\s*"\d+\.\d+\.\d+"/,
-    replacement: `version: "${targetVersion}"`
+    replacement: `version: "${targetVersion}"`,
   },
   {
     filePath: path.join(rootDir, "dist/index.js"),
     regex: /version:\s*"\d+\.\d+\.\d+"/,
-    replacement: `version: "${targetVersion}"`
+    replacement: `version: "${targetVersion}"`,
   },
   {
     filePath: path.join(rootDir, "tests/init_handshake.test.ts"),
     regex: /version:\s*"\d+\.\d+\.\d+"/,
-    replacement: `version: "${targetVersion}"`
+    replacement: `version: "${targetVersion}"`,
   },
   {
     filePath: path.join(rootDir, "playground/benchmarks/mcp-telemetry/package.json"),
     regex: /"version":\s*"\d+\.\d+\.\d+"/,
-    replacement: `"version": "${targetVersion}"`
+    replacement: `"version": "${targetVersion}"`,
+  },
+  {
+    filePath: path.join(rootDir, "playground/benchmarks/mcp-telemetry/src/index.ts"),
+    regex: /version:\s*"\d+\.\d+\.\d+"/,
+    replacement: `version: "${targetVersion}"`,
+  },
+  {
+    filePath: path.join(rootDir, "playground/benchmarks/mcp-telemetry/build/index.js"),
+    regex: /version:\s*"\d+\.\d+\.\d+"/,
+    replacement: `version: "${targetVersion}"`,
   },
 ];
 
@@ -46,7 +56,6 @@ let errorsOccurred = false;
 
 for (const file of filesToUpdate) {
   if (!fs.existsSync(file.filePath)) {
-    // Fail silently or warn depending on whether it is a pre-build or post-build script run
     console.warn(`Warning: Target file skip detected (Not found): ${file.filePath}`);
     continue;
   }

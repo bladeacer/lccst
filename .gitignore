@@ -1,5 +1,8 @@
 node_modules
 .headroom
+dist/
+.lccst_state
+.lccst/
 __pycache__
 .pytest_cache
 go-login-crud

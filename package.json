@@ -1,6 +1,6 @@
 {
   "name": "lccst",
-  "version": "2.8.1",
+  "version": "3.0.0",
   "description": "Lint, Clean, Cluster, Split, Test — Devouring messy diffs before they reach production.",
   "type": "module",
   "main": "dist/index.js",
@@ -11,6 +11,8 @@
     "start": "node dist/index.js",
     "watch": "tsc --watch",
     "test:mcp": "pnpm run build && tsx scripts/test-connection.ts",
+    "test:swarm": "tsx scripts/test-swarm-unit.ts",
+    "test": "pnpm run test:swarm && pnpm run test:mcp",
     "bump": "tsx scripts/bump-version.ts"
   },
   "devDependencies": {
@@ -19,6 +21,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.29.0"
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
   }
 }

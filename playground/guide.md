@@ -68,7 +68,7 @@ playground/
 ## Methodology
 
 The implementation methodology and procedural rules are inherited directly from the primary
-system architecture file located at `../SKILL.md`. 
+system architecture file located at `./SKILL.md`. 
 
 ### Clean-Room Environment Reference (The Answer Key)
 The playground runner provides strict target execution invariants to stop agents from looping on
@@ -84,7 +84,7 @@ infrastructure configuration. Do not alter, upgrade, or dynamically modify globa
 
 ### Automated Grading Matrix (The Rubric)
 The benchmarking engine runs static file analyses to calculate the final Robustness Score.
-Clean-room implementations must satisfy the design criteria matching the `../SKILL.md` protocol:
+Clean-room implementations must satisfy the design criteria matching the `./SKILL.md` protocol:
 
 | Assessment Criteria | Target Metrics for Max Score |
 |---------------------|------------------------------|
@@ -311,6 +311,46 @@ When executing the Go Login CRUD subproject, agents loop on `package main` impor
 | Module path mismatch across files | One internal file imports path with wrong layout or missing prefixes | Audit all import statements to match the single module path declared in `go.mod`. |
 | `httptest.NewRequest` + `SetPathValue` not called for path parameters | Handler uses `r.PathValue("id")` which returns empty string if path value not set on the test request | Call `req.SetPathValue("id", "...")` after constructing the test request when using Go 1.22+ routing patterns. |
 | Benchmark error-handling regex does not match `if err := ...; err != nil` | The benchmark scans for the contiguous substring `if\s+err\s*!=\s*nil`. Go's idiomatic `if err := call(); err != nil {` separates `if err` from `!= nil` by the pre-call statement, so the regex never fires | Use the two-line form: `err := call(); if err != nil { ... }`. The regex matches `if err != nil` only when `err` and `!=` are adjacent in the same statement. |
+
+## /audit Mode Example
+
+When running in `/audit` mode, the agent should output a dense, non-verbose
+commit plan. Example output:
+
+```
+Changes detected: 4 file(s)
+
+1. src/: parser.ts, lexer.ts
+   Suggested: feat(parser): add generic interface parser
+2. tests/: parser.test.ts
+   Suggested: test(parser): add parser coverage tests
+3. docs/: api.md
+   Suggested: docs(api): update endpoint documentation
+```
+
+No files are mutated during this phase. The plan is for human review.
+
+## State Persistence
+
+During multi-file execution branches, the protocol logs phase checkpoints
+to `.lccst_state` at the project root. This file-backed mechanism guards
+against context loss mid-swarm:
+
+```json
+{
+  "phase": "swarm_cluster",
+  "clusters": [
+    "feat(parser): add generic interface parser",
+    "test(parser): add parser coverage tests"
+  ],
+  "currentCluster": 1,
+  "errors": [],
+  "timestamp": 1712345678901
+}
+```
+
+The state file is created by the `SwarmState` class in `swarm/state.ts` and
+is automatically cleaned up on successful swarm completion.
 
 ## Traceability
 

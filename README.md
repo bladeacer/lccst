@@ -17,9 +17,33 @@ preferences first.
 3. **Targeted Testing:** Verify changes and enforce strict, ecosystem-aware
 coverage boundaries.
 4. **Atomic Commit Generation:** Issue clean Conventional Commits with detailed
-test metrics. 
+test metrics.
 > Note: The agent explicitly prompts for manual confirmation or
 requires explicit pre-authorisation before writing to your history.
+
+## Runtime Modes
+
+Locust runs in two modes depending on your environment:
+
+### Bare Skill Mode
+The protocol specification (`SKILL.md`) is loaded directly into the LLM's
+context window. The model follows the rules manually — detecting languages,
+running commands, and committing changes. No MCP server required.
+
+### MCP Server Mode (Reference: `/swarm`)
+The MCP server at `src/index.ts` (built to `dist/index.js`) exposes the full
+protocol via tools and prompts. The server source and supporting execution
+library live under `swarm/`. AI agents can call the `/init`, `/audit`, and
+`/swarm` tools programmatically.
+
+```bash
+# Go Example
+/init -> Detects go.mod -> swarm runs `go test ./...`
+# Rust Example
+/init -> Detects Cargo.toml -> swarm runs `cargo test`
+# Python Example
+/init -> Detects pyproject.toml -> swarm runs `uv run pytest`
+```
 
 ## Operational Persona: The Virtual Staff & Release Engineer
 
@@ -88,7 +112,7 @@ silent runtime type failures.
   automatically adapts to both monolithic and modular/versioned changelog
   layouts using SemVer rules.
 * **Quality over Velocity:** Prioritise structural integrity and complete test
-  verification over raw execution speed. Version 2.8.0 enforces strict Mode Gating:
+  verification over raw execution speed. Version 3.0.0 enforces strict Mode Gating:
   it maintains an ultra-lean token footprint during passive `/audit` scans, reserving
   heavy completion token investment exclusively for the execution loop where full
   verification overhead is justified.
@@ -226,6 +250,11 @@ server connection arrays (such as `claude_desktop_config.json`):
 ```
 *Once registered, invoke the `swarm` prompt through your agent's interface.*
 
+The MCP server exposes three tools for programmatic use:
+- **`init`** — Map project conventions and verify environment
+- **`audit`** — Scan workspace diffs and generate commit plan
+- **`swarm`** — Execute the full discovery-cluster-test-commit loop
+
 ---
 
 ### Option B: Zero-Setup Declarative Ingestion
@@ -244,7 +273,7 @@ claude "Review the active git diff using the parameters in ./SKILL.md"
 
 #### GitHub Copilot & OpenCode Agents
 
-Reference or pin the file within your conversational prompt context using `@` 
+Reference or pin the file within your conversational prompt context using `@`
 or `#` shortcuts depending on your host interface:
 * Attach `#SKILL.md` or `@SKILL.md` into your chat input interface.
 * Target Execution Prompt: `"Execute the protocol loop defined in this file

@@ -102,7 +102,7 @@ function updateMetrics(
 
 const server = new McpServer({
   name: "lccst-telemetry",
-  version: "2.3.0"
+  version: "3.0.0"
 });
 
 server.server.setRequestHandler(ListToolsRequestSchema, async () => {

@@ -43,7 +43,7 @@ function updateMetrics(promptTokens, completionTokens) {
     }
 }
 // Using the low-level base class guarantees perfect transport type assignment
-const server = new Server({ name: "lccst-telemetry", version: "1.0.0" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "lccst-telemetry", version: "3.0.0" }, { capabilities: { tools: {} } });
 // Register the tool list payload directly
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [

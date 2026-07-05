@@ -3,6 +3,17 @@
 Benchmarking harness for measuring the impact of skill-guided vs plain code
 generation across three reference projects.
 
+## Runtime Modes
+
+LCCST can operate in two modes:
+
+* **Bare prompt** — Load `SKILL.md` directly into your LLM context window.
+  The model follows the protocol manually (fallback language detection, manual
+  approval steps).
+* **MCP server** — Run `node dist/index.js` to serve the protocol as tools.
+  The server source lives at `src/index.ts`; the execution library is under
+  `swarm/`.
+
 ## Benchmark project dependencies
 
 | Tool | Version | Purpose |
