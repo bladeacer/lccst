@@ -6,11 +6,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 
-// ─── Runtime context ─────────────────────────────────────────────
+// --- Runtime context ------------------------------------------------
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 
-// ─── Tooling Ladder: project detection ──────────────────────────
+// --- Tooling Ladder: project detection -------------------------------
 export interface ProjectInfo {
   type: "python" | "node" | "go" | "rust" | "unknown";
   manifest: string;
@@ -68,7 +68,7 @@ export function scanEnvironment(root: string): EnvReport {
   return { project, tools, conventions };
 }
 
-// ─── State persistence (.lccst/state.json) ────────────────────────
+// --- State persistence (.lccst/state.json) ---------------------------
 export interface SwarmStateData {
   phase: string;
   clusters: string[];
@@ -94,7 +94,7 @@ export class SwarmState {
         const raw = fs.readFileSync(this.filePath, "utf-8").trim();
         if (raw) return { ...DEFAULT_STATE, ...JSON.parse(raw), timestamp: Date.now() };
       }
-    } catch { /* corrupt — return default */ }
+    } catch { /* corrupt -- return default */ }
     return { ...DEFAULT_STATE, timestamp: Date.now() };
   }
 
@@ -110,7 +110,7 @@ export class SwarmState {
   get path(): string { return this.filePath; }
 }
 
-// ─── Observability event logging (.lccst/events.jsonl) ──────────
+// --- Observability event logging (.lccst/events.jsonl) ---------------
 export function logEvent(root: string, event: Record<string, unknown>): void {
   const dir = path.resolve(root, ".lccst");
   fs.mkdirSync(dir, { recursive: true });
@@ -118,7 +118,7 @@ export function logEvent(root: string, event: Record<string, unknown>): void {
   fs.appendFileSync(path.join(dir, "events.jsonl"), JSON.stringify(entry) + "\n");
 }
 
-// ─── Hunk clustering helper ──────────────────────────────────────
+// --- Hunk clustering helper -----------------------------------------
 export interface Cluster {
   scope: string;
   files: string[];
@@ -142,7 +142,7 @@ export function clusterHunks(lines: string[]): Cluster[] {
   });
 }
 
-// ─── MCP Server ──────────────────────────────────────────────────
+// --- MCP Server -----------------------------------------------------
 const server = new McpServer({
   name: "lccst-locust",
   version: "3.0.0",
@@ -215,7 +215,7 @@ server.registerTool("audit", {
   }
 
   if (!diff.trim()) {
-    return { content: [{ type: "text", text: "Working tree clean — no changes to audit." }] };
+    return { content: [{ type: "text", text: "Working tree clean -- no changes to audit." }] };
   }
 
   const lines = diff.trim().split("\n").map(l => l.trim()).filter(Boolean);
@@ -256,10 +256,10 @@ server.registerTool("swarm", {
     `Test command: ${project.testCommand.join(" ")}`,
     `Dry-run: ${dryRun}`,
     "",
-    `Phase 1/4: Discover & Format — ${project.formatCommand?.join(" ") || "skipped"}`,
-    `Phase 2/4: Hunk Clustering — pending git analysis`,
-    `Phase 3/4: Targeted Testing — ${project.testCommand.join(" ")}`,
-    `Phase 4/4: Atomic Commit — conventional commit generation`,
+    `Phase 1/4: Discover & Format -- ${project.formatCommand?.join(" ") || "skipped"}`,
+    `Phase 2/4: Hunk Clustering -- pending git analysis`,
+    `Phase 3/4: Targeted Testing -- ${project.testCommand.join(" ")}`,
+    `Phase 4/4: Atomic Commit -- conventional commit generation`,
     "",
     `State tracking: ${state.path}`,
   ];
@@ -269,7 +269,7 @@ server.registerTool("swarm", {
   return { content: [{ type: "text", text: report.join("\n") }] };
 });
 
-// ─── Start transport (only when run directly, not when imported) ─
+// --- Start transport (only when run directly, not when imported) ----
 const isMainModule = process.argv[1] && (
   fileURLToPath(import.meta.url) === path.resolve(process.argv[1])
 );

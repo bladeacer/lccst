@@ -29,12 +29,12 @@ Locust runs in two modes depending on your environment:
 
 ### Bare Skill Mode
 The protocol specification (`SKILL.md`) is loaded directly into the LLM's
-context window. The model follows the rules manually — detecting languages,
+context window. The model follows the rules manually -- detecting languages,
 running commands, and committing changes. No MCP server required.
 
 ### MCP Server Mode (Reference: `src/swarm/`)
 The MCP server at `src/index.ts` (built to `dist/index.js`) exposes the full
-protocol via tools and prompts — all logic is self-contained in a single
+protocol via tools and prompts -- all logic is self-contained in a single
 distributable file. AI agents can call the `/init`, `/audit`, and `/swarm`
 tools programmatically.
 
@@ -47,6 +47,12 @@ See [src/swarm/README.md](src/swarm/README.md) for more details.
 /init -> Detects Cargo.toml -> swarm runs `cargo test`
 # Python Example
 /init -> Detects pyproject.toml -> swarm runs `uv run pytest`
+# Node.js Example
+/init -> Detects package.json -> swarm runs `pnpm test`
+# Julia Example
+/init -> Detects Project.toml -> swarm runs `julia --project=. -e "using Pkg; Pkg.test()"`
+# CMake Example
+/init -> Detects CMakeLists.txt -> swarm runs `cmake --build .`
 ```
 
 ## Operational Persona: The Virtual Staff & Release Engineer
@@ -196,7 +202,19 @@ missing encryption patterns).
 
 <!-- BENCHMARK_RESULTS_END -->
 
-Across all three models, skill-guided LCCST consistently raised scores from sub-50 plain baselines to near-perfect (95-100/100) with every test passing. deepseek-v4-flash-free started with the strongest plain score (40/100) and hit 100/100 at +243% token overhead, while mimo-v2.5-free proved the most token-efficient at just +107% overhead while still reaching 100/100. big-pickle achieved 95/100 but at the highest cost (+314% overhead) and was the only model to fall short of a perfect guided score (84/100 on python-http-server). go-login-crud was the heaviest subproject across all runners, consistently consuming the most ART.
+| Metric | deepseek-v4-flash-free | mimo-v2.5-free | big-pickle |
+|---|---|---|---|---|
+| Plain score | 40/100 | 34/100 | 34/100 |
+| Guided score | 100/100 | 100/100 | 95/100 |
+| Plain FCT | 2,354 | 4,808 | 1,817 |
+| Guided FCT | 8,078 | 9,946 | 7,516 |
+| FCT overhead | +243% | +107% | +314% |
+| Plain ART | 9,485 | 15,444 | 10,648 |
+| Guided ART | 32,565 | 31,956 | 44,052 |
+| ART overhead | +243% | +107% | +314% |
+| Tests passed | 3/3 | 3/3 | 3/3 |
+
+mimo-v2.5-free appears the most token-efficient at +107% overhead, but this is misleading -- its plain scores (34/100) came at inflated FCT (4,808) and ART (15,444) compared to deepseek (40/100, 2,354/9,485), indicating it choked on the plain implementation and required more tokens to produce worse code. The skill guide delivered a 100/100 score for all three, but the overhead percentage looks artificially low because the plain baseline was already elevated by struggle rather than efficiency. deepseek-v4-flash-free had the strongest plain baseline and reached 100/100 with a +243% overhead that represents genuine quality investment, not recovery from failure. big-pickle was the only model below 100/100 (95/100, with 84/100 on python-http-server) and incurred the highest overhead (+314%). go-login-crud was the heaviest subproject across all runners.
 
 ### Core Architectural Insights
 
@@ -220,6 +238,9 @@ Across all three models, skill-guided LCCST consistently raised scores from sub-
 Feel free to clone the repository and contribute your agent-specific metrics
 to the main matrix. Refer to the [playground README](./playground/README.md)
 for further details.
+
+Contributions are welcome, especially for frontier models and local powerhouses
+like Claude, GPT, Gemma 4 and GLM 5.2.
 
 ---
 
@@ -257,9 +278,9 @@ server connection arrays (such as `claude_desktop_config.json`):
 *Once registered, invoke the `swarm` prompt through your agent's interface.*
 
 The MCP server exposes three tools for programmatic use:
-- **`init`** — Map project conventions and verify environment
-- **`audit`** — Scan workspace diffs and generate commit plan
-- **`swarm`** — Execute the full discovery-cluster-test-commit loop
+- **`init`** -- Map project conventions and verify environment
+- **`audit`** -- Scan workspace diffs and generate commit plan
+- **`swarm`** -- Execute the full discovery-cluster-test-commit loop
 
 ### OpenCode Setup
 
@@ -293,7 +314,7 @@ To invoke Locust within a conversation, use the `/lccst` command or reference
 #### Available Test Scripts
 
 ```bash
-pnpm run build      # Compile TypeScript → dist/index.js
+pnpm run build      # Compile TypeScript -> dist/index.js
 pnpm run test       # Run all tests (22 unit + 6 integration)
 pnpm run test:swarm # Swarm library unit tests only
 pnpm run test:mcp   # MCP server integration tests only
@@ -349,6 +370,17 @@ machine, copy the raw content of `SKILL.md` and paste it inside your editor's
 global behavioural configuration field:
 * **Cursor:** Navigate to `Settings -> Features -> Rules for AI` and append
   the ruleset.
+* **Windsurf:** Navigate to `Settings -> Memories` and create or edit a
+  global rules entry with the SKILL.md content.
+* **VS Code (Cline / Continue):** Create or edit `~/.vscode/globalRules.json`
+  with the ruleset content, or paste directly into the extension's global
+  configuration panel.
+* **JetBrains (AI Assistant):** Navigate to `Settings -> Tools -> AI Assistant
+  -> Custom Prompts` and add the ruleset as a project-level or global
+  instruction.
+* **GitHub Copilot (CLI):** Set `GITHUB_COPILOT_INSTRUCTIONS` environment
+  variable to point to a local copy of `SKILL.md`, or append the content to
+  `~/.github/copilot-instructions.md`.
 
 ---
 

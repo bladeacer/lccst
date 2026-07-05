@@ -19,16 +19,16 @@ function withTempDir(fn: (dir: string) => void) {
 
 console.log("LCCST: Swarm library unit tests\n");
 
-// ── Project detection ──────────────────────────────────────────
+// -- Project detection ----------------------------------------------
 withTempDir((dir) => {
   const unknown = detectProject(dir);
-  assert(unknown.type === "unknown", "empty dir → unknown");
+  assert(unknown.type === "unknown", "empty dir -> unknown");
 });
 
 withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, "pyproject.toml"), "");
   const p = detectProject(dir);
-  assert(p.type === "python", "pyproject.toml → python");
+  assert(p.type === "python", "pyproject.toml -> python");
   assert(p.testCommand.join(" ") === "uv run pytest", "python test command");
   assert(p.formatCommand?.join(" ") === "uv run ruff format", "python format");
 });
@@ -36,21 +36,21 @@ withTempDir((dir) => {
 withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, "package.json"), "{}");
   const p = detectProject(dir);
-  assert(p.type === "node", "package.json → node");
+  assert(p.type === "node", "package.json -> node");
   assert(p.testCommand.join(" ") === "pnpm test", "node test command");
 });
 
 withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, "Cargo.toml"), "");
   const p = detectProject(dir);
-  assert(p.type === "rust", "Cargo.toml → rust");
+  assert(p.type === "rust", "Cargo.toml -> rust");
   assert(p.testCommand.join(" ") === "cargo test", "cargo test command");
 });
 
 withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, "go.mod"), "");
   const p = detectProject(dir);
-  assert(p.type === "go", "go.mod → go");
+  assert(p.type === "go", "go.mod -> go");
   assert(p.testCommand.join(" ") === "go test ./...", "go test command");
 });
 
@@ -69,7 +69,7 @@ withTempDir((dir) => {
   assert(p.type === "rust", "Cargo.toml beats go.mod");
 });
 
-// ── Environment scan ───────────────────────────────────────────
+// -- Environment scan -----------------------------------------------
 withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, "pyproject.toml"), "");
   const env = scanEnvironment(dir);
@@ -77,7 +77,7 @@ withTempDir((dir) => {
   assert(Array.isArray(env.conventions), "conventions is array");
 });
 
-// ── SwarmState ─────────────────────────────────────────────────
+// -- SwarmState -----------------------------------------------------
 withTempDir((dir) => {
   const state = new SwarmState(dir);
   const s1 = state.read();
@@ -99,6 +99,6 @@ withTempDir((dir) => {
   assert(!fs.existsSync(path.join(dir, ".lccst", "state.json")), "clear removes file");
 });
 
-// ── Summary ────────────────────────────────────────────────────
+// -- Summary --------------------------------------------------------
 console.log(`\nResults: ${passed} passed, ${failed} failed`);
 process.exit(failed > 0 ? 1 : 0);
