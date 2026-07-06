@@ -214,32 +214,35 @@ encryption patterns).
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
 > Skill-guided implementation used **+314%** more FCT and **+314%** more ART compared to plain implementation across the workspace suite.
 
-<!-- BENCHMARK_RESULTS_END -->
 
-| Metric | deepseek-v4-flash-free | mimo-v2.5-free | big-pickle |
-|---|---|---|---|
-| Plain score | 40/100 | 34/100 | 34/100 |
+### Benchmark Summary
+
+| Metric | opencode-mimo-v2.5-free | opencode-deepseek-v4-flash-free | opencode-big-pickle |
+| --- | --- | --- | --- |
+| Plain score | 34/100 | 40/100 | 34/100 |
 | Guided score | 100/100 | 100/100 | 95/100 |
-| Plain FCT | 2,354 | 4,808 | 1,817 |
-| Guided FCT | 8,078 | 9,946 | 7,516 |
-| FCT overhead | +243% | +107% | +314% |
-| Plain ART | 9,485 | 15,444 | 10,648 |
-| Guided ART | 32,565 | 31,956 | 44,052 |
-| ART overhead | +243% | +107% | +314% |
+| Plain FCT | 4,808 | 2,297 | 1,817 |
+| Guided FCT | 9,946 | 7,958 | 7,516 |
+| FCT overhead | +107% | +246% | +314% |
+| Plain ART | 15,444 | 32,200 | 10,648 |
+| Guided ART | 31,956 | 46,100 | 44,052 |
+| ART overhead | +107% | +43% | +314% |
 | Tests passed | 3/3 | 3/3 | 3/3 |
 
-mimo-v2.5-free appears the most token-efficient at +107% overhead, but this
-is misleading -- its plain scores (34/100) came at inflated FCT (4,808) and
-ART (15,444) compared to deepseek (40/100, 2,354/9,485), indicating it choked
-on the plain implementation and required more tokens to produce worse code.
-The skill guide delivered a 100/100 score for all three, but the overhead
-percentage looks artificially low because the plain baseline was already
-elevated by struggle rather than efficiency. deepseek-v4-flash-free had the
-strongest plain baseline and reached 100/100 with a +243% overhead that
-represents genuine quality investment, not recovery from failure. big-pickle
-was the only model below 100/100 (95/100, with 84/100 on
-python-http-server) and incurred the highest overhead (+314%). go-login-crud
-was the heaviest subproject across all runners.
+opencode-mimo-v2.5-free appears the most token-efficient at +107/+107 overhead, but this is misleading -- its plain scores (34/100) came at inflated FCT (4,808) and ART (15,444) compared to opencode-deepseek-v4-flash-free (40/100, 2,297/32,200), indicating it choked on the plain implementation and required more tokens to produce worse code.
+
+opencode-deepseek-v4-flash-free had the strongest plain baseline and reached 100/100 with a +246/+43 overhead that represents genuine quality investment, not recovery from failure.
+
+opencode-big-pickle was the only model below 100/100 (95/100, with 84/100 on python-http-server) and incurred the highest overhead (+314/+314).
+
+go-login-crud was the heaviest subproject across all runners.
+
+opencode-mimo-v2.5-free used the fewest total tokens (4,808 FCT + 9,946 guided FCT + 15,444 ART + 31,956 guided ART = 62,154 total).
+
+opencode-deepseek-v4-flash-free is a decently competing option (100/100 guided, +246/+43 overhead).
+
+opencode-big-pickle is not worth using (95/100 guided, +314/+314 overhead).
+<!-- BENCHMARK_RESULTS_END -->
 
 ### Core Architectural Insights
 

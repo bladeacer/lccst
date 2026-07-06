@@ -413,6 +413,195 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
     return "\n".join(parts)
 
 
+def generate_comparison_table(reports: list[BenchmarkReport]) -> str:
+    """Generate a cross-model comparison summary table."""
+    if not reports:
+        return ""
+
+    parts = []
+    headers = " | ".join(
+        f"{r.agent_name}-{r.model_name}" for r in reports
+    )
+    parts.append(f"| Metric | {headers} |")
+    parts.append("| --- |" + " --- |" * len(reports))
+
+    rows_data = [
+        ("Plain score", lambda r: f"{r.avg_plain_score:.0f}/100"),
+        ("Guided score", lambda r: f"{r.avg_guided_score:.0f}/100"),
+        ("Plain FCT", lambda r: fmt_int(r.total_fct_plain)),
+        ("Guided FCT", lambda r: fmt_int(r.total_fct_guided)),
+        ("FCT overhead", lambda r: pct_delta(r.total_fct_plain, r.total_fct_guided) + "%"),
+        ("Plain ART", lambda r: fmt_int(r.total_art_plain)),
+        ("Guided ART", lambda r: fmt_int(r.total_art_guided)),
+        ("ART overhead", lambda r: pct_delta(r.total_art_plain, r.total_art_guided) + "%"),
+        ("Tests passed", lambda r: f"{r.passed_count}/{len(r.projects)}"),
+    ]
+
+    for label, fn in rows_data:
+        cells = " | ".join([label] + [fn(r) for r in reports])
+        parts.append(f"| {cells} |")
+
+    return "\n".join(parts)
+
+
+def generate_summary_paragraph(reports: list[BenchmarkReport]) -> str:
+    """Generate interpretive summary paragraph from report data."""
+    if not reports:
+        return ""
+
+    by_overhead = sorted(
+        reports,
+        key=lambda r: (
+            (r.total_fct_guided - r.total_fct_plain) / r.total_fct_plain
+            if r.total_fct_plain else 0
+        ),
+    )
+    most_efficient = by_overhead[0]
+    least_efficient = by_overhead[-1]
+
+    best_plain = max(reports, key=lambda r: r.avg_plain_score)
+
+    imperfect = [r for r in reports if r.avg_guided_score < 100]
+
+    all_heavy = [
+        (r, max(r.projects, key=lambda p: p.art_guided)) for r in reports
+    ]
+    overall_heaviest = max(all_heavy, key=lambda x: x[1].art_guided)
+
+    me_name = f"{most_efficient.agent_name}-{most_efficient.model_name}"
+    bp_name = f"{best_plain.agent_name}-{best_plain.model_name}"
+
+    me_fct = pct_delta(most_efficient.total_fct_plain, most_efficient.total_fct_guided)
+    me_art = pct_delta(most_efficient.total_art_plain, most_efficient.total_art_guided)
+    bp_fct = pct_delta(best_plain.total_fct_plain, best_plain.total_fct_guided)
+    bp_art = pct_delta(best_plain.total_art_plain, best_plain.total_art_guided)
+
+    parts = []
+
+    parts.append(
+        f"{me_name} appears the most token-efficient at "
+        f"{me_fct}/{me_art} overhead, but this "
+        f"is misleading -- its plain scores "
+        f"({most_efficient.avg_plain_score:.0f}/100) came at inflated "
+        f"FCT ({fmt_int(most_efficient.total_fct_plain)}) and "
+        f"ART ({fmt_int(most_efficient.total_art_plain)}) "
+        f"compared to {bp_name} "
+        f"({best_plain.avg_plain_score:.0f}/100, "
+        f"{fmt_int(best_plain.total_fct_plain)}/"
+        f"{fmt_int(best_plain.total_art_plain)}), indicating it choked "
+        f"on the plain implementation and required more tokens to produce "
+        f"worse code."
+    )
+
+    perfect_count = sum(1 for r in reports if r.avg_guided_score >= 100)
+    total = len(reports)
+    if perfect_count == total and total > 0:
+        label = "three" if total == 3 else str(total)
+        parts.append(
+            f"The skill guide delivered a 100/100 score for all "
+            f"{label}, but the overhead "
+            f"percentage looks artificially low because the plain baseline "
+            f"was already elevated by struggle rather than efficiency."
+        )
+
+    if best_plain.avg_guided_score >= 100:
+        parts.append(
+            f"{bp_name} had the "
+            f"strongest plain baseline and reached "
+            f"100/100 with a {bp_fct}/{bp_art} overhead that "
+            f"represents genuine quality investment, not recovery from failure."
+        )
+    else:
+        parts.append(
+            f"{bp_name} had the "
+            f"strongest plain baseline at "
+            f"{best_plain.avg_plain_score:.0f}/100."
+        )
+
+    for r in imperfect:
+        worst_proj = min(r.projects, key=lambda p: p.guided_score)
+        r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
+        r_art = pct_delta(r.total_art_plain, r.total_art_guided)
+        if len(imperfect) == 1:
+            parts.append(
+                f"{r.agent_name}-{r.model_name} "
+                f"was the only model below 100/100 "
+                f"({r.avg_guided_score:.0f}/100, with "
+                f"{worst_proj.guided_score}/100 on "
+                f"{worst_proj.name}) and incurred the highest overhead "
+                f"({r_fct}/{r_art})."
+            )
+        else:
+            parts.append(
+                f"{r.agent_name}-{r.model_name} "
+                f"scored {r.avg_guided_score:.0f}/100 "
+                f"(lowest: {worst_proj.guided_score}/100 on "
+                f"{worst_proj.name}) with {r_fct}/{r_art} overhead."
+            )
+
+    parts.append(
+        f"{overall_heaviest[1].name} was the heaviest subproject "
+        f"across all runners."
+    )
+
+    lowest_abs = min(
+        reports,
+        key=lambda r: r.total_fct_plain + r.total_fct_guided
+        + r.total_art_plain + r.total_art_guided,
+    )
+    lowest_abs_total = (
+        lowest_abs.total_fct_plain + lowest_abs.total_fct_guided
+        + lowest_abs.total_art_plain + lowest_abs.total_art_guided
+    )
+    parts.append(
+        f"{lowest_abs.agent_name}-{lowest_abs.model_name} "
+        f"used the fewest total tokens "
+        f"({fmt_int(lowest_abs.total_fct_plain)} FCT + "
+        f"{fmt_int(lowest_abs.total_fct_guided)} guided FCT + "
+        f"{fmt_int(lowest_abs.total_art_plain)} ART + "
+        f"{fmt_int(lowest_abs.total_art_guided)} guided ART = "
+        f"{fmt_int(lowest_abs_total)} total)."
+    )
+
+    classified_tags: list[str] = []
+    decent = [
+        r for r in reports
+        if r.avg_guided_score >= 90
+        and r.avg_guided_score == 100
+        and r not in (most_efficient, lowest_abs)
+    ]
+    for r in decent:
+        tag = f"{r.agent_name}-{r.model_name}"
+        classified_tags.append(tag)
+        r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
+        r_art = pct_delta(r.total_art_plain, r.total_art_guided)
+        parts.append(
+            f"{tag} is a decently competing "
+            f"option ({r.avg_guided_score:.0f}/100 guided, "
+            f"{r_fct}/{r_art} overhead)."
+        )
+
+    poor = [
+        r for r in reports
+        if r.avg_guided_score < 90
+        or (r is least_efficient and r.avg_guided_score < 100)
+    ]
+    for r in poor:
+        tag = f"{r.agent_name}-{r.model_name}"
+        if tag in classified_tags:
+            continue
+        classified_tags.append(tag)
+        r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
+        r_art = pct_delta(r.total_art_plain, r.total_art_guided)
+        parts.append(
+            f"{tag} is not worth using "
+            f"({r.avg_guided_score:.0f}/100 guided, "
+            f"{r_fct}/{r_art} overhead)."
+        )
+
+    return "\n\n".join(parts)
+
+
 def update_readme(table_content: str) -> None:
     """Replace the benchmark table section in README.md."""
     text = README_PATH.read_text(encoding="utf-8")
@@ -420,12 +609,18 @@ def update_readme(table_content: str) -> None:
     start_marker = "<!-- BENCHMARK_RESULTS_START -->"
     end_marker = "<!-- BENCHMARK_RESULTS_END -->"
 
-    wrapped = f"{start_marker}\n\n{table_content}\n{end_marker}"
+    wrapped = f"{start_marker}\n\n{table_content}\n{end_marker}\n"
 
     if start_marker in text and end_marker in text:
         before = text.split(start_marker, 1)[0]
-        after = text.split(end_marker, 1)[1]
-        # Preserve the blank line after end_marker if it exists
+        after_full = text.split(end_marker, 1)[1]
+        # Strip old legacy content (static comparison table + prose summary)
+        # that used to sit after the end marker. Find the next heading.
+        next_section = re.search(r"\n### ", after_full)
+        if next_section:
+            after = after_full[next_section.start():]
+        else:
+            after = after_full
         new_text = before + wrapped + after
     else:
         # Fallback: insert after the Verification Matrix heading
@@ -474,7 +669,10 @@ def main() -> None:
         )
 
     table = generate_table(top)
-    update_readme(table)
+    comparison = generate_comparison_table(top)
+    summary = generate_summary_paragraph(top)
+    combined = f"{table}\n\n### Benchmark Summary\n\n{comparison}\n\n{summary}"
+    update_readme(combined)
 
 
 if __name__ == "__main__":

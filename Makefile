@@ -22,6 +22,7 @@ help:
 	@echo "  make benchmark-free     Run full benchmark lifecycle"
 	@echo "  make benchmark-dryrun   Build MCPs & verify connectivity (no agent session)"
 	@echo "  make bench-report       Parse telemetry & generate report (no cleanup)"
+	@echo "  make bench-update       Regenerate README benchmark tables from latest reports"
 	@echo "  make bench-cleanup      Remove transient workspace files after report"
 	@echo "  make clean              Remove dist/ directory"
 	@echo "  make help               Show this message"
