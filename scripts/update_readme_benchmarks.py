@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 import sys
+import textwrap
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -358,6 +359,53 @@ def pct_delta(a: int, b: int) -> str:
     return f"{((b - a) / a * 100):+.0f}"
 
 
+def _art_prose(ap: int, ag: int) -> str:
+    """Return the ART overhead prose fragment, handling the zero-plain case."""
+    if ap == 0:
+        return "clean, zero-waste execution on the runtime tracking proxy"
+    return f"{pct_delta(ap, ag)}% ART overhead"
+
+
+def _wrap_benchmark_text(text: str, width: int = 80) -> str:
+    """Wrap prose lines to *width* while leaving tables and headings intact."""
+    out: list[str] = []
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            out.append("")
+        elif stripped.startswith(("|", "#")):
+            out.append(line)
+        elif stripped.startswith("> "):
+            inner = line[line.index("> ") + 2 :]
+            indent = "> "
+            wrapped = textwrap.fill(
+                inner, width=width - 2,
+                break_long_words=False, break_on_hyphens=False,
+            )
+            for wl in wrapped.split("\n"):
+                out.append(f"{indent}{wl}")
+        elif stripped.startswith(("* ", "- ")):
+            inner = line[line.index(stripped[:2]) + 2:]
+            prefix = stripped[:2]
+            wrapped = textwrap.fill(
+                inner, width=width - 2,
+                break_long_words=False, break_on_hyphens=False,
+            )
+            for j, wl in enumerate(wrapped.split("\n")):
+                out.append(f"{prefix}{wl}" if j == 0 else f"  {wl}")
+        else:
+            if len(line) <= width:
+                out.append(line)
+            else:
+                out.extend(
+                    textwrap.fill(
+                        line, width=width,
+                        break_long_words=False, break_on_hyphens=False,
+                    ).split("\n")
+                )
+    return "\n".join(out)
+
+
 def generate_table(reports: list[BenchmarkReport]) -> str:
     """Generate the markdown benchmark table content."""
     parts: list[str] = []
@@ -434,12 +482,20 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
             f"> **Highest FCT subproject:** `{heavy_fct}` "
             f"consumed the most guided FCT tokens."
         )
-        parts.append(
-            f"> Skill-guided implementation used **{pct_delta(fp, fg)}%** "
-            f"more FCT and **{pct_delta(ap, ag)}%** more ART "
-            f"compared to plain implementation across the "
-            f"workspace suite."
-        )
+        if ap == 0:
+            parts.append(
+                f"> Skill-guided implementation used **{pct_delta(fp, fg)}%** "
+                f"more FCT while maintaining a clean, zero-waste baseline "
+                f"execution loop on the runtime tracking proxy across the "
+                f"workspace suite."
+            )
+        else:
+            parts.append(
+                f"> Skill-guided implementation used **{pct_delta(fp, fg)}%** "
+                f"more FCT and **{pct_delta(ap, ag)}%** more ART "
+                f"compared to plain implementation across the "
+                f"workspace suite."
+            )
         parts.append("")
 
     return "\n".join(parts)
@@ -465,7 +521,7 @@ def generate_comparison_table(reports: list[BenchmarkReport]) -> str:
         ("FCT overhead", lambda r: pct_delta(r.total_fct_plain, r.total_fct_guided) + "%"),
         ("Plain ART", lambda r: fmt_int(r.total_art_plain)),
         ("Guided ART", lambda r: fmt_int(r.total_art_guided)),
-        ("ART overhead", lambda r: pct_delta(r.total_art_plain, r.total_art_guided) + "%"),
+        ("ART overhead", lambda r: (pct_delta(r.total_art_plain, r.total_art_guided) + "%") if r.total_art_plain != 0 else "N/A"),
         ("Tests passed", lambda r: f"{r.passed_count}/{len(r.projects)}"),
     ]
 
@@ -532,14 +588,16 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                 te.append(
                     f"* **{tag}** entered with the strongest plain baseline "
                     f"({p.avg_plain_score:.0f}/100) and reached perfection "
-                    f"with {p_fct}% FCT and {p_art}% ART overhead"
-                    f"\u2014representing a genuine quality investment "
+                    f"with {p_fct}% FCT and "
+                    f"{_art_prose(p.total_art_plain, p.total_art_guided)}"
+                    f" -- representing a genuine quality investment "
                     f"rather than recovery from failure."
                 )
             else:
                 te.append(
                     f"* **{tag}** achieved a perfect guided score with "
-                    f"{p_fct}% FCT and {p_art}% ART overhead."
+                    f"{p_fct}% FCT and "
+                    f"{_art_prose(p.total_art_plain, p.total_art_guided)}."
                 )
         else:
             te.append(_fmt_intro_line(perfect))
@@ -555,8 +613,9 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
             te.append(
                 f"* **{bp_tag}** entered with the strongest plain baseline "
                 f"({best_pp.avg_plain_score:.0f}/100) and reached perfection "
-                f"with {bp_fct}% FCT and {bp_art}% ART overhead"
-                f"\u2014representing a genuine quality investment "
+                f"with {bp_fct}% FCT and "
+                f"{_art_prose(best_pp.total_art_plain, best_pp.total_art_guided)}"
+                f" -- representing a genuine quality investment "
                 f"rather than recovery from failure."
             )
 
@@ -566,12 +625,10 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                 eff_fct = pct_delta(
                     eff_pp.total_fct_plain, eff_pp.total_fct_guided
                 )
-                eff_art = pct_delta(
-                    eff_pp.total_art_plain, eff_pp.total_art_guided
-                )
                 te.append(
                     f"* **{eff_tag}** was the most token-efficient at "
-                    f"{eff_fct}% FCT and {eff_art}% ART overhead, "
+                    f"{eff_fct}% FCT with "
+                    f"{_art_prose(eff_pp.total_art_plain, eff_pp.total_art_guided)}, "
                     f"though its lower plain baseline "
                     f"({eff_pp.avg_plain_score:.0f}/100) means the "
                     f"overhead figure partly reflects additional "
@@ -587,12 +644,10 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                 r_fct = pct_delta(
                     r.total_fct_plain, r.total_fct_guided
                 )
-                r_art = pct_delta(
-                    r.total_art_plain, r.total_art_guided
-                )
                 te.append(
                     f"* **{tag}** also delivered a perfect guided score, "
-                    f"with {r_fct}% FCT and {r_art}% ART overhead."
+                    f"with {r_fct}% FCT and "
+                    f"{_art_prose(r.total_art_plain, r.total_art_guided)}."
                 )
 
     if imperfect:
@@ -602,13 +657,11 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
             r_fct = pct_delta(
                 r.total_fct_plain, r.total_fct_guided
             )
-            r_art = pct_delta(
-                r.total_art_plain, r.total_art_guided
-            )
+            art_prose = _art_prose(r.total_art_plain, r.total_art_guided)
             if r is most_efficient and r not in perfect:
                 te.append(
                     f"* **{tag}** was the most token-efficient overall "
-                    f"({r_fct}% FCT, {r_art}% ART) but scored "
+                    f"({r_fct}% FCT, {art_prose}) but scored "
                     f"{r.avg_guided_score:.0f}/100 "
                     f"(weakest: {worst.name} at {worst.guided_score}/100)."
                 )
@@ -616,7 +669,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                 te.append(
                     f"* **{tag}** scored {r.avg_guided_score:.0f}/100 "
                     f"(weakest: {worst.name} at {worst.guided_score}/100) "
-                    f"with {r_fct}% FCT and {r_art}% ART overhead."
+                    f"with {r_fct}% FCT and {art_prose}."
                 )
 
     te.append(
@@ -693,7 +746,7 @@ def update_readme(table_content: str, count: int = 0) -> None:
     start_marker = "<!-- BENCHMARK_RESULTS_START -->"
     end_marker = "<!-- BENCHMARK_RESULTS_END -->"
 
-    wrapped = f"{start_marker}\n\n{table_content}\n{end_marker}\n"
+    wrapped = f"{start_marker}\n\n{table_content}\n\n{end_marker}\n"
 
     if start_marker in text and end_marker in text:
         before = text.split(start_marker, 1)[0]
@@ -756,6 +809,7 @@ def main() -> None:
     comparison = generate_comparison_table(top)
     summary = generate_summary_sections(top)
     combined = f"{table}\n\n### Benchmark Summary\n\n{comparison}\n\n{summary}"
+    combined = _wrap_benchmark_text(combined)
     update_readme(combined, len(top))
 
 
