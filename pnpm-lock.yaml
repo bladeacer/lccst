@@ -28,7 +28,7 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  playground/opencode-big-pickle/react-timer/skill-guided:
+  playground/opencode-deepseek-v4-flash-free/react-timer/skill-guided:
     dependencies:
       react:
         specifier: ^19.0.0
