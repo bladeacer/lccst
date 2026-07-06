@@ -190,6 +190,18 @@ encryption patterns).
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
 > Skill-guided implementation used **+107%** more FCT and **+107%** more ART compared to plain implementation across the workspace suite.
 
+#### opencode-deepseek-v4-flash-free: skill version v3.0.0
+
+| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 676 | 2,343 | 5,700 | 9,900 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 485 | 1,589 | 10,500 | 14,700 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **go-login-crud** | 65/100 | **100/100** | PASSED | 1,136 | 4,026 | 16,000 | 21,500 |
+| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,297** | **7,958** | **32,200** | **46,100** |
+
+> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
+> Skill-guided implementation used **+246%** more FCT and **+43%** more ART compared to plain implementation across the workspace suite.
+
 #### opencode-big-pickle: skill version v2.8.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
@@ -201,18 +213,6 @@ encryption patterns).
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
 > Skill-guided implementation used **+314%** more FCT and **+314%** more ART compared to plain implementation across the workspace suite.
-
-#### opencode-deepseek-v4-flash-free: skill version v3.0.0
-
-| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `None detected` | **python-http-server** | 15/100 | **5/100** | FAILED | 0 | 0 | 0 | 0 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `None detected` | **react-timer** | 22/100 | **7/100** | FAILED | 0 | 0 | 0 | 0 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `None detected` | **go-login-crud** | 15/100 | **5/100** | FAILED | 0 | 0 | 0 | 0 |
-| **Summary** | | | | **Workspace Totals / Avg** | **17/100** | **6/100** | **0/3 Passed** | **0** | **0** | **0** | **0** |
-
-> **Highest ART subproject:** `python-http-server` consumed the most guided runtime tokens.
-> Skill-guided implementation used **0%** more FCT and **0%** more ART compared to plain implementation across the workspace suite.
 
 <!-- BENCHMARK_RESULTS_END -->
 
