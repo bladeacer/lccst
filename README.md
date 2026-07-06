@@ -190,56 +190,56 @@ encryption patterns).
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
 > Skill-guided implementation used **+316%** more FCT and **0%** more ART compared to plain implementation across the workspace suite.
 
-#### opencode-mimo-v2.5-free: skill version v2.8.0
+#### opencode-big-pickle: skill version v3.0.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `mimo-v2.5-free` | `v2.8.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 1,621 | 2,684 | 5,207 | 8,622 |
-| **opencode** | `mimo-v2.5-free` | `v2.8.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 735 | 1,506 | 2,360 | 4,837 |
-| **opencode** | `mimo-v2.5-free` | `v2.8.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 2,452 | 5,756 | 7,877 | 18,497 |
-| **Summary** | | | | **Workspace Totals / Avg** | **34/100** | **100/100** | **3/3 Passed** | **4,808** | **9,946** | **15,444** | **31,956** |
+| **opencode** | `big-pickle` | `v3.0.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 582 | 2,197 | 9,700 | 15,800 |
+| **opencode** | `big-pickle` | `v3.0.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 360 | 1,479 | 9,700 | 18,200 |
+| **opencode** | `big-pickle` | `v3.0.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 758 | 4,251 | 10,500 | 21,500 |
+| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,700** | **7,927** | **29,900** | **55,500** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
-> Skill-guided implementation used **+107%** more FCT and **+107%** more ART compared to plain implementation across the workspace suite.
+> Skill-guided implementation used **+366%** more FCT and **+86%** more ART compared to plain implementation across the workspace suite.
 
-#### opencode-big-pickle: skill version v2.8.0
+#### opencode-mimo-v2.5-free: skill version v3.0.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `big-pickle` | `v2.8.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **84/100** | PASSED | 610 | 2,210 | 3,575 | 12,952 |
-| **opencode** | `big-pickle` | `v2.8.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 384 | 685 | 2,250 | 4,014 |
-| **opencode** | `big-pickle` | `v2.8.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 823 | 4,621 | 4,823 | 27,086 |
-| **Summary** | | | | **Workspace Totals / Avg** | **34/100** | **95/100** | **3/3 Passed** | **1,817** | **7,516** | **10,648** | **44,052** |
+| **opencode** | `mimo-v2.5-free` | `v3.0.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 685 | 2,666 | 37,000 | 30,400 |
+| **opencode** | `mimo-v2.5-free` | `v3.0.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 465 | 1,215 | 10,000 | 15,700 |
+| **opencode** | `mimo-v2.5-free` | `v3.0.0` | `lccst-telemetry` | **go-login-crud** | 15/100 | **100/100** | PASSED | 237 | 4,792 | 15,700 | 22,900 |
+| **Summary** | | | | **Workspace Totals / Avg** | **23/100** | **100/100** | **3/3 Passed** | **1,387** | **8,673** | **62,700** | **69,000** |
 
-> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
-> Skill-guided implementation used **+314%** more FCT and **+314%** more ART compared to plain implementation across the workspace suite.
+> **Highest ART subproject:** `python-http-server` consumed the most guided runtime tokens.
+> Skill-guided implementation used **+525%** more FCT and **+10%** more ART compared to plain implementation across the workspace suite.
 
 
 ### Benchmark Summary
 
-| Metric | opencode-deepseek-v4-flash-free | opencode-mimo-v2.5-free | opencode-big-pickle |
+| Metric | opencode-deepseek-v4-flash-free | opencode-big-pickle | opencode-mimo-v2.5-free |
 | --- | --- | --- | --- |
-| Plain score | 40/100 | 34/100 | 34/100 |
-| Guided score | 100/100 | 100/100 | 95/100 |
-| Plain FCT | 2,074 | 4,808 | 1,817 |
-| Guided FCT | 8,628 | 9,946 | 7,516 |
-| FCT overhead | +316% | +107% | +314% |
-| Plain ART | 0 | 15,444 | 10,648 |
-| Guided ART | 19,800 | 31,956 | 44,052 |
-| ART overhead | 0% | +107% | +314% |
+| Plain score | 40/100 | 40/100 | 23/100 |
+| Guided score | 100/100 | 100/100 | 100/100 |
+| Plain FCT | 2,074 | 1,700 | 1,387 |
+| Guided FCT | 8,628 | 7,927 | 8,673 |
+| FCT overhead | +316% | +366% | +525% |
+| Plain ART | 0 | 29,900 | 62,700 |
+| Guided ART | 19,800 | 55,500 | 69,000 |
+| ART overhead | 0% | +86% | +10% |
 | Tests passed | 3/3 | 3/3 | 3/3 |
 
 #### Token Efficiency
 
-Both opencode-deepseek-v4-flash-free and opencode-mimo-v2.5-free achieved a perfect guided score of 100/100.
+3 opencode-deepseek-v4-flash-free and opencode-big-pickle and opencode-mimo-v2.5-free achieved a perfect guided score of 100/100.
 
-opencode-deepseek-v4-flash-free entered with the strongest plain baseline (40/100) and reached 100/100 with +316% FCT and 0% ART overhead — a genuine quality investment rather than recovery from failure.
+opencode-deepseek-v4-flash-free entered with the strongest plain baseline (40/100) and reached 100/100 with +316% FCT and 0% ART overhead - a genuine quality investment rather than recovery from failure.
 
-opencode-mimo-v2.5-free was the most token-efficient at +107% FCT and +107% ART overhead, though its lower plain baseline (34/100) means the overhead figure partly reflects additional rounds of correction.
+opencode-big-pickle also delivered 100/100, with +366% FCT and +86% ART overhead.
 
-opencode-big-pickle scored 95/100 (weakest: python-http-server at 84/100) with +314% FCT and +314% ART overhead.
+opencode-mimo-v2.5-free also delivered 100/100, with +525% FCT and +10% ART overhead.
 
-go-login-crud was the most resource-intensive subproject across all runners.
+python-http-server was the most resource-intensive subproject across all runners.
 
 #### Least Token Usage
 
@@ -250,8 +250,8 @@ opencode-deepseek-v4-flash-free consumed the fewest tokens overall (30,502): 2,0
 | Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
 | ---: | :--- | :---: | :---: | :---: | :---: | :--- |
 | 1 | opencode-deepseek-v4-flash-free | 40/100 | 100/100 | +316% | 0% | Best overall |
-| 2 | opencode-mimo-v2.5-free | 34/100 | 100/100 | +107% | +107% | Strong competitor |
-| 3 | opencode-big-pickle | 34/100 | 95/100 | +314% | +314% | Quality concern |
+| 2 | opencode-big-pickle | 40/100 | 100/100 | +366% | +86% | Strong competitor |
+| 3 | opencode-mimo-v2.5-free | 23/100 | 100/100 | +525% | +10% | Strong competitor |
 <!-- BENCHMARK_RESULTS_END -->
 
 ### Core Architectural Insights

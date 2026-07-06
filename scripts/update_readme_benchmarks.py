@@ -509,7 +509,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                 f"{bp_tag} entered with the strongest plain baseline "
                 f"({best_pp.avg_plain_score:.0f}/100) and reached 100/100 "
                 f"with {bp_fct}% FCT and {bp_art}% ART overhead "
-                f"\u2014 a genuine quality investment rather than "
+                f"- a genuine quality investment rather than "
                 f"recovery from failure."
             )
 
