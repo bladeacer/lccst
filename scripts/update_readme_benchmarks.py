@@ -103,6 +103,20 @@ def _parse_int(s: str) -> int:
         return 0
 
 
+def _fct_overhead(r: BenchmarkReport) -> float:
+    """Return FCT overhead as a decimal (0.5 = 50% overhead)."""
+    if r.total_fct_plain == 0:
+        return 0.0
+    return max((r.total_fct_guided - r.total_fct_plain) / r.total_fct_plain, 0)
+
+
+def _art_overhead(r: BenchmarkReport) -> float:
+    """Return ART overhead as a decimal (0.5 = 50% overhead)."""
+    if r.total_art_plain == 0:
+        return 0.0
+    return max((r.total_art_guided - r.total_art_plain) / r.total_art_plain, 0)
+
+
 def _parse_robustness_section(
     text: str,
 ) -> list[ProjectResult]:
@@ -304,18 +318,25 @@ def pick_top_n(
         return []
 
     max_guided = max(r.avg_guided_score for r in latest) or 1
-    max_fct = max(r.total_fct_guided for r in latest) or 1
-    max_art = max(r.total_art_guided for r in latest) or 1
+    max_plain = max(r.avg_plain_score for r in latest) or 1
+    max_fct_oh = max(_fct_overhead(r) for r in latest) or 1
+    max_art_oh = max(_art_overhead(r) for r in latest) or 1
 
-    latest.sort(
-        key=lambda r: (
-            r.avg_guided_score / max_guided * 50
-            + r.avg_plain_score / max_guided * 10
-            - (r.total_fct_guided / max_fct) * 20
-            - (r.total_art_guided / max_art) * 20
-        ),
-        reverse=True,
-    )
+    def _composite(r: BenchmarkReport) -> float:
+        guided_norm = r.avg_guided_score / max_guided
+        plain_norm = r.avg_plain_score / max_plain
+        pass_rate = r.passed_count / max(len(r.projects), 1)
+        fct_penalty = _fct_overhead(r) / max_fct_oh
+        art_penalty = _art_overhead(r) / max_art_oh
+        return (
+            guided_norm * 40
+            + plain_norm * 10
+            + pass_rate * 10
+            - fct_penalty * 20
+            - art_penalty * 20
+        )
+
+    latest.sort(key=_composite, reverse=True)
     return latest[:n]
 
 
@@ -449,15 +470,10 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
     if not reports:
         return ""
 
-    def fct_overhead_pct(r: BenchmarkReport) -> float:
-        if r.total_fct_plain == 0:
-            return 0.0
-        return (r.total_fct_guided - r.total_fct_plain) / r.total_fct_plain
-
     perfect = [r for r in reports if r.avg_guided_score >= 100]
     imperfect = [r for r in reports if r.avg_guided_score < 100]
     best_plain = max(reports, key=lambda r: r.avg_plain_score)
-    by_overhead = sorted(reports, key=fct_overhead_pct)
+    by_overhead = sorted(reports, key=_fct_overhead)
     most_efficient = by_overhead[0]
 
     all_heavy = [
@@ -513,7 +529,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                 f"recovery from failure."
             )
 
-            eff_pp = min(perfect, key=fct_overhead_pct)
+            eff_pp = min(perfect, key=_fct_overhead)
             if eff_pp is not best_pp:
                 eff_tag = f"{eff_pp.agent_name}-{eff_pp.model_name}"
                 eff_fct = pct_delta(
@@ -609,9 +625,19 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
         tag = f"{r.agent_name}-{r.model_name}"
         r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
         r_art = pct_delta(r.total_art_plain, r.total_art_guided)
+        fct_oh = _fct_overhead(r)
+        art_oh = _art_overhead(r)
+        pass_rate = r.passed_count / max(len(r.projects), 1)
+        composite = (
+            r.avg_guided_score * 0.4
+            + r.avg_plain_score * 0.1
+            + pass_rate * 10
+            - fct_oh * 20
+            - art_oh * 20
+        )
         if i == 1:
             verdict = "Best overall"
-        elif r.avg_guided_score >= 100:
+        elif composite >= 30:
             verdict = "Strong competitor"
         else:
             verdict = "Quality concern"
