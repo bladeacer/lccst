@@ -17,7 +17,7 @@ from typing import Any
 
 BENCH_DIR = Path("playground/benchmarks")
 README_PATH = Path("README.md")
-TOP_N = 3
+TOP_N = 5
 
 ART_RE = re.compile(r"\*\*(\d+)\s+tokens?\*\*")
 SCORE_RE = re.compile(r"\*\*(\d+)%\*\*")
@@ -444,165 +444,192 @@ def generate_comparison_table(reports: list[BenchmarkReport]) -> str:
     return "\n".join(parts)
 
 
-def generate_summary_paragraph(reports: list[BenchmarkReport]) -> str:
-    """Generate interpretive summary paragraph from report data."""
+def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
+    """Generate subsections: Token Efficiency, Least Token Usage, Overall Top Models."""
     if not reports:
         return ""
 
-    by_overhead = sorted(
-        reports,
-        key=lambda r: (
-            (r.total_fct_guided - r.total_fct_plain) / r.total_fct_plain
-            if r.total_fct_plain else 0
-        ),
-    )
-    most_efficient = by_overhead[0]
-    least_efficient = by_overhead[-1]
+    def fct_overhead_pct(r: BenchmarkReport) -> float:
+        if r.total_fct_plain == 0:
+            return 0.0
+        return (r.total_fct_guided - r.total_fct_plain) / r.total_fct_plain
 
-    best_plain = max(reports, key=lambda r: r.avg_plain_score)
-
+    perfect = [r for r in reports if r.avg_guided_score >= 100]
     imperfect = [r for r in reports if r.avg_guided_score < 100]
+    best_plain = max(reports, key=lambda r: r.avg_plain_score)
+    by_overhead = sorted(reports, key=fct_overhead_pct)
+    most_efficient = by_overhead[0]
 
     all_heavy = [
         (r, max(r.projects, key=lambda p: p.art_guided)) for r in reports
     ]
     overall_heaviest = max(all_heavy, key=lambda x: x[1].art_guided)
 
-    me_name = f"{most_efficient.agent_name}-{most_efficient.model_name}"
-    bp_name = f"{best_plain.agent_name}-{best_plain.model_name}"
+    # ---- Token Efficiency ----
+    te = []
 
-    me_fct = pct_delta(most_efficient.total_fct_plain, most_efficient.total_fct_guided)
-    me_art = pct_delta(most_efficient.total_art_plain, most_efficient.total_art_guided)
-    bp_fct = pct_delta(best_plain.total_fct_plain, best_plain.total_fct_guided)
-    bp_art = pct_delta(best_plain.total_art_plain, best_plain.total_art_guided)
-
-    parts = []
-
-    parts.append(
-        f"{me_name} appears the most token-efficient at "
-        f"{me_fct}/{me_art} overhead, but this "
-        f"is misleading -- its plain scores "
-        f"({most_efficient.avg_plain_score:.0f}/100) came at inflated "
-        f"FCT ({fmt_int(most_efficient.total_fct_plain)}) and "
-        f"ART ({fmt_int(most_efficient.total_art_plain)}) "
-        f"compared to {bp_name} "
-        f"({best_plain.avg_plain_score:.0f}/100, "
-        f"{fmt_int(best_plain.total_fct_plain)}/"
-        f"{fmt_int(best_plain.total_art_plain)}), indicating it choked "
-        f"on the plain implementation and required more tokens to produce "
-        f"worse code."
-    )
-
-    perfect_count = sum(1 for r in reports if r.avg_guided_score >= 100)
-    total = len(reports)
-    if perfect_count == total and total > 0:
-        label = "three" if total == 3 else str(total)
-        parts.append(
-            f"The skill guide delivered a 100/100 score for all "
-            f"{label}, but the overhead "
-            f"percentage looks artificially low because the plain baseline "
-            f"was already elevated by struggle rather than efficiency."
-        )
-
-    if best_plain.avg_guided_score >= 100:
-        parts.append(
-            f"{bp_name} had the "
-            f"strongest plain baseline and reached "
-            f"100/100 with a {bp_fct}/{bp_art} overhead that "
-            f"represents genuine quality investment, not recovery from failure."
-        )
-    else:
-        parts.append(
-            f"{bp_name} had the "
-            f"strongest plain baseline at "
-            f"{best_plain.avg_plain_score:.0f}/100."
-        )
-
-    for r in imperfect:
-        worst_proj = min(r.projects, key=lambda p: p.guided_score)
-        r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
-        r_art = pct_delta(r.total_art_plain, r.total_art_guided)
-        if len(imperfect) == 1:
-            parts.append(
-                f"{r.agent_name}-{r.model_name} "
-                f"was the only model below 100/100 "
-                f"({r.avg_guided_score:.0f}/100, with "
-                f"{worst_proj.guided_score}/100 on "
-                f"{worst_proj.name}) and incurred the highest overhead "
-                f"({r_fct}/{r_art})."
-            )
+    if perfect:
+        if len(perfect) == 1:
+            p = perfect[0]
+            tag = f"{p.agent_name}-{p.model_name}"
+            p_fct = pct_delta(p.total_fct_plain, p.total_fct_guided)
+            p_art = pct_delta(p.total_art_plain, p.total_art_guided)
+            if p is best_plain:
+                te.append(
+                    f"Only {tag} achieved a perfect guided score of "
+                    f"100/100. It also had the strongest plain baseline "
+                    f"({p.avg_plain_score:.0f}/100), making its "
+                    f"{p_fct}% FCT and {p_art}% ART overhead a genuine "
+                    f"quality investment."
+                )
+            else:
+                te.append(
+                    f"Only {tag} achieved a perfect guided score of "
+                    f"100/100, with {p_fct}% FCT and {p_art}% ART overhead."
+                )
         else:
-            parts.append(
-                f"{r.agent_name}-{r.model_name} "
-                f"scored {r.avg_guided_score:.0f}/100 "
-                f"(lowest: {worst_proj.guided_score}/100 on "
-                f"{worst_proj.name}) with {r_fct}/{r_art} overhead."
+            label = "Both" if len(perfect) == 2 else str(len(perfect))
+            perfect_names = " and ".join(
+                f"{r.agent_name}-{r.model_name}" for r in perfect
+            )
+            te.append(
+                f"{label} {perfect_names} achieved a perfect guided "
+                f"score of 100/100."
             )
 
-    parts.append(
-        f"{overall_heaviest[1].name} was the heaviest subproject "
-        f"across all runners."
+            best_pp = max(perfect, key=lambda r: r.avg_plain_score)
+            bp_tag = f"{best_pp.agent_name}-{best_pp.model_name}"
+            bp_fct = pct_delta(
+                best_pp.total_fct_plain, best_pp.total_fct_guided
+            )
+            bp_art = pct_delta(
+                best_pp.total_art_plain, best_pp.total_art_guided
+            )
+            te.append(
+                f"{bp_tag} entered with the strongest plain baseline "
+                f"({best_pp.avg_plain_score:.0f}/100) and reached 100/100 "
+                f"with {bp_fct}% FCT and {bp_art}% ART overhead "
+                f"\u2014 a genuine quality investment rather than "
+                f"recovery from failure."
+            )
+
+            eff_pp = min(perfect, key=fct_overhead_pct)
+            if eff_pp is not best_pp:
+                eff_tag = f"{eff_pp.agent_name}-{eff_pp.model_name}"
+                eff_fct = pct_delta(
+                    eff_pp.total_fct_plain, eff_pp.total_fct_guided
+                )
+                eff_art = pct_delta(
+                    eff_pp.total_art_plain, eff_pp.total_art_guided
+                )
+                te.append(
+                    f"{eff_tag} was the most token-efficient at "
+                    f"{eff_fct}% FCT and {eff_art}% ART overhead, "
+                    f"though its lower plain baseline "
+                    f"({eff_pp.avg_plain_score:.0f}/100) means the "
+                    f"overhead figure partly reflects additional "
+                    f"rounds of correction."
+                )
+
+            remaining = [
+                r for r in perfect
+                if r is not best_pp and r is not eff_pp
+            ]
+            for r in remaining:
+                tag = f"{r.agent_name}-{r.model_name}"
+                r_fct = pct_delta(
+                    r.total_fct_plain, r.total_fct_guided
+                )
+                r_art = pct_delta(
+                    r.total_art_plain, r.total_art_guided
+                )
+                te.append(
+                    f"{tag} also delivered 100/100, with "
+                    f"{r_fct}% FCT and {r_art}% ART overhead."
+                )
+
+    if imperfect:
+        for r in imperfect:
+            tag = f"{r.agent_name}-{r.model_name}"
+            worst = min(r.projects, key=lambda p: p.guided_score)
+            r_fct = pct_delta(
+                r.total_fct_plain, r.total_fct_guided
+            )
+            r_art = pct_delta(
+                r.total_art_plain, r.total_art_guided
+            )
+            if r is most_efficient and r not in perfect:
+                te.append(
+                    f"{tag} was the most token-efficient overall "
+                    f"({r_fct}% FCT, {r_art}% ART) but scored "
+                    f"{r.avg_guided_score:.0f}/100 "
+                    f"(weakest: {worst.name} at {worst.guided_score}/100)."
+                )
+            else:
+                te.append(
+                    f"{tag} scored {r.avg_guided_score:.0f}/100 "
+                    f"(weakest: {worst.name} at {worst.guided_score}/100) "
+                    f"with {r_fct}% FCT and {r_art}% ART overhead."
+                )
+
+    te.append(
+        f"{overall_heaviest[1].name} was the most resource-intensive "
+        f"subproject across all runners."
     )
 
+    # ---- Least Token Usage ----
     lowest_abs = min(
         reports,
-        key=lambda r: r.total_fct_plain + r.total_fct_guided
-        + r.total_art_plain + r.total_art_guided,
+        key=lambda r: (
+            r.total_fct_plain + r.total_fct_guided
+            + r.total_art_plain + r.total_art_guided
+        ),
     )
     lowest_abs_total = (
         lowest_abs.total_fct_plain + lowest_abs.total_fct_guided
         + lowest_abs.total_art_plain + lowest_abs.total_art_guided
     )
-    parts.append(
-        f"{lowest_abs.agent_name}-{lowest_abs.model_name} "
-        f"used the fewest total tokens "
-        f"({fmt_int(lowest_abs.total_fct_plain)} FCT + "
-        f"{fmt_int(lowest_abs.total_fct_guided)} guided FCT + "
-        f"{fmt_int(lowest_abs.total_art_plain)} ART + "
-        f"{fmt_int(lowest_abs.total_art_guided)} guided ART = "
-        f"{fmt_int(lowest_abs_total)} total)."
-    )
-
-    classified_tags: list[str] = []
-    decent = [
-        r for r in reports
-        if r.avg_guided_score >= 90
-        and r.avg_guided_score == 100
-        and r not in (most_efficient, lowest_abs)
+    ltu = [
+        f"{lowest_abs.agent_name}-{lowest_abs.model_name} consumed "
+        f"the fewest tokens overall "
+        f"({fmt_int(lowest_abs_total)}): "
+        f"{fmt_int(lowest_abs.total_fct_plain)} plain FCT, "
+        f"{fmt_int(lowest_abs.total_fct_guided)} guided FCT, "
+        f"{fmt_int(lowest_abs.total_art_plain)} plain ART, and "
+        f"{fmt_int(lowest_abs.total_art_guided)} guided ART."
     ]
-    for r in decent:
+
+    # ---- Overall Top Models ----
+    otm = [
+        "| Rank | Agent-Model | Plain Score | Guided Score "
+        "| FCT Overhead | ART Overhead | Verdict |",
+        "| ---: | :--- | :---: | :---: | :---: | :---: | :--- |",
+    ]
+    for i, r in enumerate(reports, 1):
         tag = f"{r.agent_name}-{r.model_name}"
-        classified_tags.append(tag)
         r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
         r_art = pct_delta(r.total_art_plain, r.total_art_guided)
-        parts.append(
-            f"{tag} is a decently competing "
-            f"option ({r.avg_guided_score:.0f}/100 guided, "
-            f"{r_fct}/{r_art} overhead)."
+        if i == 1:
+            verdict = "Best overall"
+        elif r.avg_guided_score >= 100:
+            verdict = "Strong competitor"
+        else:
+            verdict = "Quality concern"
+        otm.append(
+            f"| {i} | {tag} | {r.avg_plain_score:.0f}/100 "
+            f"| {r.avg_guided_score:.0f}/100 | {r_fct}% | {r_art}% "
+            f"| {verdict} |"
         )
 
-    poor = [
-        r for r in reports
-        if r.avg_guided_score < 90
-        or (r is least_efficient and r.avg_guided_score < 100)
+    sections = [
+        "#### Token Efficiency\n\n" + "\n\n".join(te),
+        "#### Least Token Usage\n\n" + "\n".join(ltu),
+        "#### Overall Top Models\n\n" + "\n".join(otm),
     ]
-    for r in poor:
-        tag = f"{r.agent_name}-{r.model_name}"
-        if tag in classified_tags:
-            continue
-        classified_tags.append(tag)
-        r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
-        r_art = pct_delta(r.total_art_plain, r.total_art_guided)
-        parts.append(
-            f"{tag} is not worth using "
-            f"({r.avg_guided_score:.0f}/100 guided, "
-            f"{r_fct}/{r_art} overhead)."
-        )
-
-    return "\n\n".join(parts)
+    return "\n\n".join(sections)
 
 
-def update_readme(table_content: str) -> None:
+def update_readme(table_content: str, count: int = 0) -> None:
     """Replace the benchmark table section in README.md."""
     text = README_PATH.read_text(encoding="utf-8")
 
@@ -646,7 +673,7 @@ def update_readme(table_content: str) -> None:
             sys.exit(1)
 
     README_PATH.write_text(new_text, encoding="utf-8")
-    print(f"Updated {README_PATH} with {TOP_N} agent-model table(s).")
+    print(f"Updated {README_PATH} with {count} agent-model table(s).")
 
 
 def main() -> None:
@@ -670,9 +697,9 @@ def main() -> None:
 
     table = generate_table(top)
     comparison = generate_comparison_table(top)
-    summary = generate_summary_paragraph(top)
+    summary = generate_summary_sections(top)
     combined = f"{table}\n\n### Benchmark Summary\n\n{comparison}\n\n{summary}"
-    update_readme(combined)
+    update_readme(combined, len(top))
 
 
 if __name__ == "__main__":

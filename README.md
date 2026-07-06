@@ -178,6 +178,18 @@ encryption patterns).
 
 <!-- BENCHMARK_RESULTS_START -->
 
+#### opencode-deepseek-v4-flash-free: skill version v2.8.0
+
+| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **opencode** | `deepseek-v4-flash-free` | `v2.8.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 655 | 2,229 | 2,639 | 8,984 |
+| **opencode** | `deepseek-v4-flash-free` | `v2.8.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 508 | 770 | 2,046 | 3,102 |
+| **opencode** | `deepseek-v4-flash-free` | `v2.8.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 1,191 | 5,079 | 4,800 | 20,479 |
+| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,354** | **8,078** | **9,485** | **32,565** |
+
+> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
+> Skill-guided implementation used **+243%** more FCT and **+243%** more ART compared to plain implementation across the workspace suite.
+
 #### opencode-mimo-v2.5-free: skill version v2.8.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
@@ -189,18 +201,6 @@ encryption patterns).
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
 > Skill-guided implementation used **+107%** more FCT and **+107%** more ART compared to plain implementation across the workspace suite.
-
-#### opencode-deepseek-v4-flash-free: skill version v3.0.0
-
-| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 676 | 2,343 | 5,700 | 9,900 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 485 | 1,589 | 10,500 | 14,700 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **go-login-crud** | 65/100 | **100/100** | PASSED | 1,136 | 4,026 | 16,000 | 21,500 |
-| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,297** | **7,958** | **32,200** | **46,100** |
-
-> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
-> Skill-guided implementation used **+246%** more FCT and **+43%** more ART compared to plain implementation across the workspace suite.
 
 #### opencode-big-pickle: skill version v2.8.0
 
@@ -217,31 +217,41 @@ encryption patterns).
 
 ### Benchmark Summary
 
-| Metric | opencode-mimo-v2.5-free | opencode-deepseek-v4-flash-free | opencode-big-pickle |
+| Metric | opencode-deepseek-v4-flash-free | opencode-mimo-v2.5-free | opencode-big-pickle |
 | --- | --- | --- | --- |
-| Plain score | 34/100 | 40/100 | 34/100 |
+| Plain score | 40/100 | 34/100 | 34/100 |
 | Guided score | 100/100 | 100/100 | 95/100 |
-| Plain FCT | 4,808 | 2,297 | 1,817 |
-| Guided FCT | 9,946 | 7,958 | 7,516 |
-| FCT overhead | +107% | +246% | +314% |
-| Plain ART | 15,444 | 32,200 | 10,648 |
-| Guided ART | 31,956 | 46,100 | 44,052 |
-| ART overhead | +107% | +43% | +314% |
+| Plain FCT | 2,354 | 4,808 | 1,817 |
+| Guided FCT | 8,078 | 9,946 | 7,516 |
+| FCT overhead | +243% | +107% | +314% |
+| Plain ART | 9,485 | 15,444 | 10,648 |
+| Guided ART | 32,565 | 31,956 | 44,052 |
+| ART overhead | +243% | +107% | +314% |
 | Tests passed | 3/3 | 3/3 | 3/3 |
 
-opencode-mimo-v2.5-free appears the most token-efficient at +107/+107 overhead, but this is misleading -- its plain scores (34/100) came at inflated FCT (4,808) and ART (15,444) compared to opencode-deepseek-v4-flash-free (40/100, 2,297/32,200), indicating it choked on the plain implementation and required more tokens to produce worse code.
+#### Token Efficiency
 
-opencode-deepseek-v4-flash-free had the strongest plain baseline and reached 100/100 with a +246/+43 overhead that represents genuine quality investment, not recovery from failure.
+Both opencode-deepseek-v4-flash-free and opencode-mimo-v2.5-free achieved a perfect guided score of 100/100.
 
-opencode-big-pickle was the only model below 100/100 (95/100, with 84/100 on python-http-server) and incurred the highest overhead (+314/+314).
+opencode-deepseek-v4-flash-free entered with the strongest plain baseline (40/100) and reached 100/100 with +243% FCT and +243% ART overhead — a genuine quality investment rather than recovery from failure.
 
-go-login-crud was the heaviest subproject across all runners.
+opencode-mimo-v2.5-free was the most token-efficient at +107% FCT and +107% ART overhead, though its lower plain baseline (34/100) means the overhead figure partly reflects additional rounds of correction.
 
-opencode-mimo-v2.5-free used the fewest total tokens (4,808 FCT + 9,946 guided FCT + 15,444 ART + 31,956 guided ART = 62,154 total).
+opencode-big-pickle scored 95/100 (weakest: python-http-server at 84/100) with +314% FCT and +314% ART overhead.
 
-opencode-deepseek-v4-flash-free is a decently competing option (100/100 guided, +246/+43 overhead).
+go-login-crud was the most resource-intensive subproject across all runners.
 
-opencode-big-pickle is not worth using (95/100 guided, +314/+314 overhead).
+#### Least Token Usage
+
+opencode-deepseek-v4-flash-free consumed the fewest tokens overall (52,482): 2,354 plain FCT, 8,078 guided FCT, 9,485 plain ART, and 32,565 guided ART.
+
+#### Overall Top Models
+
+| Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
+| ---: | :--- | :---: | :---: | :---: | :---: | :--- |
+| 1 | opencode-deepseek-v4-flash-free | 40/100 | 100/100 | +243% | +243% | Best overall |
+| 2 | opencode-mimo-v2.5-free | 34/100 | 100/100 | +107% | +107% | Strong competitor |
+| 3 | opencode-big-pickle | 34/100 | 95/100 | +314% | +314% | Quality concern |
 <!-- BENCHMARK_RESULTS_END -->
 
 ### Core Architectural Insights
