@@ -83,6 +83,12 @@ class BenchmarkReport:
         return max(self.projects, key=lambda p: p.art_guided).name
 
     @property
+    def heaviest_fct_project(self) -> str:
+        if not self.projects:
+            return ""
+        return max(self.projects, key=lambda p: p.fct_guided).name
+
+    @property
     def passed_count(self) -> int:
         return sum(1 for p in self.projects if p.test_passed)
 
@@ -402,7 +408,8 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
         avg_p = f"{report.avg_plain_score:.0f}"
         avg_g = f"{report.avg_guided_score:.0f}"
         passed = report.passed_count
-        heavy = report.heaviest_project
+        heavy_art = report.heaviest_project
+        heavy_fct = report.heaviest_fct_project
 
         summary = (
             f"| **Summary** | | | | **Workspace Totals / Avg** "
@@ -420,8 +427,12 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
         ap = report.total_art_plain
         ag = report.total_art_guided
         parts.append(
-            f"> **Highest ART subproject:** `{heavy}` "
+            f"> **Highest ART subproject:** `{heavy_art}` "
             f"consumed the most guided runtime tokens."
+        )
+        parts.append(
+            f"> **Highest FCT subproject:** `{heavy_fct}` "
+            f"consumed the most guided FCT tokens."
         )
         parts.append(
             f"> Skill-guided implementation used **{pct_delta(fp, fg)}%** "
@@ -465,6 +476,27 @@ def generate_comparison_table(reports: list[BenchmarkReport]) -> str:
     return "\n".join(parts)
 
 
+def _fmt_backtick_tag(r: BenchmarkReport) -> str:
+    return f"`{r.agent_name}-{r.model_name}`"
+
+
+def _fmt_names(reports: list[BenchmarkReport]) -> str:
+    tags = [_fmt_backtick_tag(r) for r in reports]
+    if len(tags) == 1:
+        return tags[0]
+    if len(tags) == 2:
+        return f"{tags[0]} and {tags[1]}"
+    return ", ".join(tags[:-1]) + f", and {tags[-1]}"
+
+
+def _fmt_intro_line(perfect: list[BenchmarkReport]) -> str:
+    return (
+        f"All evaluated models ({_fmt_names(perfect)}) achieved a perfect "
+        f"guided score of 100/100 under the protocol. However, their "
+        f"resource efficiency varied significantly:"
+    )
+
+
 def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
     """Generate subsections: Token Efficiency, Least Token Usage, Overall Top Models."""
     if not reports:
@@ -476,10 +508,11 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
     by_overhead = sorted(reports, key=_fct_overhead)
     most_efficient = by_overhead[0]
 
-    all_heavy = [
-        (r, max(r.projects, key=lambda p: p.art_guided)) for r in reports
-    ]
-    overall_heaviest = max(all_heavy, key=lambda x: x[1].art_guided)
+    heavy_counts: dict[str, int] = {}
+    for r in reports:
+        name = max(r.projects, key=lambda p: p.art_guided).name
+        heavy_counts[name] = heavy_counts.get(name, 0) + 1
+    majority_name = max(heavy_counts, key=heavy_counts.get)
 
     # ---- Token Efficiency ----
     te = []
@@ -490,28 +523,26 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
             tag = f"{p.agent_name}-{p.model_name}"
             p_fct = pct_delta(p.total_fct_plain, p.total_fct_guided)
             p_art = pct_delta(p.total_art_plain, p.total_art_guided)
+            te.append(
+                f"Only {_fmt_backtick_tag(p)} achieved a perfect guided "
+                f"score of 100/100. However, its resource efficiency "
+                f"varied across subprojects:"
+            )
             if p is best_plain:
                 te.append(
-                    f"Only {tag} achieved a perfect guided score of "
-                    f"100/100. It also had the strongest plain baseline "
-                    f"({p.avg_plain_score:.0f}/100), making its "
-                    f"{p_fct}% FCT and {p_art}% ART overhead a genuine "
-                    f"quality investment."
+                    f"* **{tag}** entered with the strongest plain baseline "
+                    f"({p.avg_plain_score:.0f}/100) and reached perfection "
+                    f"with {p_fct}% FCT and {p_art}% ART overhead"
+                    f"\u2014representing a genuine quality investment "
+                    f"rather than recovery from failure."
                 )
             else:
                 te.append(
-                    f"Only {tag} achieved a perfect guided score of "
-                    f"100/100, with {p_fct}% FCT and {p_art}% ART overhead."
+                    f"* **{tag}** achieved a perfect guided score with "
+                    f"{p_fct}% FCT and {p_art}% ART overhead."
                 )
         else:
-            label = "Both" if len(perfect) == 2 else str(len(perfect))
-            perfect_names = " and ".join(
-                f"{r.agent_name}-{r.model_name}" for r in perfect
-            )
-            te.append(
-                f"{label} {perfect_names} achieved a perfect guided "
-                f"score of 100/100."
-            )
+            te.append(_fmt_intro_line(perfect))
 
             best_pp = max(perfect, key=lambda r: r.avg_plain_score)
             bp_tag = f"{best_pp.agent_name}-{best_pp.model_name}"
@@ -522,11 +553,11 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                 best_pp.total_art_plain, best_pp.total_art_guided
             )
             te.append(
-                f"{bp_tag} entered with the strongest plain baseline "
-                f"({best_pp.avg_plain_score:.0f}/100) and reached 100/100 "
-                f"with {bp_fct}% FCT and {bp_art}% ART overhead "
-                f"- a genuine quality investment rather than "
-                f"recovery from failure."
+                f"* **{bp_tag}** entered with the strongest plain baseline "
+                f"({best_pp.avg_plain_score:.0f}/100) and reached perfection "
+                f"with {bp_fct}% FCT and {bp_art}% ART overhead"
+                f"\u2014representing a genuine quality investment "
+                f"rather than recovery from failure."
             )
 
             eff_pp = min(perfect, key=_fct_overhead)
@@ -539,7 +570,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                     eff_pp.total_art_plain, eff_pp.total_art_guided
                 )
                 te.append(
-                    f"{eff_tag} was the most token-efficient at "
+                    f"* **{eff_tag}** was the most token-efficient at "
                     f"{eff_fct}% FCT and {eff_art}% ART overhead, "
                     f"though its lower plain baseline "
                     f"({eff_pp.avg_plain_score:.0f}/100) means the "
@@ -560,8 +591,8 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                     r.total_art_plain, r.total_art_guided
                 )
                 te.append(
-                    f"{tag} also delivered 100/100, with "
-                    f"{r_fct}% FCT and {r_art}% ART overhead."
+                    f"* **{tag}** also delivered a perfect guided score, "
+                    f"with {r_fct}% FCT and {r_art}% ART overhead."
                 )
 
     if imperfect:
@@ -576,21 +607,21 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
             )
             if r is most_efficient and r not in perfect:
                 te.append(
-                    f"{tag} was the most token-efficient overall "
+                    f"* **{tag}** was the most token-efficient overall "
                     f"({r_fct}% FCT, {r_art}% ART) but scored "
                     f"{r.avg_guided_score:.0f}/100 "
                     f"(weakest: {worst.name} at {worst.guided_score}/100)."
                 )
             else:
                 te.append(
-                    f"{tag} scored {r.avg_guided_score:.0f}/100 "
+                    f"* **{tag}** scored {r.avg_guided_score:.0f}/100 "
                     f"(weakest: {worst.name} at {worst.guided_score}/100) "
                     f"with {r_fct}% FCT and {r_art}% ART overhead."
                 )
 
     te.append(
-        f"{overall_heaviest[1].name} was the most resource-intensive "
-        f"subproject across all runners."
+        f"Across all runners, `{majority_name}` remained "
+        f"the most resource-intensive subproject."
     )
 
     # ---- Least Token Usage ----

@@ -188,6 +188,7 @@ encryption patterns).
 | **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,074** | **8,628** | **0** | **19,800** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
+> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT tokens.
 > Skill-guided implementation used **+316%** more FCT and **0%** more ART compared to plain implementation across the workspace suite.
 
 #### opencode-mimo-v2.5-free: skill version v3.0.0
@@ -200,6 +201,7 @@ encryption patterns).
 | **Summary** | | | | **Workspace Totals / Avg** | **23/100** | **100/100** | **3/3 Passed** | **1,387** | **8,673** | **62,700** | **69,000** |
 
 > **Highest ART subproject:** `python-http-server` consumed the most guided runtime tokens.
+> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT tokens.
 > Skill-guided implementation used **+525%** more FCT and **+10%** more ART compared to plain implementation across the workspace suite.
 
 #### opencode-big-pickle: skill version v3.0.0
@@ -212,6 +214,7 @@ encryption patterns).
 | **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,700** | **7,927** | **29,900** | **55,500** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime tokens.
+> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT tokens.
 > Skill-guided implementation used **+366%** more FCT and **+86%** more ART compared to plain implementation across the workspace suite.
 
 
@@ -231,15 +234,15 @@ encryption patterns).
 
 #### Token Efficiency
 
-3 opencode-deepseek-v4-flash-free and opencode-mimo-v2.5-free and opencode-big-pickle achieved a perfect guided score of 100/100.
+All evaluated models (`opencode-deepseek-v4-flash-free`, `opencode-mimo-v2.5-free`, and `opencode-big-pickle`) achieved a perfect guided score of 100/100 under the protocol. However, their resource efficiency varied significantly:
 
-opencode-deepseek-v4-flash-free entered with the strongest plain baseline (40/100) and reached 100/100 with +316% FCT and 0% ART overhead - a genuine quality investment rather than recovery from failure.
+* **opencode-deepseek-v4-flash-free** entered with the strongest plain baseline (40/100) and reached perfection with +316% FCT and 0% ART overhead—representing a genuine quality investment rather than recovery from failure.
 
-opencode-mimo-v2.5-free also delivered 100/100, with +525% FCT and +10% ART overhead.
+* **opencode-mimo-v2.5-free** also delivered a perfect guided score, with +525% FCT and +10% ART overhead.
 
-opencode-big-pickle also delivered 100/100, with +366% FCT and +86% ART overhead.
+* **opencode-big-pickle** also delivered a perfect guided score, with +366% FCT and +86% ART overhead.
 
-python-http-server was the most resource-intensive subproject across all runners.
+Across all runners, `go-login-crud` remained the most resource-intensive subproject.
 
 #### Least Token Usage
 
