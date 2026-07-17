@@ -174,22 +174,21 @@ encryption patterns).
 
 <!-- BENCHMARK_RESULTS_START -->
 
-#### opencode-deepseek-v4-flash-free: skill version v3.0.0
+#### opencode-deepseek-v4-flash-free: skill version v3.1.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 540 | 2,203 | 0 | 6,300 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 582 | 1,365 | 0 | 6,000 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.0.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 952 | 5,060 | 0 | 7,500 |
-| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,074** | **8,628** | **0** | **19,800** |
+| **opencode** | `deepseek-v4-flash-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 590 | 2,284 | 5,300 | 4,700 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 462 | 1,614 | 1,800 | 4,000 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 1,149 | 4,264 | 2,300 | 5,300 |
+| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,201** | **8,162** | **9,400** | **14,000** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
 > tokens.
 > **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
 > tokens.
-> Skill-guided implementation used **+316%** more FCT while maintaining a clean,
-> zero-waste baseline execution loop on the runtime tracking proxy across the
-> workspace suite.
+> Skill-guided implementation used **+271%** more FCT and **+49%** more ART
+> compared to plain implementation across the workspace suite.
 
 #### opencode-mimo-v2.5-free: skill version v3.0.0
 
@@ -230,12 +229,12 @@ encryption patterns).
 | --- | --- | --- | --- |
 | Plain score | 40/100 | 23/100 | 40/100 |
 | Guided score | 100/100 | 100/100 | 100/100 |
-| Plain FCT | 2,074 | 1,387 | 1,700 |
-| Guided FCT | 8,628 | 8,673 | 7,927 |
-| FCT overhead | +316% | +525% | +366% |
-| Plain ART | 0 | 62,700 | 29,900 |
-| Guided ART | 19,800 | 69,000 | 55,500 |
-| ART overhead | N/A | +10% | +86% |
+| Plain FCT | 2,201 | 1,387 | 1,700 |
+| Guided FCT | 8,162 | 8,673 | 7,927 |
+| FCT overhead | +271% | +525% | +366% |
+| Plain ART | 9,400 | 62,700 | 29,900 |
+| Guided ART | 14,000 | 69,000 | 55,500 |
+| ART overhead | +49% | +10% | +86% |
 | Tests passed | 3/3 | 3/3 | 3/3 |
 
 #### Token Efficiency
@@ -246,9 +245,8 @@ score of 100/100 under the protocol. However, their resource efficiency varied
 significantly:
 
 * **opencode-deepseek-v4-flash-free** entered with the strongest plain baseline
-  (40/100) and reached perfection with +316% FCT and clean, zero-waste execution
-  on the runtime tracking proxy -- representing a genuine quality investment
-  rather than recovery from failure.
+  (40/100) and reached perfection with +271% FCT and +49% ART overhead --
+  representing a genuine quality investment rather than recovery from failure.
 
 * **opencode-mimo-v2.5-free** also delivered a perfect guided score, with +525%
   FCT and +10% ART overhead.
@@ -261,14 +259,14 @@ subproject.
 
 #### Least Token Usage
 
-opencode-deepseek-v4-flash-free consumed the fewest tokens overall (30,502):
-2,074 plain FCT, 8,628 guided FCT, 0 plain ART, and 19,800 guided ART.
+opencode-deepseek-v4-flash-free consumed the fewest tokens overall (33,763):
+2,201 plain FCT, 8,162 guided FCT, 9,400 plain ART, and 14,000 guided ART.
 
 #### Overall Top Models
 
 | Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
 | ---: | :--- | :---: | :---: | :---: | :---: | :--- |
-| 1 | opencode-deepseek-v4-flash-free | 40/100 | 100/100 | +316% | N/A | Best overall |
+| 1 | opencode-deepseek-v4-flash-free | 40/100 | 100/100 | +271% | +49% | Best overall |
 | 2 | opencode-mimo-v2.5-free | 23/100 | 100/100 | +525% | +10% | Quality concern |
 | 3 | opencode-big-pickle | 40/100 | 100/100 | +366% | +86% | Quality concern |
 
