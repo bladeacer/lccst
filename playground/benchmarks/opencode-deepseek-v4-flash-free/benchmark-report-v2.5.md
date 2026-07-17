@@ -11,7 +11,7 @@
 |---|:-:|:-:|:-:|
 | File-Content Tokens (FCT) | 2105 | 7113 | +5008 (+238%) |
 | Total Program Lines | 306 | 1009 | +703 |
-| Agent Runtime Tokens (ART) | 17429 total tokens | 6 execution loops tracked over development lifecycles | — |
+| Agent Runtime Tokens (ART) | 17429 total tokens | 6 execution loops tracked over development lifecycles | -- |
 
 ## Runtime Cost Partitioning (ART breakdown)
 
@@ -39,9 +39,9 @@
 
 | Project Target | Strategy | Explicit Typing | Security Measures | Robustness Guardrails | Test Assertions |
 |---|---|:-:|:-:|:-:|:-:|
-| python-http-server | Plain | ✅ | ❌ | ✅ | ❌ |
-| python-http-server | Guided | ✅ | ✅ | ✅ | ✅ |
-| react-timer | Plain | ❌ | ❌ | ❌ | ❌ |
-| react-timer | Guided | ✅ | ❌ | ❌ | ✅ |
-| go-login-crud | Plain | ✅ | ✅ | ✅ | ✅ |
-| go-login-crud | Guided | ✅ | ✅ | ✅ | ✅ |
+| python-http-server | Plain | [+] | [-] | [+] | [-] |
+| python-http-server | Guided | [+] | [+] | [+] | [+] |
+| react-timer | Plain | [-] | [-] | [-] | [-] |
+| react-timer | Guided | [+] | [-] | [-] | [+] |
+| go-login-crud | Plain | [+] | [+] | [+] | [+] |
+| go-login-crud | Guided | [+] | [+] | [+] | [+] |

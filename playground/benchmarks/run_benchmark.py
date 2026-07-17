@@ -350,7 +350,7 @@ def generate_markdown(results, agent_tag, skill_ver, art_data):
 |---|:-:|:-:|:-:|
 | File-Content Tokens (FCT) | {total_plain_tokens} | {total_guided_tokens} | +{token_diff} ({token_pct:+.0f}%) |
 | Total Program Lines | {total_plain_lines} | {total_guided_lines} | +{total_guided_lines - total_plain_lines} |
-| Agent Runtime Tokens (ART) | {art_data.get('total_tokens', 0)} total tokens | {art_data.get('turns', 0)} execution loops tracked over development lifecycles | — |
+| Agent Runtime Tokens (ART) | {art_data.get('total_tokens', 0)} total tokens | {art_data.get('turns', 0)} execution loops tracked over development lifecycles | -- |
 
 ## Runtime Cost Partitioning (ART breakdown)
 

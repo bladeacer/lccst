@@ -353,9 +353,10 @@ def fmt_int(n: int) -> str:
 
 
 def pct_delta(a: int, b: int) -> str:
-    """Return signed percentage string from a to b."""
+    """Return signed percentage string from a to b. Returns '--' when the
+    baseline is zero (the delta is undefined rather than zero)."""
     if a == 0:
-        return "0"
+        return "--"
     return f"{((b - a) / a * 100):+.0f}"
 
 
@@ -725,9 +726,10 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
             verdict = "Strong competitor"
         else:
             verdict = "Quality concern"
+        art_col = "N/A" if r.total_art_plain == 0 else f"{r_art}%"
         otm.append(
             f"| {i} | {tag} | {r.avg_plain_score:.0f}/100 "
-            f"| {r.avg_guided_score:.0f}/100 | {r_fct}% | {r_art}% "
+            f"| {r.avg_guided_score:.0f}/100 | {r_fct}% | {art_col} "
             f"| {verdict} |"
         )
 

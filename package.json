@@ -1,7 +1,7 @@
 {
   "name": "lccst",
-  "version": "3.0.0",
-  "description": "Lint, Clean, Cluster, Split, Test — Devouring messy diffs before they reach production.",
+  "version": "3.1.0",
+  "description": "Lint, Clean, Cluster, Split, Test -- Devouring messy diffs before they reach production.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

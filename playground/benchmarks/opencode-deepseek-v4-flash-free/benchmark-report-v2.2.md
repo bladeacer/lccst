@@ -135,19 +135,19 @@ tests/test_server.py::test_delete_user_not_found PASSED                  [100%]
 **Test Errors:**
 ```
 npm warn Unknown project config "allow-builds". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
-PASS tests/Timer.test.tsx
+[+] tests/Timer.test.tsx
   formatTime
-    ✓ formats zero (1 ms)
-    ✓ formats seconds (1 ms)
-    ✓ formats minutes and seconds
-    ✓ formats tenths
+    [+] formats zero (1 ms)
+    [+] formats seconds (1 ms)
+    [+] formats minutes and seconds
+    [+] formats tenths
   Timer
-    ✓ starts and stops
-    ✓ resets elapsed time (1 ms)
-    ✓ calls onTick after start (102 ms)
+    [+] starts and stops
+    [+] resets elapsed time (1 ms)
+    [+] calls onTick after start (102 ms)
   TimerDisplay
-    ✓ renders formatted time (18 ms)
-    ✓ renders zero time (1 ms)
+    [+] renders formatted time (18 ms)
+    [+] renders zero time (1 ms)
 
 Test Suites: 1 passed, 1 total
 Tests:       9 passed, 9 total
@@ -205,30 +205,30 @@ Ran all test suites.
 **Test Output:**
 ```
 === RUN   TestRegisterUser
---- PASS: TestRegisterUser (0.00s)
+--- [+]: TestRegisterUser (0.00s)
 === RUN   TestRegisterDuplicateUsername
---- PASS: TestRegisterDuplicateUsername (0.00s)
+--- [+]: TestRegisterDuplicateUsername (0.00s)
 === RUN   TestLoginSuccess
---- PASS: TestLoginSuccess (0.00s)
+--- [+]: TestLoginSuccess (0.00s)
 === RUN   TestLoginInvalidCredentials
---- PASS: TestLoginInvalidCredentials (0.00s)
+--- [+]: TestLoginInvalidCredentials (0.00s)
 === RUN   TestListUsers
---- PASS: TestListUsers (0.00s)
+--- [+]: TestListUsers (0.00s)
 === RUN   TestGetUser
---- PASS: TestGetUser (0.00s)
+--- [+]: TestGetUser (0.00s)
 === RUN   TestGetUserNotFound
---- PASS: TestGetUserNotFound (0.00s)
+--- [+]: TestGetUserNotFound (0.00s)
 === RUN   TestUpdateUser
---- PASS: TestUpdateUser (0.00s)
+--- [+]: TestUpdateUser (0.00s)
 === RUN   TestDeleteUser
---- PASS: TestDeleteUser (0.00s)
+--- [+]: TestDeleteUser (0.00s)
 === RUN   TestDeleteUserNotFound
---- PASS: TestDeleteUserNotFound (0.00s)
+--- [+]: TestDeleteUserNotFound (0.00s)
 === RUN   TestPasswordNotExposedInJSON
---- PASS: TestPasswordNotExposedInJSON (0.00s)
+--- [+]: TestPasswordNotExposedInJSON (0.00s)
 === RUN   TestUserJSONMarshallingHidesPassword
---- PASS: TestUserJSONMarshallingHidesPassword (0.00s)
-PASS
+--- [+]: TestUserJSONMarshallingHidesPassword (0.00s)
+[+]
 ok  	login-crud/tests	(cached)
 
 ```

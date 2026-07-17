@@ -7,10 +7,10 @@ generation across three reference projects.
 
 LCCST can operate in two modes:
 
-* **Bare prompt** — Load `SKILL.md` directly into your LLM context window.
+* **Bare prompt** -- Load `SKILL.md` directly into your LLM context window.
   The model follows the protocol manually (fallback language detection, manual
   approval steps).
-* **MCP server** — Run `node dist/index.js` to serve the protocol as tools.
+* **MCP server** -- Run `node dist/index.js` to serve the protocol as tools.
   The entire server is self-contained in `src/index.ts`, compiling to a single
   distributable `dist/index.js`.
 

@@ -11,7 +11,7 @@
 |---|:-:|:-:|:-:|
 | File-Content Tokens (FCT) | 1700 | 7927 | +6227 (+366%) |
 | Total Program Lines | 261 | 1195 | +934 |
-| Agent Runtime Tokens (ART) | 85400 total tokens | 6 execution loops tracked over development lifecycles | — |
+| Agent Runtime Tokens (ART) | 85400 total tokens | 6 execution loops tracked over development lifecycles | -- |
 
 ## Runtime Cost Partitioning (ART breakdown)
 
