@@ -111,6 +111,11 @@ Run this in project root, not this directory.
 Each project contains two implementations: a minimal "plain" version and a
 structured "skill-guided" version following the protocol rules in `SKILL.md`.
 
+The benchmark harness enforces **protocol invariants** that isolate plain from
+guided runs and restrict agent tooling to prevent context bleeding. These rules
+are documented in [`guide.md`](./guide.md#protocol-invariants-for-agent-runs)
+and are applied by the runner, not by SKILL.md itself.
+
 The evaluation framework captures data across two metrics:
 1. **File Payload Footprint (FCT):** Structural robustness, syntax verbosity,
    and test file generation weight calculated via `tiktoken` (cl100k_base).

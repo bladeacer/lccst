@@ -2,24 +2,21 @@
 
 ![Logo poster](./logo-poster.png)
 
-An algorithmic workspace gatekeeper that decomposes complex codebase changes
-into isolated, test-verified, atomic Git commits while rigorously enforcing
-architectural cohesion and SOLID invariants.
+A deterministic workspace gatekeeper that enforces architectural cohesion and
+SOLID invariants through a lean execution protocol. Decomposes codebase changes
+into isolated, test-verified, atomic Git commits with zero meta-cognition tax.
 
-Locust operates as a deterministic, zero-compromise guardian for codebase
-health, test coverage, and structural boundaries -- built to put your
+Locust operates as a structural integrity guardian for codebase health, test
+coverage, and architectural boundaries -- built to put your
 preferences first.
 
 > "Swarming your messy diffs before they reach production."
 
-1. **Discover & Format:** Run lints and compilers via a strict Tooling Ladder.
-2. **Hunk Clustering:** Group workspace diffs into isolated, atomic units.
-3. **Targeted Testing:** Verify changes and enforce strict, ecosystem-aware
-   coverage boundaries.
-4. **Atomic Commit Generation:** Issue clean Conventional Commits with
-   detailed test metrics.
-   > Note: The agent explicitly prompts for manual confirmation or
-   > requires explicit pre-authorisation before writing to your history.
+The execution model is a flat 3-step path: wipe stale artifacts, seed via
+`/init`, then generate application files directly. No multi-phase loops or
+phase-checking pauses. Architectural guardrails (anti-god-object, strict
+typing, defensive engineering) and ecosystem discovery (Tooling Ladder,
+manifest scanning) remain active during code generation to enforce quality.
 
 ## Runtime Modes
 
@@ -85,17 +82,16 @@ Clustering** over your workspace tree.
 
 Tools like Ponytail stop the AI from writing *too much* code, but they cannot
 stop it from breaking your architectural boundaries. Locust treats tokens as
-strategic capital. It invests tokens into multi-step validation loops (the
-Tooling Ladder) to eliminate the exponentially higher downstream costs of
-debugging broken production builds, untangling messy Git histories, or fixing
-silent runtime type failures.
+strategic capital -- invested into the Tooling Ladder to eliminate the
+exponentially higher downstream costs of debugging broken production builds,
+untangling messy Git histories, or fixing silent runtime type failures.
 
-> **Higher token consumption is the intended tradeoff.** Our benchmarks
-> consistently show +200-300% more FCT and ART for skill-guided
-> implementations. This overhead is not waste -- it funds explicit type safety,
-> security boundaries, error handling, and complete test coverage that plain
-> generations systematically omit. Every extra token is an investment against
-> the 10x cost of finding these defects in production.
+> **v3.1 eliminates the meta-cognition tax.** Earlier versions spent runtime
+> tokens on multi-phase execution loops and internal compliance tracking.
+> Version 3.1.0 replaced that with a flat 3-step path: wipe, seed via `/init`,
+> generate. Guardrails (typing, defensive engineering, ecosystem discovery)
+> remain active in the *output structure*, not in the model's reasoning loop.
+> The result: FCT stays lean (~7k guided), ART drops back toward baseline.
 
 ## Core Philosophy
 
@@ -134,10 +130,10 @@ silent runtime type failures.
    layouts using SemVer rules.
 
 8. **Quality over Velocity:** Prioritise structural integrity and complete
-   test verification over raw execution speed. Version 3.0.0 enforces strict
-   Mode Gating: it maintains an ultra-lean token footprint during passive
-   `/audit` scans, reserving heavy completion token investment exclusively for
-   the execution loop where full verification overhead is justified.
+   test verification over raw execution speed. Version 3.1.0 strips the
+   meta-cognition tax by replacing multi-phase execution loops with a flat
+   3-step path. Token discipline is enforced at the output level, not as
+   internal reasoning rules.
 
 9. **Granularity over Convenience:** Reject the temptation to bundle
    multi-domain fixes into single execution blocks. Locust applies strict
@@ -272,7 +268,7 @@ opencode-deepseek-v4-flash-free consumed the fewest tokens overall (30,502):
 
 | Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
 | ---: | :--- | :---: | :---: | :---: | :---: | :--- |
-| 1 | opencode-deepseek-v4-flash-free | 40/100 | 100/100 | +316% | 0% | Best overall |
+| 1 | opencode-deepseek-v4-flash-free | 40/100 | 100/100 | +316% | N/A | Best overall |
 | 2 | opencode-mimo-v2.5-free | 23/100 | 100/100 | +525% | +10% | Quality concern |
 | 3 | opencode-big-pickle | 40/100 | 100/100 | +366% | +86% | Quality concern |
 
