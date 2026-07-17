@@ -32,8 +32,8 @@ const filesToUpdate = [
   },
   {
     filePath: path.join(rootDir, "tests/init_handshake.test.ts"),
-    regex: /version:\s*"\d+\.\d+\.\d+"/,
-    replacement: `version: "${targetVersion}"`,
+    regex: /version(?:\s*:\s*|\s*===?\s*)"\d+\.\d+\.\d+"/,
+    replacement: (match) => match.replace(/\d+\.\d+\.\d+/, targetVersion),
   },
   {
     filePath: path.join(rootDir, "playground/benchmarks/mcp-telemetry/package.json"),
