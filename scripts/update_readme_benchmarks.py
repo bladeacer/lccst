@@ -307,6 +307,28 @@ def get_agent_reports(
     return reports
 
 
+def _composite_score(
+    r: BenchmarkReport, reports: list[BenchmarkReport]
+) -> float:
+    """Normalized composite: higher = better, accounts for score, pass rate, and token overhead."""
+    max_guided = max(x.avg_guided_score for x in reports) or 1
+    max_plain = max(x.avg_plain_score for x in reports) or 1
+    max_fct_oh = max(_fct_overhead(x) for x in reports) or 1
+    max_art_oh = max(_art_overhead(x) for x in reports) or 1
+    guided_norm = r.avg_guided_score / max_guided
+    plain_norm = r.avg_plain_score / max_plain
+    pass_rate = r.passed_count / max(len(r.projects), 1)
+    fct_penalty = _fct_overhead(r) / max_fct_oh
+    art_penalty = _art_overhead(r) / max_art_oh
+    return (
+        guided_norm * 40
+        + plain_norm * 10
+        + pass_rate * 10
+        - fct_penalty * 20
+        - art_penalty * 20
+    )
+
+
 def pick_top_n(
     reports_map: dict[
         str, list[tuple[tuple[int, ...], BenchmarkReport]]
@@ -324,26 +346,7 @@ def pick_top_n(
     if not latest:
         return []
 
-    max_guided = max(r.avg_guided_score for r in latest) or 1
-    max_plain = max(r.avg_plain_score for r in latest) or 1
-    max_fct_oh = max(_fct_overhead(r) for r in latest) or 1
-    max_art_oh = max(_art_overhead(r) for r in latest) or 1
-
-    def _composite(r: BenchmarkReport) -> float:
-        guided_norm = r.avg_guided_score / max_guided
-        plain_norm = r.avg_plain_score / max_plain
-        pass_rate = r.passed_count / max(len(r.projects), 1)
-        fct_penalty = _fct_overhead(r) / max_fct_oh
-        art_penalty = _art_overhead(r) / max_art_oh
-        return (
-            guided_norm * 40
-            + plain_norm * 10
-            + pass_rate * 10
-            - fct_penalty * 20
-            - art_penalty * 20
-        )
-
-    latest.sort(key=_composite, reverse=True)
+    latest = sorted(latest, key=lambda r: _composite_score(r, latest[:]), reverse=True)
     return latest[:n]
 
 
@@ -710,22 +713,20 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
         tag = f"{r.agent_name}-{r.model_name}"
         r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
         r_art = pct_delta(r.total_art_plain, r.total_art_guided)
-        fct_oh = _fct_overhead(r)
-        art_oh = _art_overhead(r)
-        pass_rate = r.passed_count / max(len(r.projects), 1)
-        composite = (
-            r.avg_guided_score * 0.4
-            + r.avg_plain_score * 0.1
-            + pass_rate * 10
-            - fct_oh * 20
-            - art_oh * 20
-        )
+        composite = _composite_score(r, reports)
+
         if i == 1:
             verdict = "Best overall"
-        elif composite >= 30:
-            verdict = "Strong competitor"
-        else:
+        elif r.avg_guided_score >= 100:
+            verdict = "Strong contender"
+        elif composite >= 40:
+            verdict = "Strong contender"
+        elif composite >= 20:
+            verdict = "Promising"
+        elif composite >= 0:
             verdict = "Quality concern"
+        else:
+            verdict = "Avoid using"
         art_col = "N/A" if r.total_art_plain == 0 else f"{r_art}%"
         otm.append(
             f"| {i} | {tag} | {r.avg_plain_score:.0f}/100 "
