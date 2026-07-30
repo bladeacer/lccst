@@ -50,6 +50,11 @@ const filesToUpdate = [
     regex: /version:\s*"\d+\.\d+\.\d+"/,
     replacement: `version: "${targetVersion}"`,
   },
+  {
+    filePath: path.join(rootDir, "SKILL.md"),
+    regex: /version:\s*"\d+\.\d+\.\d+"/,
+    replacement: `version: "${targetVersion}"`,
+  },
 ];
 
 let errorsOccurred = false;

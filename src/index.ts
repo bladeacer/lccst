@@ -56,7 +56,7 @@ export interface EnvReport {
 
 export function scanEnvironment(root: string): EnvReport {
   const project = detectProject(root);
-  const requiredTools = [...new Set(project.testCommand)].filter(c => !c.startsWith("-") && !c.startsWith("."));
+  const requiredTools = project.testCommand.filter(c => !c.startsWith("-") && !c.startsWith(".") && !c.startsWith("./"));
   const tools: Record<string, boolean> = {};
   for (const t of requiredTools) tools[t] = detectTool(t);
   tools["git"] = detectTool("git");
@@ -94,7 +94,7 @@ export class SwarmState {
         const raw = fs.readFileSync(this.filePath, "utf-8").trim();
         if (raw) return { ...DEFAULT_STATE, ...JSON.parse(raw), timestamp: Date.now() };
       }
-    } catch { /* corrupt -- return default */ }
+    } catch (e) { console.warn("SwarmState: corrupt state file, returning default:", e); }
     return { ...DEFAULT_STATE, timestamp: Date.now() };
   }
 
@@ -104,7 +104,8 @@ export class SwarmState {
   }
 
   clear(): void {
-    try { if (fs.existsSync(this.filePath)) fs.unlinkSync(this.filePath); } catch { /* ignore */ }
+    try { if (fs.existsSync(this.filePath)) fs.unlinkSync(this.filePath); }
+    catch (e) { console.warn("SwarmState: failed to clear state file:", e); }
   }
 
   get path(): string { return this.filePath; }
@@ -126,7 +127,7 @@ export interface Cluster {
 }
 
 export function clusterHunks(lines: string[]): Cluster[] {
-  const files = lines.filter(l => l.includes("|")).map(l => l.split("|")[0].trim()).filter(Boolean);
+  const files = lines.filter(l => l.includes("|")).map(l => (l.split("|")[0] || "").trim()).filter(Boolean);
   if (files.length === 0) return [{ scope: "root", files: lines, suggestion: "chore: apply workspace changes" }];
 
   const groups: Record<string, string[]> = {};
@@ -145,7 +146,7 @@ export function clusterHunks(lines: string[]): Cluster[] {
 // --- MCP Server -----------------------------------------------------
 const server = new McpServer({
   name: "lccst-locust",
-  version: "3.1.0",
+  version: "3.2.0",
 });
 
 // Prompt: load SKILL.md into context
@@ -203,31 +204,47 @@ server.registerTool("audit", {
   const state = new SwarmState(ROOT);
   state.write({ phase: "audit" });
 
-  let diff = "";
+  let staged = "";
+  let unstaged = "";
   logEvent(ROOT, { event: "audit_start" });
   try {
-    diff = execSync("git diff --cached --stat", { cwd: ROOT, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString();
-    if (!diff.trim()) {
-      diff = execSync("git diff --stat", { cwd: ROOT, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString();
-    }
+    staged = execSync("git diff --cached --stat", { cwd: ROOT, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+    unstaged = execSync("git diff --stat", { cwd: ROOT, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
   } catch {
     return { content: [{ type: "text", text: "Not a git repository or no git available." }] };
   }
 
-  if (!diff.trim()) {
+  const plan: string[] = [];
+  let totalFiles = 0;
+
+  if (staged) {
+    const lines = staged.split("\n").map(l => l.trim()).filter(Boolean);
+    const clusters = clusterHunks(lines);
+    totalFiles += lines.length;
+    plan.push(`Staged changes: ${lines.length} file(s)`, "");
+    clusters.forEach((c, i) => {
+      plan.push(`${i + 1}. ${c.scope}: ${c.files.join(", ")}`);
+      plan.push(`   Suggested: ${c.suggestion}`);
+    });
+    state.write({ clusters: clusters.map(c => c.suggestion) });
+  }
+
+  if (unstaged) {
+    const lines = unstaged.split("\n").map(l => l.trim()).filter(Boolean);
+    const clusters = clusterHunks(lines);
+    totalFiles += lines.length;
+    if (plan.length > 0) plan.push("");
+    plan.push(`Unstaged changes: ${lines.length} file(s) (not yet staged)`, "");
+    clusters.forEach((c, i) => {
+      plan.push(`${i + 1}. ${c.scope}: ${c.files.join(", ")}`);
+      plan.push(`   Suggested: ${c.suggestion}`);
+    });
+  }
+
+  if (!staged && !unstaged) {
     return { content: [{ type: "text", text: "Working tree clean -- no changes to audit." }] };
   }
 
-  const lines = diff.trim().split("\n").map(l => l.trim()).filter(Boolean);
-  const clusters = clusterHunks(lines);
-
-  const plan: string[] = [`Changes detected: ${lines.length} file(s)`, ""];
-  clusters.forEach((c, i) => {
-    plan.push(`${i + 1}. ${c.scope}: ${c.files.join(", ")}`);
-    plan.push(`   Suggested: ${c.suggestion}`);
-  });
-
-  state.write({ clusters: clusters.map(c => c.suggestion) });
   return { content: [{ type: "text", text: plan.join("\n") }] };
 });
 

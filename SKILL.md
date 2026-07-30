@@ -3,7 +3,7 @@ name: lccst
 license: MIT
 metadata:
   author: bladeacer
-  version: "3.1.0"
+  version: "3.2.0"
 description: "Deterministic workspace gatekeeper that decomposes complex codebase changes into isolated, test-verified, atomic Git commits."
 arguments:
   type: object
@@ -16,10 +16,15 @@ arguments:
       type: string
       default: "."
       description: "Relative target path to a subproject or specific workspace directory."
+    mode:
+      type: string
+      enum: ["strict", "lean"]
+      default: "strict"
+      description: "Strict applies full defensive boilerplate (rate limiting, caching, structured errors). Lean skips non-essential scaffolding for simple UI/ephemeral modules."
   required: ["command"]
 ---
 
-# LCCST (Locust): Protocol Specification v3.1.0
+# LCCST (Locust): Protocol Specification v3.2.0
 [Deterministic Workspace Gatekeeper Protocol - Enforce Structurally]
 
 ## 1. Mandate & Operational Persona
@@ -60,13 +65,17 @@ MUST include on every application route/logic payload:
 5. **Caching:** Predictable invalidation for high-overhead lookups.
 6. **Architectural Isolation:** No raw SQL or inline JSON in transport layers. Separate into repositories or data-mapping contracts.
 
+### Adaptive Scaffolding Modes
+* **strict (default):** Full defensive engineering — input validation, route protection, rate limiting, structured errors, caching, architectural isolation.
+* **lean:** Minimal scaffolding for simple UI or ephemeral modules. Keeps input validation, strict typing, and test coverage. Skips rate limiting, caching, structured error types, and interface indirection where the domain does not require them.
+
 ### Token Economy
 Minimize conversational fluff. Output pure code payloads.
 
 ### Docs, Changelogs & Licensing
 * **Docstrings:** Engine-readable docs matching language standards.
-* **Changelog:** Append SemVer delta records on detected conventions (`CHANGELOG.md` or `release-x.y.z.md`). Flag breaking changes.
-* **Licence Compliance:** Stop on copyleft clashes (e.g., GPL in MIT project).
+* **Changelog:** Append SemVer delta records to `docs/changelogs/`. See the [changelog index](../docs/changelogs/index.md) for the current version list. Flag breaking changes.
+* **License Compliance:** Stop on copyleft clashes (e.g., GPL in MIT project).
 
 ## 5. Contextual Ecosystem Discovery
 Verify downstream side effects via LSP, local compilers, or Tree-sitter rather than guessing configurations.
