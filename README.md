@@ -172,13 +172,13 @@ encryption patterns).
 
 <!-- BENCHMARK_RESULTS_START -->
 
-#### opencode-ling-3.0-flash-free: skill version v3.2.0
+#### opencode-ling-3.0-flash-free: skill version v3.1.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `ling-3.0-flash-free` | `v3.2.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 528 | 2,221 | 3,900 | 1,850 |
-| **opencode** | `ling-3.0-flash-free` | `v3.2.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 428 | 992 | 750 | 1,600 |
-| **opencode** | `ling-3.0-flash-free` | `v3.2.0` | `lccst-telemetry` | **go-login-crud** | 65/100 | **100/100** | PASSED | 812 | 4,495 | 800 | 1,800 |
+| **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 528 | 2,221 | 3,900 | 1,850 |
+| **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 428 | 992 | 750 | 1,600 |
+| **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 65/100 | **100/100** | PASSED | 812 | 4,495 | 800 | 1,800 |
 | **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,768** | **7,708** | **5,450** | **5,250** |
 
 > **Highest ART subproject:** `python-http-server` consumed the most guided
@@ -188,13 +188,13 @@ encryption patterns).
 > Skill-guided implementation used **+336%** more FCT and **-4%** more ART
 > compared to plain implementation across the workspace suite.
 
-#### opencode-deepseek-v4-flash-free: skill version v3.2.0
+#### opencode-deepseek-v4-flash-free: skill version v3.1.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `v3.2.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 590 | 2,284 | 5,300 | 4,700 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.2.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 462 | 1,614 | 1,800 | 4,000 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.2.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 1,149 | 4,264 | 2,300 | 5,300 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 590 | 2,284 | 5,300 | 4,700 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 462 | 1,614 | 1,800 | 4,000 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 1,149 | 4,264 | 2,300 | 5,300 |
 | **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,201** | **8,162** | **9,400** | **14,000** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
@@ -204,13 +204,13 @@ encryption patterns).
 > Skill-guided implementation used **+271%** more FCT and **+49%** more ART
 > compared to plain implementation across the workspace suite.
 
-#### opencode-hy3-free: skill version v3.2.0
+#### opencode-hy3-free: skill version v3.1.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `hy3-free` | `v3.2.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 620 | 2,214 | 3,680 | 8,250 |
-| **opencode** | `hy3-free` | `v3.2.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 490 | 1,177 | 9,950 | 14,700 |
-| **opencode** | `hy3-free` | `v3.2.0` | `lccst-telemetry` | **go-login-crud** | 32/100 | **100/100** | PASSED | 820 | 3,601 | 17,400 | 24,100 |
+| **opencode** | `hy3-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 620 | 2,214 | 3,680 | 8,250 |
+| **opencode** | `hy3-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 490 | 1,177 | 9,950 | 14,700 |
+| **opencode** | `hy3-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 32/100 | **100/100** | PASSED | 820 | 3,601 | 17,400 | 24,100 |
 | **Summary** | | | | **Workspace Totals / Avg** | **29/100** | **100/100** | **3/3 Passed** | **1,930** | **6,992** | **31,030** | **47,050** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
