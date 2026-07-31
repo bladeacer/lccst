@@ -38,6 +38,10 @@ MCP tool audits both.
 1. Unit tests adjacent to every functional module, passing via `make test`.
 2. Docstrings on every public export, class, and function.
 
+**Proportionality:** Size tests and docstrings to the module. Assert public
+behavior, skip trivial internals, and do not add scaffolding the domain does
+not justify.
+
 **Nice to Have (best-effort, may defer):**
 3. API docs for public interfaces (e.g. `docs/api-docs/`).
 4. Changelog delta records in `docs/changelogs/` (see below).

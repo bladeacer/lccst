@@ -56,11 +56,10 @@ Added `.pytest_cache` to `.gitignore`.
 
 ### Adaptive Scaffolding Modes
 
-SKILL.md now accepts a `mode` parameter (`strict` | `lean`, default
-`strict`). Strict mode applies full defensive engineering (rate limiting,
-caching, structured errors, architectural isolation). Lean mode skips
-non-essential scaffolding for simple UI or ephemeral modules, reducing token
-overhead for small projects like react-timer.
+SKILL.md now accepts a `mode` parameter (`strict` | `lean`, default `lean`).
+Lean applies only the scaffolding the module's domain justifies. Strict is
+opt-in for high-stakes routes, adding rate limiting, caching, structured
+errors, and architectural isolation on top of lean.
 
 ### CI Workflow
 
@@ -122,8 +121,9 @@ pipelines.
 SKILL.md splits every payload into two requirement tiers, audited by the
 `/compliance` tool:
 
-- **Must Have** (non-negotiable, blocks commit): unit tests adjacent to every
-  functional module, and docstrings on public exports.
+- **Must Have** (non-negotiable, blocks commit): a focused unit test file per
+  functional module, and docstrings on public exports -- both sized to the
+  module's behavior.
 - **Nice to Have** (best-effort, may defer): API docs for public interfaces
   and changelog delta records. License compliance remains a hard stop on
   copyleft clashes.
@@ -158,3 +158,22 @@ None. All changes are additive, corrective, or internal.
 ## Version
 
 Bumped from 3.1.0 to 3.2.0.
+
+## Post-Release Correction
+
+Date: _2026-07-31_
+
+### Proportionality First
+
+Benchmark review of v3.2.0 showed guided FCT overhead at +503% vs plain
+(driven by strict-by-default defensive scaffolding and commit-gating unit
+tests on every module). The skill file was rebalanced toward minimalism:
+
+- `mode` default flipped from `strict` to `lean`.
+- Defensive Engineering reframed as proportional: apply each control only
+  where the domain justifies it.
+- Deliverable Tiers size unit tests and docstrings to the module; user
+  conventions are the first law before any protocol scaffolding.
+
+Test verification remains a hard gate; the change targets redundant
+boilerplate, not test coverage.
