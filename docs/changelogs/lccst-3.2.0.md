@@ -96,7 +96,7 @@ canonical commands win.
 
 ### New MCP Tools
 
-Ten tools are now exposed (was three):
+Eleven tools are now exposed (was three):
 
 - `tooling` -- inventory Makefile targets, script helpers, and package scripts
 - `lint` -- run lint (Makefile target first, manifest fallback)
@@ -105,14 +105,35 @@ Ten tools are now exposed (was three):
 - `build` -- run build (new `buildCommand` added to project detection)
 - `verify` -- run the full quality gate (format, lint, test, build) with a
   pass/fail summary
+- `compliance` -- audit deliverable tiers (must-haves: unit tests, docstrings;
+  nice-to-haves: API docs, changelog)
 - `version` -- report the current LCCST version
 
 ### SKILL.md Subcommands
 
 SKILL.md now documents `/tooling`, `/lint`, `/format`, `/test`, `/build`,
-`/verify`, and `/version`, each mapping 1:1 to an MCP tool. The Tooling
-Ladder was re-ordered so the project utility layer (Makefile, `scripts/`,
-package scripts) sits above LSP/Tree-sitter and ad-hoc `grep` pipelines.
+`/verify`, `/compliance`, and `/version`, each mapping 1:1 to an MCP tool.
+The Tooling Ladder was re-ordered so the project utility layer (Makefile,
+`scripts/`, package scripts) sits above LSP/Tree-sitter and ad-hoc `grep`
+pipelines.
+
+### Deliverable Tiers
+
+SKILL.md splits every payload into two requirement tiers, audited by the
+`/compliance` tool:
+
+- **Must Have** (non-negotiable, blocks commit): unit tests adjacent to every
+  functional module, and docstrings on public exports.
+- **Nice to Have** (best-effort, may defer): API docs for public interfaces
+  and changelog delta records. License compliance remains a hard stop on
+  copyleft clashes.
+
+### AGENTS.md
+
+Added `AGENTS.md` capturing repository conventions for AI agents: canonical
+Makefile commands, the must-have / nice-to-have deliverable tiers, changelog
+style, version-bump workflow, the eleven MCP tools, code layout, and
+structural invariants. Referenced from the README Development section.
 
 ### MCP Server Activation Rules
 

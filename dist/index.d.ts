@@ -18,6 +18,17 @@ export declare function listShellScripts(root: string): string[];
 export declare function discoverTooling(root: string): ToolingReport;
 export type ProjectStep = "test" | "lint" | "format" | "build";
 export declare function resolveCommand(root: string, kind: ProjectStep): string[] | null;
+export interface ComplianceReport {
+    mustHave: {
+        unitTests: boolean;
+        docstrings: boolean;
+    };
+    niceToHave: {
+        apiDocs: boolean;
+        changelog: boolean;
+    };
+}
+export declare function auditCompliance(root: string): ComplianceReport;
 export interface RunResult {
     command: string[];
     output: string;

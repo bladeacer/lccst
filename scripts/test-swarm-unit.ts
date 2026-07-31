@@ -1,4 +1,4 @@
-import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand } from "../src/index.js";
+import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand, auditCompliance } from "../src/index.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -131,6 +131,40 @@ withTempDir((dir) => {
 
 withTempDir((dir) => {
   assert(resolveCommand(dir, "build") === null, "unknown dir -> no build command");
+});
+
+// -- Deliverable tier audit ------------------------------------------
+withTempDir((dir) => {
+  const c = auditCompliance(dir);
+  assert(c.mustHave.unitTests === false, "empty dir -> no unit tests");
+  assert(c.mustHave.docstrings === false, "empty dir -> no docstrings");
+  assert(c.niceToHave.changelog === false, "empty dir -> no changelog");
+});
+
+withTempDir((dir) => {
+  fs.mkdirSync(path.join(dir, "tests"));
+  fs.mkdirSync(path.join(dir, "src"));
+  fs.writeFileSync(path.join(dir, "tests", "app.test.ts"), "");
+  fs.writeFileSync(path.join(dir, "src", "app.ts"), "/** JSDoc comment */\nexport const x = 1;");
+  const c = auditCompliance(dir);
+  assert(c.mustHave.unitTests === true, "tests dir -> unit tests present");
+  assert(c.mustHave.docstrings === true, "src docstring -> docstrings present");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "test_app.py"), "");
+  fs.writeFileSync(path.join(dir, "app.py"), '"""Module docstring."""\n');
+  const c = auditCompliance(dir);
+  assert(c.mustHave.unitTests === true, "test_*.py -> unit tests present");
+  assert(c.mustHave.docstrings === true, "python docstring detected");
+});
+
+withTempDir((dir) => {
+  fs.mkdirSync(path.join(dir, "docs", "api-docs"), { recursive: true });
+  fs.mkdirSync(path.join(dir, "docs", "changelogs"), { recursive: true });
+  const c = auditCompliance(dir);
+  assert(c.niceToHave.apiDocs === true, "docs/api-docs -> api docs present");
+  assert(c.niceToHave.changelog === true, "docs/changelogs -> changelog present");
 });
 
 // -- SwarmState -----------------------------------------------------

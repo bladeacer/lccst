@@ -121,6 +121,77 @@ export function resolveCommand(root: string, kind: ProjectStep): string[] | null
   return cmd && cmd.length > 0 ? cmd : null;
 }
 
+// --- Deliverable tier audit ------------------------------------------
+export interface ComplianceReport {
+  mustHave: { unitTests: boolean; docstrings: boolean };
+  niceToHave: { apiDocs: boolean; changelog: boolean };
+}
+
+function hasAny(dir: string, patterns: RegExp[]): boolean {
+  if (!fs.existsSync(dir)) return false;
+  const walk = (current: string, depth: number): boolean => {
+    if (depth > 4) return false;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "dist" || entry.name === ".venv") continue;
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) { if (walk(full, depth + 1)) return true; }
+      else if (patterns.some(p => p.test(entry.name))) return true;
+    }
+    return false;
+  };
+  return walk(dir, 0);
+}
+
+export function auditCompliance(root: string): ComplianceReport {
+  const testPatterns = [
+    /\.test\.(ts|tsx|js|jsx)$/,
+    /\.spec\.(ts|tsx|js|jsx)$/,
+    /^test_.*\.py$/,
+    /_test\.py$/,
+    /_test\.go$/,
+    /\.test\.rs$/,
+    /.*_test\.rs$/,
+  ];
+  const hasTests = hasAny(root, testPatterns);
+  const srcDir = path.join(root, "src");
+  const hasDocstrings = hasDocstringInSrc(fs.existsSync(srcDir) ? srcDir : root);
+
+  const apiDocs = fs.existsSync(path.join(root, "docs", "api-docs")) ||
+    fs.existsSync(path.join(root, "docs", "reference")) ||
+    fs.existsSync(path.join(root, "docs", "api")) ||
+    fs.existsSync(path.join(root, "api-docs")) ||
+    fs.existsSync(path.join(root, "reference"));
+  const changelog = fs.existsSync(path.join(root, "docs", "changelogs")) ||
+    fs.existsSync(path.join(root, "CHANGELOG.md")) ||
+    fs.existsSync(path.join(root, "changelog.md"));
+
+  return {
+    mustHave: { unitTests: hasTests, docstrings: hasDocstrings },
+    niceToHave: { apiDocs, changelog },
+  };
+}
+
+function hasDocstringInSrc(dir: string): boolean {
+  if (!fs.existsSync(dir)) return false;
+  const markers = ["/**", "\"\"\"", "///", "## ", "# ", "// "];
+  const walk = (current: string, depth: number): boolean => {
+    if (depth > 4) return false;
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      if (entry.name.startsWith(".") || entry.name === "node_modules" || entry.name === "dist" || entry.name === ".venv") continue;
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) { if (walk(full, depth + 1)) return true; }
+      else if (/\.(py|ts|tsx|js|jsx|go|rs)$/.test(entry.name)) {
+        try {
+          const head = fs.readFileSync(full, "utf-8").slice(0, 2000);
+          if (markers.some(m => head.includes(m))) return true;
+        } catch { continue; }
+      }
+    }
+    return false;
+  };
+  return walk(dir, 0);
+}
+
 export interface RunResult {
   command: string[];
   output: string;
@@ -473,6 +544,31 @@ server.registerTool("verify", {
   }
   report.push("", `Result: ${failed === 0 ? "PASS" : `${failed} failing step(s)`}`);
   return { content: [{ type: "text", text: report.join("\n") }] };
+});
+
+// Tool: /compliance
+server.registerTool("compliance", {
+  description: "Audit deliverable tiers: must-haves (unit tests, docstrings) and nice-to-haves (API docs, changelog).",
+  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+}, async (args) => {
+  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
+  if (!fs.existsSync(target)) {
+    return { content: [{ type: "text", text: `Error: path "${target}" does not exist.` }] };
+  }
+  const report = auditCompliance(target);
+  logEvent(target, { event: "compliance_audit", report });
+  const lines = [
+    `Compliance audit for ${target}`,
+    "",
+    "MUST HAVE",
+    `  Unit tests: ${report.mustHave.unitTests ? "PRESENT" : "MISSING"}`,
+    `  Docstrings: ${report.mustHave.docstrings ? "PRESENT" : "MISSING"}`,
+    "",
+    "NICE TO HAVE",
+    `  API docs: ${report.niceToHave.apiDocs ? "PRESENT" : "MISSING"}`,
+    `  Changelog: ${report.niceToHave.changelog ? "PRESENT" : "MISSING"}`,
+  ];
+  return { content: [{ type: "text", text: lines.join("\n") }] };
 });
 
 // Tool: /version

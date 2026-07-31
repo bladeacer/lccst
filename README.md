@@ -28,12 +28,13 @@ The protocol specification (`SKILL.md`) is loaded directly into the LLM's
 context window. The model follows the rules manually -- detecting languages,
 running commands, and committing changes. No MCP server required.
 
-### MCP Server Mode (Reference: `src/swarm/`)
+### MCP Server Mode
 
 The MCP server at `src/index.ts` (built to `dist/index.js`) exposes the full
 protocol via tools and prompts -- all logic is self-contained in a single
-distributable file. AI agents can call the `/init`, `/audit`, and `/swarm`
-tools programmatically.
+distributable file. AI agents can call the `/init`, `/audit`, `/swarm`,
+`/tooling`, `/lint`, `/format`, `/test`, `/build`, `/verify`,
+`/compliance`, and `/version` tools programmatically.
 
 The server is self-contained in a single file; see `src/index.ts` for implementation details.
 
@@ -439,7 +440,7 @@ server connection arrays (such as `claude_desktop_config.json`):
 > actual path to `dist/index.js` on your system. If you downloaded from
 > GitHub Releases (Option A), point it to the downloaded file location.
 
-The MCP server exposes ten tools for programmatic use:
+The MCP server exposes eleven tools for programmatic use:
 * **`init`** -- Map project conventions and verify environment
 * **`audit`** -- Scan workspace diffs and generate commit plan
 * **`swarm`** -- Execute the full discovery-cluster-test-commit loop
@@ -449,6 +450,7 @@ The MCP server exposes ten tools for programmatic use:
 * **`test`** -- Run the project test command
 * **`build`** -- Run the project build command
 * **`verify`** -- Run the full quality gate (format, lint, test, build)
+* **`compliance`** -- Audit deliverable tiers (must-haves: unit tests, docstrings; nice-to-haves: API docs, changelog)
 * **`version`** -- Report the current LCCST version
 
 #### OpenCode Setup
@@ -490,7 +492,7 @@ To invoke Locust within a conversation, use the `/lccst` command or reference
 
 ```bash
 pnpm run build      # Bundle deps + source -> dist/index.js
-pnpm run test       # Run all tests (22 unit + 6 integration)
+pnpm run test       # Run all tests (46 unit + 6 integration)
 pnpm run test:swarm # Swarm library unit tests only
 pnpm run test:mcp   # MCP server integration tests only
 pnpm run bump 3.0.1 # Bump version across all files
@@ -499,6 +501,12 @@ pnpm run bump 3.0.1 # Bump version across all files
 ---
 
 ## Development
+
+### Agent Conventions
+
+Agents working on this repository should read `AGENTS.md` for build/test
+commands, deliverable tiers (must-have vs nice-to-have), changelog
+conventions, and structural invariants.
 
 ### Developer Dependencies
 
