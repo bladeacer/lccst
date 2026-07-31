@@ -492,7 +492,7 @@ To invoke Locust within a conversation, use the `/lccst` command or reference
 
 ```bash
 pnpm run build      # Bundle deps + source -> dist/index.js
-pnpm run test       # Run all tests (46 unit + 6 integration)
+pnpm run test       # Run all tests (61 unit + 9 integration)
 pnpm run test:swarm # Swarm library unit tests only
 pnpm run test:mcp   # MCP server integration tests only
 pnpm run bump 3.0.1 # Bump version across all files

@@ -1,4 +1,4 @@
-import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand, auditCompliance } from "../src/index.js";
+import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand, auditCompliance, clusterHunks, runCommand, detectTool, logEvent } from "../src/index.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -165,6 +165,57 @@ withTempDir((dir) => {
   const c = auditCompliance(dir);
   assert(c.niceToHave.apiDocs === true, "docs/api-docs -> api docs present");
   assert(c.niceToHave.changelog === true, "docs/changelogs -> changelog present");
+});
+
+// -- Hunk clustering -------------------------------------------------
+{
+  const clusters = clusterHunks([]);
+  assert(clusters.length === 1 && clusters[0].scope === "root", "empty lines -> root cluster");
+  assert(clusters[0].suggestion === "chore: apply workspace changes", "root fallback suggestion");
+}
+
+{
+  const clusters = clusterHunks([
+    "src/app.ts | 4 ++--",
+    "src/util.ts | 2 +-",
+    "README.md | 6 ++++--",
+  ]);
+  assert(clusters.some(c => c.scope === "src"), "group by top-level dir");
+  const src = clusters.find(c => c.scope === "src");
+  assert(src?.files.length === 2, "src cluster has both files");
+  assert(src?.suggestion === "feat(src): apply 2 file change(s)", "src cluster suggestion");
+  const root = clusters.find(c => c.scope === "root");
+  assert(root?.files.includes("README.md"), "no-slash file -> root scope");
+}
+
+// -- Environment conventions -----------------------------------------
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, ".editorconfig"), "root = true\n");
+  fs.writeFileSync(path.join(dir, ".prettierrc"), "{}\n");
+  const env = scanEnvironment(dir);
+  assert(env.conventions.includes("editorconfig"), "editorconfig convention detected");
+  assert(env.conventions.includes("prettier"), "prettier convention detected");
+  assert(env.tools.git === true, "git tool reported");
+});
+
+// -- Command execution -----------------------------------------------
+withTempDir((dir) => {
+  const ok = runCommand(["printf", "hello"], dir);
+  assert(ok.code === 0 && ok.output === "hello", "runCommand success");
+  const fail = runCommand(["sh", "-c", "echo bad 1>&2; exit 3"], dir);
+  assert(fail.code === 3, "runCommand captures nonzero exit");
+  assert(fail.output.includes("bad"), "runCommand captures stderr on failure");
+});
+
+// -- Tool detection --------------------------------------------------
+assert(typeof detectTool("sh") === "boolean", "detectTool returns boolean");
+
+// -- Event logging ---------------------------------------------------
+withTempDir((dir) => {
+  logEvent(dir, { event: "swarm_start", project: "node" });
+  const events = fs.readFileSync(path.join(dir, ".lccst", "events.jsonl"), "utf-8");
+  assert(events.includes("swarm_start"), "logEvent writes events.jsonl");
+  assert(events.includes("node"), "logEvent records payload");
 });
 
 // -- SwarmState -----------------------------------------------------

@@ -135,6 +135,13 @@ Makefile commands, the must-have / nice-to-have deliverable tiers, changelog
 style, version-bump workflow, the eleven MCP tools, code layout, and
 structural invariants. Referenced from the README Development section.
 
+### Test Suite Expansion
+
+Extended unit coverage to `clusterHunks`, `runCommand`, `detectTool`,
+`logEvent`, and `scanEnvironment` conventions (61 unit tests total). Added
+MCP integration tests for the `version`, `tooling`, and `compliance` tools
+(9 integration tests total). README test-script counts updated accordingly.
+
 ### MCP Server Activation Rules
 
 The main `lccst` MCP server is registered in `opencode.jsonc` but **disabled
