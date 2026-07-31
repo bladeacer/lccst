@@ -1,6 +1,16 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
+    // Main LCCST gatekeeper server. Disabled by default.
+    // Set "enabled": true (or toggle per-prompt in the host) to activate.
+    // The lccst-telemetry server is benchmark-only instrumentation and
+    // stays enabled inside playground workspaces; the main server must
+    // stay disabled there to keep benchmark runs isolated.
+    "lccst": {
+      "type": "local",
+      "command": ["node", "${workspaceFolder}/dist/index.js"],
+      "enabled": false
+    },
     "lccst-telemetry": {
       "type": "local",
       "command": ["node", "${workspaceFolder}/playground/benchmarks/mcp-telemetry/build/index.js"],

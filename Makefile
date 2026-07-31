@@ -68,6 +68,9 @@ telemetry-build:
 define GENERATE_OPECODE_CONFIG
 {
   "mcp": {
+    "lccst": {
+      "enabled": false
+    },
     "lccst-telemetry": {
       "type": "local",
       "command": ["node", "$(CURDIR)/playground/benchmarks/mcp-telemetry/build/index.js"],

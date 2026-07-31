@@ -17,14 +17,15 @@ export interface ProjectInfo {
   testCommand: string[];
   formatCommand?: string[];
   lintCommand?: string[];
+  buildCommand?: string[];
 }
 
-const MANIFEST_PRIORITY: Array<{ manifest: string; type: ProjectInfo["type"]; test: string[]; format?: string[]; lint?: string[] }> = [
+const MANIFEST_PRIORITY: Array<{ manifest: string; type: ProjectInfo["type"]; test: string[]; format?: string[]; lint?: string[]; build?: string[] }> = [
   { manifest: "pyproject.toml", type: "python", test: ["uv", "run", "pytest"], format: ["uv", "run", "ruff", "format"], lint: ["uv", "run", "ruff", "check"] },
-  { manifest: "package.json", type: "node", test: ["pnpm", "test"], format: ["pnpm", "run", "format"], lint: ["pnpm", "run", "lint"] },
-  { manifest: "Cargo.toml", type: "rust", test: ["cargo", "test"], format: ["cargo", "fmt"], lint: ["cargo", "clippy"] },
-  { manifest: "go.mod", type: "go", test: ["go", "test", "./..."], format: ["gofmt", "-l", "."], lint: ["go", "vet", "./..."] },
-  { manifest: "CMakeLists.txt", type: "unknown", test: ["cmake", "--build", "."] },
+  { manifest: "package.json", type: "node", test: ["pnpm", "test"], format: ["pnpm", "run", "format"], lint: ["pnpm", "run", "lint"], build: ["pnpm", "run", "build"] },
+  { manifest: "Cargo.toml", type: "rust", test: ["cargo", "test"], format: ["cargo", "fmt"], lint: ["cargo", "clippy"], build: ["cargo", "build"] },
+  { manifest: "go.mod", type: "go", test: ["go", "test", "./..."], format: ["gofmt", "-l", "."], lint: ["go", "vet", "./..."], build: ["go", "build", "./..."] },
+  { manifest: "CMakeLists.txt", type: "unknown", test: ["cmake", "--build", "."], build: ["cmake", "--build", "."] },
   { manifest: "Project.toml", type: "unknown", test: ["julia", "--project=.", "-e", "using Pkg; Pkg.test()"] },
 ];
 
@@ -37,10 +38,104 @@ export function detectProject(root: string): ProjectInfo {
         testCommand: entry.test,
         formatCommand: entry.format,
         lintCommand: entry.lint,
+        buildCommand: entry.build,
       };
     }
   }
   return { type: "unknown", manifest: "", testCommand: [] };
+}
+
+// --- Native tooling discovery (Makefile, package scripts, shell utils) --
+export interface ToolingReport {
+  makeTargets: string[];
+  packageScripts: Record<string, string>;
+  shellScripts: string[];
+}
+
+export function listMakeTargets(root: string): string[] {
+  const makefile = path.join(root, "Makefile");
+  if (!fs.existsSync(makefile)) return [];
+  const lines = fs.readFileSync(makefile, "utf-8").split("\n");
+  const targets: string[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith(".")) continue;
+    if (/[:+?]=/.test(trimmed)) continue;
+    const m = trimmed.match(/^([A-Za-z0-9_][A-Za-z0-9_.%/-]*)\s*:/);
+    if (m) targets.push(m[1]);
+  }
+  return [...new Set(targets)].sort();
+}
+
+export function listPackageScripts(root: string): Record<string, string> {
+  const pkgPath = path.join(root, "package.json");
+  if (!fs.existsSync(pkgPath)) return {};
+  try {
+    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
+    return (pkg.scripts ?? {}) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
+export function listShellScripts(root: string): string[] {
+  const dirs = ["scripts", "tools", "bin", "script"];
+  const out: string[] = [];
+  for (const d of dirs) {
+    const dir = path.join(root, d);
+    if (!fs.existsSync(dir)) continue;
+    for (const entry of fs.readdirSync(dir).sort()) {
+      const full = path.join(dir, entry);
+      let stat;
+      try { stat = fs.statSync(full); } catch { continue; }
+      if (!stat.isFile()) continue;
+      const isExec = (stat.mode & 0o111) !== 0;
+      if (isExec || /\.(sh|py|js|ts|mjs|cjs)$/.test(entry)) out.push(path.join(d, entry));
+    }
+  }
+  return out;
+}
+
+export function discoverTooling(root: string): ToolingReport {
+  return {
+    makeTargets: listMakeTargets(root),
+    packageScripts: listPackageScripts(root),
+    shellScripts: listShellScripts(root),
+  };
+}
+
+// --- Command resolution & execution ----------------------------------
+export type ProjectStep = "test" | "lint" | "format" | "build";
+
+export function resolveCommand(root: string, kind: ProjectStep): string[] | null {
+  const makeTargets = listMakeTargets(root);
+  if (makeTargets.includes(kind)) return ["make", kind];
+  const project = detectProject(root);
+  const map: Record<ProjectStep, string[] | undefined> = {
+    test: project.testCommand,
+    lint: project.lintCommand,
+    format: project.formatCommand,
+    build: project.buildCommand,
+  };
+  const cmd = map[kind];
+  return cmd && cmd.length > 0 ? cmd : null;
+}
+
+export interface RunResult {
+  command: string[];
+  output: string;
+  code: number;
+}
+
+export function runCommand(command: string[], cwd: string): RunResult {
+  try {
+    const output = execSync(command.join(" "), { cwd, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString();
+    return { command, output: output.trim(), code: 0 };
+  } catch (e: any) {
+    const stderr = e?.stderr?.toString?.() ?? "";
+    const stdout = e?.stdout?.toString?.() ?? "";
+    return { command, output: (stdout + stderr).trim() || String(e?.message ?? e), code: e?.status ?? 1 };
+  }
 }
 
 export function detectTool(name: string): boolean {
@@ -182,6 +277,7 @@ server.registerTool("init", {
   }
 
   const env = scanEnvironment(target);
+  const tooling = discoverTooling(target);
   new SwarmState(target).write({ phase: "init" });
   logEvent(target, { event: "init", project: env.project.type, manifest: env.project.manifest });
 
@@ -190,6 +286,8 @@ server.registerTool("init", {
     `Manifest: ${env.project.manifest || "(none detected)"}`,
     `Tools available: ${Object.entries(env.tools).filter(([, v]) => v).map(([k]) => k).join(", ") || "none"}`,
     `Test command: ${env.project.testCommand.join(" ") || "(none)"}`,
+    `Makefile targets: ${tooling.makeTargets.join(", ") || "(none)"}`,
+    `Script helpers: ${tooling.shellScripts.join(", ") || "(none)"}`,
   ];
   if (env.conventions.length > 0) lines.push(`Conventions: ${env.conventions.join(", ")}`);
 
@@ -267,15 +365,21 @@ server.registerTool("swarm", {
     return { content: [{ type: "text", text: `No test runner detected for ${target}. Cannot execute swarm.` }] };
   }
 
+  const tooling = discoverTooling(target);
+  const makeTargets = tooling.makeTargets.length > 0 ? `make: ${tooling.makeTargets.join(", ")}` : "no Makefile";
+  const formatCmd = resolveCommand(target, "format");
+  const testCmd = resolveCommand(target, "test");
+
   const report: string[] = [
     `Swarm execution started at ${target}`,
     `Project: ${project.type} (${project.manifest})`,
-    `Test command: ${project.testCommand.join(" ")}`,
+    `Native tooling: ${makeTargets}`,
+    `Test command: ${testCmd?.join(" ") || "(none detected)"}`,
     `Dry-run: ${dryRun}`,
     "",
-    `Phase 1/4: Discover & Format -- ${project.formatCommand?.join(" ") || "skipped"}`,
+    `Phase 1/4: Discover & Format -- ${formatCmd?.join(" ") || "skipped"}`,
     `Phase 2/4: Hunk Clustering -- pending git analysis`,
-    `Phase 3/4: Targeted Testing -- ${project.testCommand.join(" ")}`,
+    `Phase 3/4: Targeted Testing -- ${testCmd?.join(" ") || "(none detected)"}`,
     `Phase 4/4: Atomic Commit -- conventional commit generation`,
     "",
     `State tracking: ${state.path}`,
@@ -284,6 +388,104 @@ server.registerTool("swarm", {
   if (!dryRun) state.write({ phase: "swarm_discover" });
 
   return { content: [{ type: "text", text: report.join("\n") }] };
+});
+
+// --- Shared runner for project-step tools ----------------------------
+function runStepTool(kind: ProjectStep, args?: { path?: string }): { content: { type: "text"; text: string }[] } {
+  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
+  if (!fs.existsSync(target)) {
+    return { content: [{ type: "text", text: `Error: path "${target}" does not exist.` }] };
+  }
+  const cmd = resolveCommand(target, kind);
+  if (!cmd) {
+    return { content: [{ type: "text", text: `No ${kind} command detected for ${target}.` }] };
+  }
+  const result = runCommand(cmd, target);
+  logEvent(target, { event: `${kind}_run`, command: cmd.join(" "), exitCode: result.code });
+  const lines = [
+    `[${kind}] ${cmd.join(" ")}`,
+    `Exit code: ${result.code}`,
+    result.output ? `\n${result.output}` : "(no output)",
+  ];
+  return { content: [{ type: "text", text: lines.join("\n") }] };
+}
+
+// Tool: /tooling
+server.registerTool("tooling", {
+  description: "Inventory native tooling: Makefile targets, package.json scripts, and scripts/ helpers.",
+  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+}, async (args) => {
+  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
+  if (!fs.existsSync(target)) {
+    return { content: [{ type: "text", text: `Error: path "${target}" does not exist.` }] };
+  }
+  const t = discoverTooling(target);
+  const lines: string[] = [`Tooling for ${target}`, ""];
+  lines.push(`Makefile targets: ${t.makeTargets.join(", ") || "(none)"}`);
+  lines.push(`Shell/script helpers: ${t.shellScripts.join(", ") || "(none)"}`);
+  lines.push(`package.json scripts: ${Object.keys(t.packageScripts).join(", ") || "(none)"}`);
+  return { content: [{ type: "text", text: lines.join("\n") }] };
+});
+
+// Tool: /lint
+server.registerTool("lint", {
+  description: "Run the project lint command (Makefile `lint` target first, then manifest lint).",
+  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+}, async (args) => runStepTool("lint", args));
+
+// Tool: /format
+server.registerTool("format", {
+  description: "Run the project format command (Makefile `format` target first, then manifest format).",
+  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+}, async (args) => runStepTool("format", args));
+
+// Tool: /test
+server.registerTool("test", {
+  description: "Run the project test command (Makefile `test` target first, then manifest test).",
+  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+}, async (args) => runStepTool("test", args));
+
+// Tool: /build
+server.registerTool("build", {
+  description: "Run the project build command (Makefile `build` target first, then manifest build).",
+  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+}, async (args) => runStepTool("build", args));
+
+// Tool: /verify
+server.registerTool("verify", {
+  description: "Run the full quality gate: format, lint, test, build. Skips steps with no detected command.",
+  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+}, async (args) => {
+  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
+  const steps: ProjectStep[] = ["format", "lint", "test", "build"];
+  const report: string[] = [`Quality gate for ${target}`, ""];
+  let failed = 0;
+  for (const step of steps) {
+    const cmd = resolveCommand(target, step);
+    if (!cmd) {
+      report.push(`[SKIP] ${step} -- no command detected`);
+      continue;
+    }
+    const result = runCommand(cmd, target);
+    logEvent(target, { event: `${step}_run`, command: cmd.join(" "), exitCode: result.code });
+    report.push(`[${result.code === 0 ? "OK" : "FAIL"}] ${step}: ${cmd.join(" ")}`);
+    if (result.code !== 0) failed++;
+  }
+  report.push("", `Result: ${failed === 0 ? "PASS" : `${failed} failing step(s)`}`);
+  return { content: [{ type: "text", text: report.join("\n") }] };
+});
+
+// Tool: /version
+server.registerTool("version", {
+  description: "Report the LCCST protocol and server version.",
+  inputSchema: {},
+}, async () => {
+  let pkgVersion = "(unknown)";
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.resolve(ROOT, "package.json"), "utf-8"));
+    pkgVersion = pkg.version ?? "(unknown)";
+  } catch { /* ignore */ }
+  return { content: [{ type: "text", text: `LCCST v${pkgVersion}` }] };
 });
 
 // --- Start transport (only when run directly, not when imported) ----

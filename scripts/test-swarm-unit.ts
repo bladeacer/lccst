@@ -1,4 +1,4 @@
-import { detectProject, scanEnvironment, SwarmState } from "../src/index.js";
+import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand } from "../src/index.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -75,6 +75,62 @@ withTempDir((dir) => {
   const env = scanEnvironment(dir);
   assert(env.project.type === "python", "scan detects python");
   assert(Array.isArray(env.conventions), "conventions is array");
+});
+
+// -- Native tooling discovery ----------------------------------------
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Makefile"), "all: test\n\n.PHONY: test build\n\ntest:\n\tpnpm test\n\nbuild:\n\tpnpm run build\n");
+  const targets = listMakeTargets(dir);
+  assert(targets.includes("test"), "makefile test target");
+  assert(targets.includes("build"), "makefile build target");
+  assert(!targets.includes("all") === false, "makefile all target present");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Makefile"), "");
+  assert(listMakeTargets(dir).length === 0, "empty makefile -> no targets");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ scripts: { test: "jest", build: "tsc" } }));
+  const scripts = listPackageScripts(dir);
+  assert(scripts.test === "jest", "package.json scripts parsed");
+  assert(scripts.build === "tsc", "package.json build script");
+});
+
+withTempDir((dir) => {
+  fs.mkdirSync(path.join(dir, "scripts"));
+  fs.writeFileSync(path.join(dir, "scripts", "deploy.sh"), "#!/bin/sh\n");
+  fs.writeFileSync(path.join(dir, "scripts", "bump.ts"), "");
+  fs.writeFileSync(path.join(dir, "scripts", "notes.txt"), "");
+  const helpers = listShellScripts(dir);
+  assert(helpers.includes("scripts/deploy.sh"), "shell script detected");
+  assert(helpers.includes("scripts/bump.ts"), "ts script detected");
+  assert(!helpers.includes("scripts/notes.txt"), "non-script excluded");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Makefile"), "test:\n\tpnpm test\n");
+  fs.mkdirSync(path.join(dir, "scripts"));
+  fs.writeFileSync(path.join(dir, "scripts", "check.sh"), "#!/bin/sh\n");
+  const t = discoverTooling(dir);
+  assert(t.makeTargets.includes("test"), "discover make targets");
+  assert(t.shellScripts.includes("scripts/check.sh"), "discover shell scripts");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Makefile"), "lint:\n\trun-lint\n");
+  assert(resolveCommand(dir, "lint")?.join(" ") === "make lint", "Makefile target wins over manifest");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "package.json"), "{}");
+  assert(resolveCommand(dir, "test")?.join(" ") === "pnpm test", "node manifest fallback test command");
+  assert(resolveCommand(dir, "lint")?.join(" ") === "pnpm run lint", "node manifest fallback lint command");
+});
+
+withTempDir((dir) => {
+  assert(resolveCommand(dir, "build") === null, "unknown dir -> no build command");
 });
 
 // -- SwarmState -----------------------------------------------------

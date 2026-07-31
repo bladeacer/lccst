@@ -77,6 +77,52 @@ see the index for a summary of un-tagged releases.
 
 Added `.node-version` file for automated Node.js version management.
 
+## New Features: Expanded Tooling & Subcommands
+
+### Native Tooling Discovery
+
+The server now inventories a project's own utility layer before composing
+raw commands:
+
+- `listMakeTargets` parses `Makefile` targets
+- `listPackageScripts` reads `package.json` scripts
+- `listShellScripts` scans `scripts/`, `tools/`, `bin/`, and `script/` for
+  executable or script-extension helpers
+- `discoverTooling` aggregates all three into a single report
+
+Command resolution (`resolveCommand`) prefers a matching Makefile target over
+the manifest fallback (e.g. `make test` over `pnpm test`), so the project's
+canonical commands win.
+
+### New MCP Tools
+
+Ten tools are now exposed (was three):
+
+- `tooling` -- inventory Makefile targets, script helpers, and package scripts
+- `lint` -- run lint (Makefile target first, manifest fallback)
+- `format` -- run format
+- `test` -- run test
+- `build` -- run build (new `buildCommand` added to project detection)
+- `verify` -- run the full quality gate (format, lint, test, build) with a
+  pass/fail summary
+- `version` -- report the current LCCST version
+
+### SKILL.md Subcommands
+
+SKILL.md now documents `/tooling`, `/lint`, `/format`, `/test`, `/build`,
+`/verify`, and `/version`, each mapping 1:1 to an MCP tool. The Tooling
+Ladder was re-ordered so the project utility layer (Makefile, `scripts/`,
+package scripts) sits above LSP/Tree-sitter and ad-hoc `grep` pipelines.
+
+### MCP Server Activation Rules
+
+The main `lccst` MCP server is registered in `opencode.jsonc` but **disabled
+by default** (`enabled: false`). It is activated by flipping the flag or
+toggling per-prompt in the host. Inside benchmark playgrounds
+(`playground/{agent-model}/`) the main server is always disabled -- the
+generated `opencode.jsonc` now explicitly sets `lccst.enabled: false` -- so
+runs stay isolated from protocol tooling and only `lccst-telemetry` is active.
+
 ## Breaking Changes
 
 None. All changes are additive, corrective, or internal.

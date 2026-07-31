@@ -7,5 +7,6 @@ export const payload = {
 export const expectedResponse = (response: any): boolean => {
   if (response.id !== 5 || !response.result?.tools) return false;
   const names = response.result.tools.map((t: any) => t.name);
-  return names.includes("init") && names.includes("audit") && names.includes("swarm");
+  const required = ["init", "audit", "swarm", "tooling", "lint", "format", "test", "build", "verify", "version"];
+  return required.every(name => names.includes(name));
 };

@@ -4,8 +4,26 @@ export interface ProjectInfo {
     testCommand: string[];
     formatCommand?: string[];
     lintCommand?: string[];
+    buildCommand?: string[];
 }
 export declare function detectProject(root: string): ProjectInfo;
+export interface ToolingReport {
+    makeTargets: string[];
+    packageScripts: Record<string, string>;
+    shellScripts: string[];
+}
+export declare function listMakeTargets(root: string): string[];
+export declare function listPackageScripts(root: string): Record<string, string>;
+export declare function listShellScripts(root: string): string[];
+export declare function discoverTooling(root: string): ToolingReport;
+export type ProjectStep = "test" | "lint" | "format" | "build";
+export declare function resolveCommand(root: string, kind: ProjectStep): string[] | null;
+export interface RunResult {
+    command: string[];
+    output: string;
+    code: number;
+}
+export declare function runCommand(command: string[], cwd: string): RunResult;
 export declare function detectTool(name: string): boolean;
 export interface EnvReport {
     project: ProjectInfo;

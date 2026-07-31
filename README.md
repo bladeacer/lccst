@@ -439,10 +439,17 @@ server connection arrays (such as `claude_desktop_config.json`):
 > actual path to `dist/index.js` on your system. If you downloaded from
 > GitHub Releases (Option A), point it to the downloaded file location.
 
-The MCP server exposes three tools for programmatic use:
+The MCP server exposes ten tools for programmatic use:
 * **`init`** -- Map project conventions and verify environment
 * **`audit`** -- Scan workspace diffs and generate commit plan
 * **`swarm`** -- Execute the full discovery-cluster-test-commit loop
+* **`tooling`** -- Inventory Makefile targets, `scripts/` helpers, and package scripts
+* **`lint`** -- Run the project lint command (Makefile target first, manifest fallback)
+* **`format`** -- Run the project format command
+* **`test`** -- Run the project test command
+* **`build`** -- Run the project build command
+* **`verify`** -- Run the full quality gate (format, lint, test, build)
+* **`version`** -- Report the current LCCST version
 
 #### OpenCode Setup
 
@@ -466,7 +473,11 @@ Add the following to your `opencode.jsonc`:
 }
 ```
 
-Replace the path with your actual `dist/index.js` location.
+Replace the path with your actual `dist/index.js` location. The server is
+disabled by default (`enabled: false`); flip it to `true` to keep it active
+for a session, or toggle it per-prompt in your host. Inside benchmark
+playground workspaces the main server stays disabled so runs remain
+isolated from protocol tooling.
 
 ##### Referencing as a Skill
 
