@@ -8,12 +8,12 @@
     // stay disabled there to keep benchmark runs isolated.
     "lccst": {
       "type": "local",
-      "command": ["node", "${workspaceFolder}/dist/index.js"],
+      "command": ["node", "dist/index.js"],
       "enabled": false
     },
     "lccst-telemetry": {
       "type": "local",
-      "command": ["node", "${workspaceFolder}/playground/benchmarks/mcp-telemetry/build/index.js"],
+      "command": ["node", "playground/benchmarks/mcp-telemetry/build/index.js"],
       "enabled": true
     }
   }

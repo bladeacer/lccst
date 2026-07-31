@@ -177,3 +177,35 @@ tests on every module). The skill file was rebalanced toward minimalism:
 
 Test verification remains a hard gate; the change targets redundant
 boilerplate, not test coverage.
+
+## Post-Release Correction (MCP Activation & Lean Skill)
+
+Date: _2026-07-31_
+
+### MCP Server Activation Fix
+
+Enabling the `lccst` MCP server via the opencode host failed at startup with
+`Connection closed`. Root cause: `opencode.jsonc` pointed the `command` array
+at the shell-style `${workspaceFolder}/dist/index.js` placeholder, but
+opencode spawns MCP `command` arrays directly (no shell) and only
+interpolates `{env:VAR}` / `{file:path}`. Node received the literal
+placeholder, could not resolve the module, and exited before the handshake.
+Both `lccst` and `lccst-telemetry` now use paths relative to the workspace
+cwd (`dist/index.js`,
+`playground/benchmarks/mcp-telemetry/build/index.js`). Verified with
+`opencode mcp list`: both servers report connected when enabled.
+
+### Lean Skill File
+
+Trimmed verbosity in `SKILL.md` to pull the 3.2.0 token footprint back down
+to 3.1.0 levels without sacrificing safety:
+
+- Defensive Engineering rewritten as a single compact directive list.
+- Manifest discovery and tooling selection collapsed into a `manifest_map`
+  block; the Tooling Ladder order is preserved.
+- Redundant Execution Invariants consolidated into one Invariants list.
+- Added explicit token-economy output caps for generated code.
+
+Token count dropped from ~2,769 to ~1,512 (-45%), matching the v3.1.0
+footprint (~1,523). All slash-command semantics, deliverable tiers, MCP
+mappings, and guardrails are preserved.
