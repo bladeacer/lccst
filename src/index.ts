@@ -312,7 +312,7 @@ export function clusterHunks(lines: string[]): Cluster[] {
 // --- MCP Server -----------------------------------------------------
 const server = new McpServer({
   name: "lccst-locust",
-  version: "3.2.0",
+  version: "3.3.0",
 });
 
 // Prompt: load SKILL.md into context

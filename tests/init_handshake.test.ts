@@ -5,7 +5,7 @@ export const payload = {
   params: {
     protocolVersion: "2024-11-05",
     capabilities: {},
-    clientInfo: { name: "lccst-test-harness", version: "3.2.0" },
+    clientInfo: { name: "lccst-test-harness", version: "3.3.0" },
   },
 };
 
@@ -13,7 +13,7 @@ export const expectedResponse = (response: any): boolean => {
   return (
     response.id === 1 &&
     response.result?.serverInfo?.name === "lccst-locust" &&
-    response.result?.serverInfo?.version === "3.2.0" &&
+    response.result?.serverInfo?.version === "3.3.0" &&
     response.result?.capabilities?.prompts !== undefined &&
     response.result?.capabilities?.tools !== undefined
   );

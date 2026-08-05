@@ -32,7 +32,7 @@ const filesToUpdate = [
   },
   {
     filePath: path.join(rootDir, "tests/init_handshake.test.ts"),
-    regex: /version(?:\s*:\s*|\s*===?\s*)"\d+\.\d+\.\d+"/,
+    regex: /version(?:\s*:\s*|\s*===?\s*)"\d+\.\d+\.\d+"/g,
     replacement: (match) => match.replace(/\d+\.\d+\.\d+/, targetVersion),
   },
   {

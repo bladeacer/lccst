@@ -87,11 +87,11 @@ strategic capital -- invested into the Tooling Ladder to eliminate the
 exponentially higher downstream costs of debugging broken production builds,
 untangling messy Git histories, or fixing silent runtime type failures.
 
-> **v3.2 adds adaptive scaffolding and correctness hardening.** The `mode`
-> parameter defaults to `lean` (scaffold only what the module's domain
-> justifies); `strict` is opt-in for high-stakes routes. Proportionality is a
-> first-class principle: do not over-implement. Changelogs are now tracked
-> under `docs/changelogs/`. See the [changelog index](docs/changelogs/index.md).
+> **v3.3 restores strict-by-default guardrails.** The `mode` parameter now
+> defaults to `strict` (defensive guardrails enforced for network/data
+> modules); `lean` omits rate limiting and caching for pure logic/UI helpers
+> only. Changelogs are tracked under `docs/changelogs/`. See the
+> [changelog index](docs/changelogs/index.md).
 
 ## Core Philosophy
 
