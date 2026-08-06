@@ -2,13 +2,33 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 
 // --- Runtime context ------------------------------------------------
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const ROOT = path.resolve(__dirname, "..");
+const ROOT = path.resolve(__dirname, ".."); // lccst install root (SKILL.md, package.json)
+const WORKSPACE = process.env.LCCST_WORKSPACE || process.cwd(); // client project root
+
+// --- Target path resolution -----------------------------------------
+// Tools default to the client workspace root (the cwd of the MCP server,
+// which hosts spawn as the project being edited), not the lccst install dir.
+export function resolveTarget(raw: string | undefined, base?: string): string | null {
+  const b = base ?? WORKSPACE;
+  let p = (raw ?? "").trim();
+  if (!p || p === ".") return fs.existsSync(b) ? b : null;
+  if (p === "~") p = os.homedir();
+  else if (p.startsWith("~/")) p = path.join(os.homedir(), p.slice(2));
+  const abs = path.isAbsolute(p) ? path.normalize(p) : path.resolve(b, p);
+  return fs.existsSync(abs) ? abs : null;
+}
+
+function targetError(raw?: string): string {
+  const shown = raw && raw.trim() ? raw.trim() : ".";
+  return `Error: path "${shown}" does not exist. Workspace root: ${WORKSPACE}`;
+}
 
 // --- Tooling Ladder: project detection -------------------------------
 export interface ProjectInfo {
@@ -324,7 +344,7 @@ server.registerPrompt("swarm", {
     return {
       messages: [{
         role: "user",
-        content: { type: "text", text: `Execute the following system skill framework precisely:\n\n${skillContent}` },
+        content: { type: "text", text: `Active workspace root: ${WORKSPACE}\n\nExecute the following system skill framework precisely:\n\n${skillContent}` },
       }],
     };
   } catch (error: any) {
@@ -340,11 +360,11 @@ server.registerPrompt("swarm", {
 // Tool: /init
 server.registerTool("init", {
   description: "Map project conventions and verify local environment state.",
-  inputSchema: { path: z.string().optional().default(".").describe("Relative target path to scan.") },
+  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
 }, async (args) => {
-  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
-  if (!fs.existsSync(target)) {
-    return { content: [{ type: "text", text: `Error: path "${target}" does not exist.` }] };
+  const target = resolveTarget(args?.path);
+  if (!target) {
+    return { content: [{ type: "text", text: targetError(args?.path) }] };
   }
 
   const env = scanEnvironment(target);
@@ -353,6 +373,7 @@ server.registerTool("init", {
   logEvent(target, { event: "init", project: env.project.type, manifest: env.project.manifest });
 
   const lines: string[] = [
+    `Target: ${target}`,
     `Project type: ${env.project.type}`,
     `Manifest: ${env.project.manifest || "(none detected)"}`,
     `Tools available: ${Object.entries(env.tools).filter(([, v]) => v).map(([k]) => k).join(", ") || "none"}`,
@@ -368,22 +389,27 @@ server.registerTool("init", {
 // Tool: /audit
 server.registerTool("audit", {
   description: "Scan workspace diffs and present an ultra-lean commit plan.",
-  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
-}, async () => {
-  const state = new SwarmState(ROOT);
+  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
+}, async (args) => {
+  const target = resolveTarget(args?.path);
+  if (!target) {
+    return { content: [{ type: "text", text: targetError(args?.path) }] };
+  }
+
+  const state = new SwarmState(target);
   state.write({ phase: "audit" });
 
   let staged = "";
   let unstaged = "";
-  logEvent(ROOT, { event: "audit_start" });
+  logEvent(target, { event: "audit_start" });
   try {
-    staged = execSync("git diff --cached --stat", { cwd: ROOT, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
-    unstaged = execSync("git diff --stat", { cwd: ROOT, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+    staged = execSync("git diff --cached --stat", { cwd: target, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
+    unstaged = execSync("git diff --stat", { cwd: target, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
   } catch {
-    return { content: [{ type: "text", text: "Not a git repository or no git available." }] };
+    return { content: [{ type: "text", text: `${target} is not a git repository, or git is unavailable.` }] };
   }
 
-  const plan: string[] = [];
+  const plan: string[] = [`Audit plan for ${target}`, ""];
   let totalFiles = 0;
 
   if (staged) {
@@ -402,7 +428,7 @@ server.registerTool("audit", {
     const lines = unstaged.split("\n").map(l => l.trim()).filter(Boolean);
     const clusters = clusterHunks(lines);
     totalFiles += lines.length;
-    if (plan.length > 0) plan.push("");
+    if (plan.length > 1) plan.push("");
     plan.push(`Unstaged changes: ${lines.length} file(s) (not yet staged)`, "");
     clusters.forEach((c, i) => {
       plan.push(`${i + 1}. ${c.scope}: ${c.files.join(", ")}`);
@@ -411,7 +437,7 @@ server.registerTool("audit", {
   }
 
   if (!staged && !unstaged) {
-    return { content: [{ type: "text", text: "Working tree clean -- no changes to audit." }] };
+    return { content: [{ type: "text", text: `Working tree clean -- no changes to audit at ${target}.` }] };
   }
 
   return { content: [{ type: "text", text: plan.join("\n") }] };
@@ -421,11 +447,14 @@ server.registerTool("audit", {
 server.registerTool("swarm", {
   description: "Transition to Active Execution: discover, cluster, test, commit.",
   inputSchema: {
-    path: z.string().optional().default(".").describe("Target path."),
+    path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root."),
     dryRun: z.boolean().optional().default(false).describe("Dry-run mode (no mutations)."),
   },
 }, async (args) => {
-  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
+  const target = resolveTarget(args?.path);
+  if (!target) {
+    return { content: [{ type: "text", text: targetError(args?.path) }] };
+  }
   const dryRun = args?.dryRun === true;
   const state = new SwarmState(target);
   state.write({ phase: "swarm" });
@@ -463,9 +492,9 @@ server.registerTool("swarm", {
 
 // --- Shared runner for project-step tools ----------------------------
 function runStepTool(kind: ProjectStep, args?: { path?: string }): { content: { type: "text"; text: string }[] } {
-  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
-  if (!fs.existsSync(target)) {
-    return { content: [{ type: "text", text: `Error: path "${target}" does not exist.` }] };
+  const target = resolveTarget(args?.path);
+  if (!target) {
+    return { content: [{ type: "text", text: targetError(args?.path) }] };
   }
   const cmd = resolveCommand(target, kind);
   if (!cmd) {
@@ -484,11 +513,11 @@ function runStepTool(kind: ProjectStep, args?: { path?: string }): { content: { 
 // Tool: /tooling
 server.registerTool("tooling", {
   description: "Inventory native tooling: Makefile targets, package.json scripts, and scripts/ helpers.",
-  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
 }, async (args) => {
-  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
-  if (!fs.existsSync(target)) {
-    return { content: [{ type: "text", text: `Error: path "${target}" does not exist.` }] };
+  const target = resolveTarget(args?.path);
+  if (!target) {
+    return { content: [{ type: "text", text: targetError(args?.path) }] };
   }
   const t = discoverTooling(target);
   const lines: string[] = [`Tooling for ${target}`, ""];
@@ -501,33 +530,36 @@ server.registerTool("tooling", {
 // Tool: /lint
 server.registerTool("lint", {
   description: "Run the project lint command (Makefile `lint` target first, then manifest lint).",
-  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
 }, async (args) => runStepTool("lint", args));
 
 // Tool: /format
 server.registerTool("format", {
   description: "Run the project format command (Makefile `format` target first, then manifest format).",
-  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
 }, async (args) => runStepTool("format", args));
 
 // Tool: /test
 server.registerTool("test", {
   description: "Run the project test command (Makefile `test` target first, then manifest test).",
-  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
 }, async (args) => runStepTool("test", args));
 
 // Tool: /build
 server.registerTool("build", {
   description: "Run the project build command (Makefile `build` target first, then manifest build).",
-  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
 }, async (args) => runStepTool("build", args));
 
 // Tool: /verify
 server.registerTool("verify", {
   description: "Run the full quality gate: format, lint, test, build. Skips steps with no detected command.",
-  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
 }, async (args) => {
-  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
+  const target = resolveTarget(args?.path);
+  if (!target) {
+    return { content: [{ type: "text", text: targetError(args?.path) }] };
+  }
   const steps: ProjectStep[] = ["format", "lint", "test", "build"];
   const report: string[] = [`Quality gate for ${target}`, ""];
   let failed = 0;
@@ -549,11 +581,11 @@ server.registerTool("verify", {
 // Tool: /compliance
 server.registerTool("compliance", {
   description: "Audit deliverable tiers: must-haves (unit tests, docstrings) and nice-to-haves (API docs, changelog).",
-  inputSchema: { path: z.string().optional().default(".").describe("Relative target path.") },
+  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
 }, async (args) => {
-  const target = args?.path ? path.resolve(ROOT, String(args.path)) : ROOT;
-  if (!fs.existsSync(target)) {
-    return { content: [{ type: "text", text: `Error: path "${target}" does not exist.` }] };
+  const target = resolveTarget(args?.path);
+  if (!target) {
+    return { content: [{ type: "text", text: targetError(args?.path) }] };
   }
   const report = auditCompliance(target);
   logEvent(target, { event: "compliance_audit", report });

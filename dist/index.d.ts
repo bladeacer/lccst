@@ -1,3 +1,4 @@
+export declare function resolveTarget(raw: string | undefined, base?: string): string | null;
 export interface ProjectInfo {
     type: "python" | "node" | "go" | "rust" | "unknown";
     manifest: string;

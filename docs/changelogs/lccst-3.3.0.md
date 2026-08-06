@@ -61,3 +61,55 @@ guardrails).
 ## Version
 
 Bumped from 3.2.0 to 3.3.0.
+
+## Post-Release Correction
+
+Date: _2026-08-06_
+
+### Workspace-Bound Path Resolution
+
+The MCP server resolved every `path` argument against the LCCST install
+directory (`ROOT`), so running `/audit`, `/tooling`, `/init`, or any step
+tool from another project with `.` scanned the LCCST repository instead of
+the client's project. Targets now resolve against the workspace root -- the
+server's `process.cwd()`, which hosts spawn as the project being edited --
+falling back to an optional `LCCST_WORKSPACE` environment variable override.
+`ROOT` is retained only for LCCST's own files (`SKILL.md`, `package.json`).
+
+### /audit Honors Its `path` Argument
+
+The `/audit` handler previously ignored its `path` schema entirely
+(`async () =>`) and always ran `git diff` against the LCCST repo. It now
+accepts the argument, resolves it through `resolveTarget`, and executes git
+against the target directory, so a subdirectory of a repo is audited in
+repo context.
+
+## Consistency
+
+### Unified Path Resolution & Errors
+
+All nine path-taking tools share a single `resolveTarget` helper with
+consistent semantics: default `.` / empty maps to the workspace root,
+absolute paths are preserved, `~` expands to the home directory, and
+relative paths resolve under the workspace root. Non-existent targets return
+a uniform `Error: path "<x>" does not exist. Workspace root: <y>` message.
+`path` schema descriptions now state the workspace-relative/absolute
+semantics.
+
+### Observable Targets
+
+`/init` and `/audit` report the resolved absolute target at the top of their
+output, and the `/swarm` prompt preamble now carries `Active workspace root:
+<path>` so the model operates on the client project rather than guessing.
+
+## New Features
+
+### LCCST_WORKSPACE Override
+
+Hosts that do not spawn MCP servers with the project as cwd can pin the
+workspace root via the `LCCST_WORKSPACE` environment variable.
+
+## Tests
+
+Eight unit tests added for `resolveTarget` (default, dot, relative, absolute,
+non-existent, whitespace); suite now at 69 unit tests + 9 integration tests.

@@ -1,4 +1,4 @@
-import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand, auditCompliance, clusterHunks, runCommand, detectTool, logEvent } from "../src/index.js";
+import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand, auditCompliance, clusterHunks, runCommand, detectTool, logEvent, resolveTarget } from "../src/index.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -238,6 +238,23 @@ withTempDir((dir) => {
 
   state.clear();
   assert(!fs.existsSync(path.join(dir, ".lccst", "state.json")), "clear removes file");
+});
+
+// -- Path resolution ------------------------------------------------
+withTempDir((dir) => {
+  fs.mkdirSync(path.join(dir, "src"));
+  assert(resolveTarget(undefined, dir) === dir, "default resolves to base");
+  assert(resolveTarget(".", dir) === dir, "dot resolves to base");
+  assert(resolveTarget("src", dir) === path.join(dir, "src"), "relative resolves under base");
+  assert(resolveTarget(path.join(dir, "src"), dir) === path.join(dir, "src"), "absolute path preserved");
+  assert(resolveTarget("./src", dir) === path.join(dir, "src"), "explicit relative dot prefix");
+  assert(resolveTarget("missing", dir) === null, "non-existent path -> null");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "pyproject.toml"), "");
+  assert(resolveTarget("", dir) === dir, "empty string defaults to base");
+  assert(resolveTarget("  ", dir) === dir, "whitespace defaults to base");
 });
 
 // -- Summary --------------------------------------------------------

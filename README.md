@@ -454,6 +454,15 @@ The MCP server exposes eleven tools for programmatic use:
 * **`compliance`** -- Audit deliverable tiers (must-haves: unit tests, docstrings; nice-to-haves: API docs, changelog)
 * **`version`** -- Report the current LCCST version
 
+Every path-taking tool (`init`, `audit`, `swarm`, `tooling`, `lint`,
+`format`, `test`, `build`, `verify`, `compliance`) accepts a `path` argument.
+The default `.` (and an empty path) resolves to the **client project's cwd** --
+the directory the host spawned the MCP server in -- not the LCCST install
+directory. Absolute paths are preserved, `~` expands to your home directory,
+and relative paths resolve under the workspace root. To override the
+workspace root (e.g. hosts that do not spawn MCP servers with the project as
+cwd), set the `LCCST_WORKSPACE` environment variable.
+
 #### OpenCode Setup
 
 OpenCode uses an `opencode.jsonc` file at the project root for MCP server
@@ -493,7 +502,7 @@ To invoke Locust within a conversation, use the `/lccst` command or reference
 
 ```bash
 pnpm run build      # Bundle deps + source -> dist/index.js
-pnpm run test       # Run all tests (61 unit + 9 integration)
+pnpm run test       # Run all tests (69 unit + 9 integration)
 pnpm run test:swarm # Swarm library unit tests only
 pnpm run test:mcp   # MCP server integration tests only
 pnpm run bump 3.0.1 # Bump version across all files
