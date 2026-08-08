@@ -191,56 +191,57 @@ encryption patterns).
 > Skill-guided implementation used **+336%** more FCT and **-4%** more ART
 > compared to plain implementation across the workspace suite.
 
-#### opencode-hy3-free: skill version v3.1.0
+#### opencode-deepseek-v4-flash-free: skill version v3.1.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `hy3-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 620 | 2,214 | 3,680 | 8,250 |
-| **opencode** | `hy3-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 490 | 1,177 | 9,950 | 14,700 |
-| **opencode** | `hy3-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 32/100 | **100/100** | PASSED | 820 | 3,601 | 17,400 | 24,100 |
-| **Summary** | | | | **Workspace Totals / Avg** | **29/100** | **100/100** | **3/3 Passed** | **1,930** | **6,992** | **31,030** | **47,050** |
+| **opencode** | `deepseek-v4-flash-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 48/100 | **100/100** | PASSED | 590 | 2,284 | 5,300 | 4,700 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 462 | 1,614 | 1,800 | 4,000 |
+| **opencode** | `deepseek-v4-flash-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 1,149 | 4,264 | 2,300 | 5,300 |
+| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **2,201** | **8,162** | **9,400** | **14,000** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
 > tokens.
 > **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
 > tokens.
-> Skill-guided implementation used **+262%** more FCT and **+52%** more ART
+> Skill-guided implementation used **+271%** more FCT and **+49%** more ART
 > compared to plain implementation across the workspace suite.
 
-#### opencode-mimo-v2.5-free: skill version v3.1.0
+#### opencode-deepseek-v4-flash-07-31-free: skill version v3.3.0
 
 | Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `mimo-v2.5-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **84/100** | PASSED | 542 | 2,254 | 5,150 | 7,000 |
-| **opencode** | `mimo-v2.5-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 459 | 902 | 3,450 | 8,000 |
-| **opencode** | `mimo-v2.5-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 876 | 3,085 | 3,950 | 9,000 |
-| **Summary** | | | | **Workspace Totals / Avg** | **34/100** | **95/100** | **3/3 Passed** | **1,877** | **6,241** | **12,550** | **24,000** |
+| **opencode** | `deepseek-v4-flash-07-31-free` | `v3.3.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 617 | 3,337 | 98,400 | 34,000 |
+| **opencode** | `deepseek-v4-flash-07-31-free` | `v3.3.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 445 | 1,336 | 31,900 | 35,700 |
+| **opencode** | `deepseek-v4-flash-07-31-free` | `v3.3.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 795 | 4,436 | 33,300 | 38,200 |
+| **Summary** | | | | **Workspace Totals / Avg** | **34/100** | **100/100** | **3/3 Passed** | **1,857** | **9,109** | **163,600** | **107,900** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
 > tokens.
 > **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
 > tokens.
-> Skill-guided implementation used **+232%** more FCT and **+91%** more ART
+> Skill-guided implementation used **+391%** more FCT and **-34%** more ART
 > compared to plain implementation across the workspace suite.
 
 
 ### Benchmark Summary
 
-| Metric | opencode-ling-3.0-flash-free | opencode-hy3-free | opencode-mimo-v2.5-free |
+| Metric | opencode-ling-3.0-flash-free | opencode-deepseek-v4-flash-free | opencode-deepseek-v4-flash-07-31-free |
 | --- | --- | --- | --- |
-| Plain score | 40/100 | 29/100 | 34/100 |
-| Guided score | 100/100 | 100/100 | 95/100 |
-| Plain FCT | 1,768 | 1,930 | 1,877 |
-| Guided FCT | 7,708 | 6,992 | 6,241 |
-| FCT overhead | +336% | +262% | +232% |
-| Plain ART | 5,450 | 31,030 | 12,550 |
-| Guided ART | 5,250 | 47,050 | 24,000 |
-| ART overhead | -4% | +52% | +91% |
+| Plain score | 40/100 | 40/100 | 34/100 |
+| Guided score | 100/100 | 100/100 | 100/100 |
+| Plain FCT | 1,768 | 2,201 | 1,857 |
+| Guided FCT | 7,708 | 8,162 | 9,109 |
+| FCT overhead | +336% | +271% | +391% |
+| Plain ART | 5,450 | 9,400 | 163,600 |
+| Guided ART | 5,250 | 14,000 | 107,900 |
+| ART overhead | -4% | +49% | -34% |
 | Tests passed | 3/3 | 3/3 | 3/3 |
 
 #### Token Efficiency
 
-All evaluated models (`opencode-ling-3.0-flash-free` and `opencode-hy3-free`)
+All evaluated models (`opencode-ling-3.0-flash-free`,
+`opencode-deepseek-v4-flash-free`, and `opencode-deepseek-v4-flash-07-31-free`)
 achieved a perfect guided score of 100/100 under the protocol. However, their
 resource efficiency varied significantly:
 
@@ -248,12 +249,12 @@ resource efficiency varied significantly:
   (40/100) and reached perfection with +336% FCT and -4% ART overhead --
   representing a genuine quality investment rather than recovery from failure.
 
-* **opencode-hy3-free** was the most token-efficient at +262% FCT with +52% ART
-  overhead, though its lower plain baseline (29/100) means the overhead figure
-  partly reflects additional rounds of correction.
+* **opencode-deepseek-v4-flash-free** was the most token-efficient at +271% FCT
+  with +49% ART overhead, though its lower plain baseline (40/100) means the
+  overhead figure partly reflects additional rounds of correction.
 
-* **opencode-mimo-v2.5-free** was the most token-efficient overall (+232% FCT,
-  +91% ART overhead) but scored 95/100 (weakest: python-http-server at 84/100).
+* **opencode-deepseek-v4-flash-07-31-free** also delivered a perfect guided
+  score, with +391% FCT and -34% ART overhead.
 
 Across all runners, `go-login-crud` remained the most resource-intensive
 subproject.
@@ -268,8 +269,8 @@ plain FCT, 7,708 guided FCT, 5,450 plain ART, and 5,250 guided ART.
 | Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
 | ---: | :--- | :---: | :---: | :---: | :---: | :--- |
 | 1 | opencode-ling-3.0-flash-free | 40/100 | 100/100 | +336% | -4% | Best overall |
-| 2 | opencode-hy3-free | 29/100 | 100/100 | +262% | +52% | Strong contender |
-| 3 | opencode-mimo-v2.5-free | 34/100 | 95/100 | +232% | +91% | Promising |
+| 2 | opencode-deepseek-v4-flash-free | 40/100 | 100/100 | +271% | +49% | Strong contender |
+| 3 | opencode-deepseek-v4-flash-07-31-free | 34/100 | 100/100 | +391% | -34% | Strong contender |
 
 <!-- BENCHMARK_RESULTS_END -->
 
