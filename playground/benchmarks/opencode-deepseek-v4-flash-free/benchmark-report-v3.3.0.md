@@ -1,6 +1,6 @@
 # LCCST Playground Benchmark Report
 
-**Agent Configuration:** opencode-deepseek-v4-flash-07-31-free
+**Agent Configuration:** opencode-deepseek-v4-flash-free
 **Active Ecosystem MCPs:** `lccst-telemetry`
 **Skill Protocol Engine:** v3.3.0
 **Python Runtime:** 3.13.11 | **pnpm:** 11.3.0 | **Go:** 1.26.5-X:nodwarf5

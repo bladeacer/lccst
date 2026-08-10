@@ -2,7 +2,7 @@
 
 VERSION      ?= $(shell node -p "require('./package.json').version")
 AGENT_NAME   ?= opencode
-MODEL_NAME   ?= deepseek-v4-flash-07-31-free
+MODEL_NAME   ?= deepseek-v4-flash-free
 AGENT_MODEL  := $(AGENT_NAME)-$(MODEL_NAME)
 BENCH_DIR    := playground/benchmarks
 CONFIG_FILE  ?=
