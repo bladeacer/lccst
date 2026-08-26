@@ -3,7 +3,7 @@ name: lccst
 license: MIT
 metadata:
   author: bladeacer
-  version: "3.3.0"
+  version: "3.4.0"
 description: "Deterministic workspace gatekeeper that decomposes complex codebase changes into isolated, test-verified, atomic Git commits."
 arguments:
   type: object
