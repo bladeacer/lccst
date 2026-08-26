@@ -15,32 +15,26 @@ Added benchmark results for three agent-model combinations:
 
 ### Benchmark Report Automation
 
-`scripts/update_readme_benchmarks.py` parses benchmark reports from
-`playground/benchmarks/` and regenerates the README comparison tables with
-composite scoring.
+`scripts/update_readme_benchmarks.py` parses benchmark reports from `playground/benchmarks/` and regenerates the README comparison tables with composite scoring.
 
 ### Adaptive README Benchmarks
 
-Automated top-N selection of best-performing agent models with token
-efficiency prose generation.
+Automated top-N selection of best-performing agent models with token efficiency prose generation.
 
 ## Changes
 
 ### Skill File Trimming
 
-Reduced SKILL.md token count by removing passive-voice prose and
-consolidating redundant guardrail descriptions.
+Reduced SKILL.md token count by removing passive-voice prose and consolidating redundant guardrail descriptions.
 
 ### Hardcoded Version Fix
 
-Test file `tests/init_handshake.test.ts` version string is now managed by
-the bump-version utility instead of hardcoded.
+Test file `tests/init_handshake.test.ts` version string is now managed by the bump-version utility instead of hardcoded.
 
 ### Benchmark Harness Improvements
 
 - Telemetry MCP server for runtime token tracking
-- Composite scoring with guided score, plain baseline, pass rate, and token
-  overhead components
+- Composite scoring with guided score, plain baseline, pass rate, and token overhead components
 - Project-aware scoring profiles per subproject
 
 ## Breaking Changes

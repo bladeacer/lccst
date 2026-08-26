@@ -1,42 +1,24 @@
 # LCCST (Locust)
 
-![Logo poster](./logo-poster.png)
+A deterministic workspace gatekeeper. It enforces architectural cohesion and SOLID invariants through a lean execution protocol. Decomposes codebase changes into isolated, test-verified, atomic Git commits.
 
-A deterministic workspace gatekeeper that enforces architectural cohesion and
-SOLID invariants through a lean execution protocol. Decomposes codebase changes
-into isolated, test-verified, atomic Git commits with zero meta-cognition tax.
-
-Locust operates as a structural integrity guardian for codebase health, test
-coverage, and architectural boundaries -- built to put your
-preferences first.
+Locust acts as a structural integrity guardian for codebase health, test coverage, and architectural boundaries.
 
 > "Swarming your messy diffs before they reach production."
 
-The execution model is a flat 3-step path: wipe stale artifacts, seed via
-`/init`, then generate application files directly. No multi-phase loops or
-phase-checking pauses. Architectural guardrails (anti-god-object, strict
-typing, defensive engineering) and ecosystem discovery (Tooling Ladder,
-manifest scanning) remain active during code generation to enforce quality.
+The execution model is a flat 3-step path: wipe stale artefacts, seed via `/init`, then generate application files directly. Architectural guardrails and ecosystem discovery remain active during code generation.
 
 ## Runtime Modes
 
-Locust runs in two modes depending on your environment:
-
 ### Bare Skill Mode
 
-The protocol specification (`SKILL.md`) is loaded directly into the LLM's
-context window. The model follows the rules manually -- detecting languages,
-running commands, and committing changes. No MCP server required.
+The protocol specification (`SKILL.md`) loads directly into the LLM context window. The model follows the rules manually. No MCP server required.
 
 ### MCP Server Mode
 
-The MCP server at `src/index.ts` (built to `dist/index.js`) exposes the full
-protocol via tools and prompts -- all logic is self-contained in a single
-distributable file. AI agents can call the `/init`, `/audit`, `/swarm`,
-`/tooling`, `/lint`, `/format`, `/test`, `/build`, `/verify`,
-`/compliance`, and `/version` tools programmatically.
+The MCP server at `src/index.ts` (built to `dist/index.js`) exposes the full protocol via tools. AI agents call `/init`, `/audit`, `/swarm`, `/tooling`, `/lint`, `/format`, `/test`, `/build`, `/verify`, `/compliance`, and `/version` programmatically.
 
-The server is self-contained in a single file; see `src/index.ts` for implementation details.
+The server is self-contained in a single file. See `src/index.ts` for implementation details.
 
 ```bash
 # Go Example
@@ -53,274 +35,17 @@ The server is self-contained in a single file; see `src/index.ts` for implementa
 /init -> Detects CMakeLists.txt -> swarm runs `cmake --build .`
 ```
 
-## Operational Persona: The Virtual Staff & Release Engineer
-
-Within your workspace ecosystem, Locust acts as a hybrid **Staff Architect**
-and hyper-vigilant **Release Engineer**. It does not just facilitate changes;
-it ensures every modification complies with long-term engineering health. Like
-a disciplined peer, it actively prevents the creation of anti-patterns,
-automates versioning overhead, and refuses to stage or commit code that drops
-below strict quality thresholds.
-
-## Ecosystem Placement: The Quality Counter-Weight
-
-While the modern AI engineering space is heavily saturated with tools focusing
-strictly on compression and cost-reduction, Locust provides the missing
-philosophical balance. It is built to run standalone or alongside token-cutters.
-
-| Tool Layer | Focus | Tactical Mechanism |
-|---|---|---|
-| **[Ponytail](https://github.com/DietrichGebert/ponytail)** | Code Minimisation | Prevents agent boilerplate bloat. |
-| **[Headroom](https://github.com/chopratejas/headroom)** | History Reduction | Trims context logs and chat data. |
-| **[Caveman](https://github.com/JuliusBrussee/caveman)** | Output Compression | Strips syntax token overhead. |
-| **Locust (LCCST)** | **Payload Integrity** | **Enforces typing, lints, and tests.** |
-
-### The Token Investment Philosophy
-
-The project name itself embodies this duality: **LCCST** stands as a direct pun
-on **Low Cost** asset management while algorithmically executing **Locality
-Clustering** over your workspace tree.
-
-Tools like Ponytail stop the AI from writing *too much* code, but they cannot
-stop it from breaking your architectural boundaries. Locust treats tokens as
-strategic capital -- invested into the Tooling Ladder to eliminate the
-exponentially higher downstream costs of debugging broken production builds,
-untangling messy Git histories, or fixing silent runtime type failures.
-
-> **v3.3 restores strict-by-default guardrails.** The `mode` parameter now
-> defaults to `strict` (defensive guardrails enforced for network/data
-> modules); `lean` omits rate limiting and caching for pure logic/UI helpers
-> only. Changelogs are tracked under `docs/changelogs/`. See the
-> [changelog index](docs/changelogs/index.md).
-
-## Core Philosophy
-
-1. **UNIX philosophy over framework**: A simple single-file SKILL.md and
-   index.js Model Context Protocol (MCP), nothing more required.
-   Over-engineering is bad for auditing, adds technical debt and
-   needless complexity for nothing.
-
-2. **User Conventions First:** The workspace's existing patterns, manifest-declared commands, and your explicit preferred design patterns always take priority when defining application payloads. However, the core safety gates of the pipeline -- including atomic hunk isolation, the Tooling Ladder, and strict test-pass verification -- are non-negotiable workspace invariants designed to prevent structural regressions.
-
-3. **Streamlined Initialisation:** Use the `/init` command on startup to kick
-   off immediate, automated codebase scans, helping you audit repository
-   health and catch architectural documentation gaps before any changes begin.
-
-4. **Interactive Engagement Loop:** No abrupt dead ends. The system maintains
-   continuous, collaborative dialogue -- prompting you for confirmations,
-   staging approvals, or clarifying implementation paths.
-
-5. **Proactive Semantic Discovery & Testing:** Leverages Language Server
-   Protocol (LSP) data, Tree-sitter AST queries, and native testing frameworks
-   to dynamically trace downstream side-effects.
-
-6. **Ecosystem-Native Architecture:** Enforces strict type-safety boundaries,
-   modern project layout orchestrators, and single-responsibility interfaces
-   (while dynamically allowing cohesive multi-method structures like unified
-   HTTP handlers).
-
-7. **Defensive Engineering & Compliance:** Applies validation boundaries and
-   security controls proportionally -- only where the domain justifies them.
-   Filters token overhead, audits package licences, and automatically adapts
-   to both monolithic and modular/versioned changelog layouts using SemVer
-   rules.
-
-8. **Quality over Velocity:** Prioritise structural integrity and complete
-   test verification over raw execution speed. Version 3.1.0 strips the
-   meta-cognition tax by replacing multi-phase execution loops with a flat
-   3-step path. Token discipline is enforced at the output level, not as
-   internal reasoning rules.
-
-9. **Granularity over Convenience:** Reject the temptation to bundle
-   multi-domain fixes into single execution blocks. Locust applies strict
-   **Locality Clustering** to group workspace diffs by their functional
-   domain boundaries. The overhead of creating multiple atomic commits is
-   deliberately chosen to guarantee easy code rollbacks and crystal-clear
-   repository history.
-
-10. **Proportionality over Boilerplate:** Implement the fewest lines that
-    preserve correctness, scalability, and adaptability. Scaffolding that
-    exceeds the domain's actual risk is over-engineering -- a correctness
-    defect, not a virtue.
-
----
-
-## Playground and Benchmarking
-
-See [`playground/README.md`](playground/README.md) for the benchmarking suite
-that measures token impact of skill-guided vs plain code generation across
-three reference projects (Python HTTP server, React timer, Go login CRUD).
-
-### Verification Matrix & Baseline Benchmarks
-
-The baseline metrics below were captured using our automated evaluation
-harness. The data highlights the concrete performance delta observed between
-unguided generation and structured protocol compliance.
-
-Two distinct token metrics are tracked:
-* **FCT (File-Content Tokens):** Static token footprint of final source
-  files (measured via `tiktoken` post-run).
-* **ART (Agent Runtime Tokens):** Cumulative prompt + completion tokens
-  consumed during the agent loop (captured via the `track_runtime.py`
-  proxy).
-
-> ART is captured per-subproject via the `lccst-telemetry` MCP server, giving
-> a perfect trace of agent development costs. See the
-> [methodology guide](playground/README.md) for the full breakdown.
-
-Scores are fully normalised to a 100-point scale using domain-specific
-evaluation profiles. Each subproject is graded on features relevant to its
-architectural domain (e.g., UI components are not penalised for missing
-encryption patterns).
-
-<!-- BENCHMARK_RESULTS_START -->
-
-#### opencode-ling-3.0-flash-free: skill version v3.1.0
-
-| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 528 | 2,221 | 3,900 | 1,850 |
-| **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 428 | 992 | 750 | 1,600 |
-| **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 65/100 | **100/100** | PASSED | 812 | 4,495 | 800 | 1,800 |
-| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,768** | **7,708** | **5,450** | **5,250** |
-
-> **Highest ART subproject:** `python-http-server` consumed the most guided
-> runtime tokens.
-> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
-> tokens.
-> Skill-guided implementation used **+336%** more FCT and **-4%** more ART
-> compared to plain implementation across the workspace suite.
-
-#### opencode-hy3-free: skill version v3.3.0
-
-| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `hy3-free` | `v3.3.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 566 | 1,866 | 11,000 | 5,100 |
-| **opencode** | `hy3-free` | `v3.3.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 588 | 1,027 | 2,100 | 5,500 |
-| **opencode** | `hy3-free` | `v3.3.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 886 | 3,835 | 2,600 | 6,400 |
-| **Summary** | | | | **Workspace Totals / Avg** | **34/100** | **100/100** | **3/3 Passed** | **2,040** | **6,728** | **15,700** | **17,000** |
-
-> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
-> tokens.
-> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
-> tokens.
-> Skill-guided implementation used **+230%** more FCT and **+8%** more ART
-> compared to plain implementation across the workspace suite.
-
-#### opencode-deepseek-v4-flash-free: skill version v3.3.0
-
-| Agent Runtime | LLM Engine | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **opencode** | `deepseek-v4-flash-free` | `v3.3.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 617 | 3,337 | 98,400 | 34,000 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.3.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 445 | 1,336 | 31,900 | 35,700 |
-| **opencode** | `deepseek-v4-flash-free` | `v3.3.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 795 | 4,436 | 33,300 | 38,200 |
-| **Summary** | | | | **Workspace Totals / Avg** | **34/100** | **100/100** | **3/3 Passed** | **1,857** | **9,109** | **163,600** | **107,900** |
-
-> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
-> tokens.
-> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
-> tokens.
-> Skill-guided implementation used **+391%** more FCT and **-34%** more ART
-> compared to plain implementation across the workspace suite.
-
-
-### Benchmark Summary
-
-| Metric | opencode-ling-3.0-flash-free | opencode-hy3-free | opencode-deepseek-v4-flash-free |
-| --- | --- | --- | --- |
-| Plain score | 40/100 | 34/100 | 34/100 |
-| Guided score | 100/100 | 100/100 | 100/100 |
-| Plain FCT | 1,768 | 2,040 | 1,857 |
-| Guided FCT | 7,708 | 6,728 | 9,109 |
-| FCT overhead | +336% | +230% | +391% |
-| Plain ART | 5,450 | 15,700 | 163,600 |
-| Guided ART | 5,250 | 17,000 | 107,900 |
-| ART overhead | -4% | +8% | -34% |
-| Tests passed | 3/3 | 3/3 | 3/3 |
-
-#### Token Efficiency
-
-All evaluated models (`opencode-ling-3.0-flash-free`, `opencode-hy3-free`, and
-`opencode-deepseek-v4-flash-free`) achieved a perfect guided score of 100/100
-under the protocol. However, their resource efficiency varied significantly:
-
-* **opencode-ling-3.0-flash-free** entered with the strongest plain baseline
-  (40/100) and reached perfection with +336% FCT and -4% ART overhead --
-  representing a genuine quality investment rather than recovery from failure.
-
-* **opencode-hy3-free** was the most token-efficient at +230% FCT with +8% ART
-  overhead, though its lower plain baseline (34/100) means the overhead figure
-  partly reflects additional rounds of correction.
-
-* **opencode-deepseek-v4-flash-free** also delivered a perfect guided score,
-  with +391% FCT and -34% ART overhead.
-
-Across all runners, `go-login-crud` remained the most resource-intensive
-subproject.
-
-#### Least Token Usage
-
-opencode-ling-3.0-flash-free consumed the fewest tokens overall (20,176): 1,768
-plain FCT, 7,708 guided FCT, 5,450 plain ART, and 5,250 guided ART.
-
-#### Overall Top Models
-
-| Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
-| ---: | :--- | :---: | :---: | :---: | :---: | :--- |
-| 1 | opencode-ling-3.0-flash-free | 40/100 | 100/100 | +336% | -4% | Best overall |
-| 2 | opencode-hy3-free | 34/100 | 100/100 | +230% | +8% | Strong contender |
-| 3 | opencode-deepseek-v4-flash-free | 34/100 | 100/100 | +391% | -34% | Strong contender |
-
-<!-- BENCHMARK_RESULTS_END -->
-
-### Core Architectural Insights
-
-* **The Token Trade-Off (FCT):** The skill-guided protocol introduces a
-  deliberate file-content token overhead (see FCT columns above) to fund
-  explicit typing, robust error-handling, and mandatory unit testing.
-* **Agent Runtime Tokens (ART):** The harness tracks a runtime investment
-  across skill-guided development cycles. The heaviest subproject (noted in
-  the table above) typically accounts for the largest share of guided ART,
-  isolating structural errors during the gated plan-to-execute transition.
-
-> Note: Detailed metric partitioning, line count growth, and feature
-> completeness matrices are available in the comprehensive playground
-> breakdown. See individual reports for per-version traces.
->
-> `headroom` MCP is used for all benchmarks. Follow their setup instructions.
-
-### Adding Benchmarks for Other Models
-
-Feel free to clone the repository and contribute your agent-specific metrics
-to the main matrix. Refer to the [playground README](./playground/README.md)
-for further details.
-
-Contributions are welcome, especially for frontier models and local
-powerhouses like Claude, GPT, Gemma 4 and GLM 5.2.
-
----
-
 ## Installation
 
 ### Option A: GitHub Releases (Recommended)
 
-> **Pre-built, no build step required.**
+Download the latest release assets from the [releases page](https://github.com/bladeacer/lccst/releases). Each release bundles `dist/index.js`, `SKILL.md`, `dist/index.d.ts`, `LICENSE`, and `README.md`.
 
-Download the latest release assets from the
-[releases page](https://github.com/bladeacer/lccst/releases). Each release
-bundles `dist/index.js` (self-contained MCP server), `SKILL.md`,
-`dist/index.d.ts`, `LICENSE`, and `README.md`.
-
-After downloading, set the correct path to `dist/index.js` in your agent
-configuration file (see Option D for MCP configuration examples). No `npm
-install` or build is needed -- `dist/index.js` is fully self-contained.
+After downloading, set the correct path to `dist/index.js` in your agent configuration file. No `npm install` or build is needed.
 
 ### Option B: Zero-Setup Declarative Ingestion
 
-> **Download once, run everywhere.**
-
-For instruction-driven workflows, direct CLI executions, or platforms that do
-not need background processes.
+For instruction-driven workflows or platforms that do not need background processes.
 
 #### Claude Code CLI
 
@@ -332,16 +57,11 @@ claude "Review the active git diff using the parameters in ./SKILL.md"
 
 #### GitHub Copilot & OpenCode Agents
 
-Reference or pin the file within your conversational prompt context using `@`
-or `#` shortcuts depending on your host interface:
-* Attach `#SKILL.md` or `@SKILL.md` into your chat input interface.
-* Target Execution Prompt: `"Execute the protocol loop defined in this file
-  over my uncommitted workspace changes."`
+Reference or pin the file within your conversational prompt context using `@` or `#` shortcuts. Attach `#SKILL.md` or `@SKILL.md` into your chat input interface.
 
 #### Codex & Independent Agent Harnesses
 
-Pipe the raw text content into initialisation runs or supply it through
-custom extension layers:
+Pipe the raw text content into initialisation runs:
 
 ```bash
 cat SKILL.md | your-agent-runner "Apply this system execution skill"
@@ -349,66 +69,35 @@ cat SKILL.md | your-agent-runner "Apply this system execution skill"
 
 #### Project-Level Workspace Binding (Automated Rule Locking)
 
-To permanently bind an AI agent to the Locust framework constraints without
-typing manual prompt triggers, save or symlink `SKILL.md` directly into your
-repository root using the appropriate file target:
-* **Cursor IDE:** Save file as `.cursorrules` in your project root.
-* **Cline / VS Code AI Agents:** Save file as `.clinerules` in your project
-  root.
-* **GitHub Copilot (Editor):** Save file as
-  `.github/copilot-instructions.md`.
+To permanently bind an AI agent to the Locust framework constraints, save or symlink `SKILL.md` directly into your repository root:
+- **Cursor IDE:** Save file as `.cursorrules` in your project root.
+- **Cline / VS Code AI Agents:** Save file as `.clinerules` in your project root.
+- **GitHub Copilot (Editor):** Save file as `.github/copilot-instructions.md`.
 
 #### Global Editor Profiles
 
-To apply these rules globally across all open development spaces on your
-machine, copy the raw content of `SKILL.md` and paste it inside your
-editor's global behavioural configuration field:
-* **Cursor:** Navigate to `Settings -> Features -> Rules for AI` and append
-  the ruleset.
-* **Windsurf:** Navigate to `Settings -> Memories` and create or edit a
-  global rules entry with the SKILL.md content.
-* **VS Code (Cline / Continue):** Create or edit
-  `~/.vscode/globalRules.json` with the ruleset content, or paste directly
-  into the extension's global configuration panel.
-* **JetBrains (AI Assistant):** Navigate to
-  `Settings -> Tools -> AI Assistant -> Custom Prompts` and add the ruleset
-  as a project-level or global instruction.
-* **GitHub Copilot (CLI):** Set `GITHUB_COPILOT_INSTRUCTIONS` environment
-  variable to point to a local copy of `SKILL.md`, or append the content to
-  `~/.github/copilot-instructions.md`.
-
----
+To apply these rules globally, copy the raw content of `SKILL.md` and paste it inside your editor's global behavioural configuration field:
+- **Cursor:** `Settings -> Features -> Rules for AI`
+- **Windsurf:** `Settings -> Memories`
+- **VS Code (Cline / Continue):** `~/.vscode/globalRules.json`
+- **JetBrains (AI Assistant):** `Settings -> Tools -> AI Assistant -> Custom Prompts`
+- **GitHub Copilot (CLI):** Set `GITHUB_COPILOT_INSTRUCTIONS` or append to `~/.github/copilot-instructions.md`.
 
 ### Option C: Universal Package Registry Integration
 
-> **The package manager route. One command, multi-agent deployment.**
-
-For platforms and command-line interfaces that natively implement the
-decentralised **Agent Skills Standard** (e.g., Claude Code, Cursor, Windsurf,
-Roo Code, Gemini CLI, Codex). This directly registers the root-level
-`SKILL.md` file layout to your environment using the global skills
-infrastructure.
-
-Install the skill block directly from the public GitHub source path:
+For platforms that natively implement the decentralised Agent Skills Standard:
 
 ```bash
 npx skills add bladeacer/lccst
 ```
 
-#### Executing the Workspace Module
-
-Once mapped through the universal package engine, invoke the system execution
-pipeline via your terminal runner profile or active agent interface:
+Once mapped, invoke the system execution pipeline via your terminal runner profile or active agent interface:
 
 ```bash
 /lccst
 ```
 
----
-
 ### Option D: Model Context Protocol (MCP) Server Setup
-
-> **Clone, install, build, configure.**
 
 Clone the repository and install dependencies:
 
@@ -419,12 +108,9 @@ pnpm install
 pnpm run build
 ```
 
-For AI runners that support automated standard I/O (stdio) communication
-daemons (e.g., Claude Code, Cursor, Cline, Windsurf, Codex, Pi, OpenCode,
-Gemini CLI / Antigravity).
+For AI runners that support automated standard I/O communication daemons.
 
-Add the following configuration object to your global or project-level MCP
-server connection arrays (such as `claude_desktop_config.json`):
+Add the following configuration object to your global or project-level MCP server connection arrays:
 
 ```json
 {
@@ -437,36 +123,26 @@ server connection arrays (such as `claude_desktop_config.json`):
 }
 ```
 
-> **Important:** Replace `/absolute/path/to/lccst/dist/index.js` with the
-> actual path to `dist/index.js` on your system. If you downloaded from
-> GitHub Releases (Option A), point it to the downloaded file location.
+> **Important:** Replace `/absolute/path/to/lccst/dist/index.js` with the actual path to `dist/index.js`.
 
 The MCP server exposes eleven tools for programmatic use:
-* **`init`** -- Map project conventions and verify environment
-* **`audit`** -- Scan workspace diffs and generate commit plan
-* **`swarm`** -- Execute the full discovery-cluster-test-commit loop
-* **`tooling`** -- Inventory Makefile targets, `scripts/` helpers, and package scripts
-* **`lint`** -- Run the project lint command (Makefile target first, manifest fallback)
-* **`format`** -- Run the project format command
-* **`test`** -- Run the project test command
-* **`build`** -- Run the project build command
-* **`verify`** -- Run the full quality gate (format, lint, test, build)
-* **`compliance`** -- Audit deliverable tiers (must-haves: unit tests, docstrings; nice-to-haves: API docs, changelog)
-* **`version`** -- Report the current LCCST version
+- **`init`** -- Map project conventions and verify environment
+- **`audit`** -- Scan workspace diffs and generate commit plan
+- **`swarm`** -- Execute the full discovery-cluster-test-commit loop
+- **`tooling`** -- Inventory Makefile targets, `scripts/` helpers, and package scripts
+- **`lint`** -- Run lint (Makefile target first, manifest fallback)
+- **`format`** -- Run format
+- **`test`** -- Run test
+- **`build`** -- Run build
+- **`verify`** -- Run the full quality gate (format, lint, test, build)
+- **`compliance`** -- Audit deliverable tiers
+- **`version`** -- Report the current LCCST version
 
-Every path-taking tool (`init`, `audit`, `swarm`, `tooling`, `lint`,
-`format`, `test`, `build`, `verify`, `compliance`) accepts a `path` argument.
-The default `.` (and an empty path) resolves to the **client project's cwd** --
-the directory the host spawned the MCP server in -- not the LCCST install
-directory. Absolute paths are preserved, `~` expands to your home directory,
-and relative paths resolve under the workspace root. To override the
-workspace root (e.g. hosts that do not spawn MCP servers with the project as
-cwd), set the `LCCST_WORKSPACE` environment variable.
+Every path-taking tool accepts a `path` argument. The default `.` resolves to the client project's cwd. Absolute paths are preserved. `~` expands to your home directory. Relative paths resolve under the workspace root. To override the workspace root, set the `LCCST_WORKSPACE` environment variable.
 
 #### OpenCode Setup
 
-OpenCode uses an `opencode.jsonc` file at the project root for MCP server
-configuration and skill registration.
+OpenCode uses an `opencode.jsonc` file at the project root for MCP server configuration and skill registration.
 
 ##### Registering the Main LCCST MCP Server
 
@@ -485,62 +161,44 @@ Add the following to your `opencode.jsonc`:
 }
 ```
 
-Replace the path with your actual `dist/index.js` location. The server is
-disabled by default (`enabled: false`); flip it to `true` to keep it active
-for a session, or toggle it per-prompt in your host. Inside benchmark
-playground workspaces the main server stays disabled so runs remain
-isolated from protocol tooling.
+Replace the path with your actual `dist/index.js` location. The server is disabled by default (`enabled: false`). Flip it to `true` to keep it active for a session. Inside benchmark playground workspaces the main server stays disabled so runs remain isolated from protocol tooling.
 
 ##### Referencing as a Skill
 
-The `SKILL.md` file is an [Agent Skill](https://agentskills.io/specification).
-OpenCode automatically discovers skills named `SKILL.md` at the project root.
-To invoke Locust within a conversation, use the `/lccst` command or reference
-`@SKILL.md` in your prompt.
+The `SKILL.md` file is an [Agent Skill](https://agentskills.io/specification). OpenCode automatically discovers skills named `SKILL.md` at the project root. To invoke Locust within a conversation, use the `/lccst` command or reference `@SKILL.md` in your prompt.
 
 ##### Available Test Scripts
 
 ```bash
 pnpm run build      # Bundle deps + source -> dist/index.js
-pnpm run test       # Run all tests (69 unit + 9 integration)
+pnpm run test       # Run all tests
 pnpm run test:swarm # Swarm library unit tests only
 pnpm run test:mcp   # MCP server integration tests only
 pnpm run bump 3.0.1 # Bump version across all files
 ```
 
----
-
 ## Development
 
-### Agent Conventions
-
-Agents working on this repository should read `AGENTS.md` for build/test
-commands, deliverable tiers (must-have vs nice-to-have), changelog
-conventions, and structural invariants.
+Agents working on this repository should read `AGENTS.md` for build and test commands, deliverable tiers, changelog conventions, and structural invariants.
 
 ### Developer Dependencies
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| pnpm | >= 9 | Package manager (engine + playground Node projects) |
+| pnpm | >= 9 | Package manager |
 | TypeScript | >= 5.4 | Compiling engine source |
 
-Benchmarking has its own set of dependencies, see details in
-[playground README](/playground/README.md).
+Benchmarking has its own set of dependencies. See [playground README](/playground/README.md).
 
 ## LLM Usage Disclosure
 
-It's an AI skill, AI assistance was used in the making of this project.
-Architectural, design decisions and ensuring the code works as intended was
-done by a human.
+AI assistance was used in the making of this project. Architectural and design decisions and ensuring the code works as intended was done by a human.
 
 ## Credits
 
-Locust was heavily inspired by
-[ponytail](https://github.com/DietrichGebert/ponytail).
+Locust was heavily inspired by [ponytail](https://github.com/DietrichGebert/ponytail).
 
-The logo and posters uses
-[the Iceberg Dark colour scheme by cocopon](https://cocopon.github.io/iceberg.vim/).
+The logo and posters use [the Iceberg Dark colour scheme by cocopon](https://cocopon.github.io/iceberg.vim/).
 
 [IBM Plex Mono](https://github.com/IBM/plex) was used for typography.
 

@@ -8,6 +8,4 @@
 
 ## Prior Versions
 
-Changelogs for versions before 3.0.0 are not available. The project history
-includes the following un-tagged versions: 2.9.0, 2.8.0, 2.7.0, 2.6.0, 2.5.0,
-2.3.0, and an initial v1.0.0 (TypeScript migration).
+Changelogs for versions before 3.0.0 are not available. The project history includes the following un-tagged versions: 2.9.0, 2.8.0, 2.7.0, 2.6.0, 2.5.0, 2.3.0, and an initial v1.0.0 (TypeScript migration).

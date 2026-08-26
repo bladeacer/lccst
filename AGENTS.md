@@ -39,7 +39,7 @@ MCP tool audits both.
 2. Docstrings on every public export, class, and function.
 
 **Proportionality:** Size tests and docstrings to the module. Assert public
-behavior, skip trivial internals, and do not add scaffolding the domain does
+behaviour, skip trivial internals, and do not add scaffolding the domain does
 not justify.
 
 **Nice to Have (best-effort, may defer):**
@@ -54,7 +54,7 @@ by `docs/changelogs/index.md`. Use the Ada_CRDT style: a version header with
 date, a one-line summary, then categorized sections (`## Correctness`,
 `## Consistency`, `## New Features`, `## Breaking Changes`, `## Version`).
 
-Always append a changelog entry when changing behavior. Flag breaking changes
+Always append a changelog entry when changing behaviour. Flag breaking changes
 explicitly.
 
 ## Version Bumping
