@@ -298,7 +298,6 @@ plain FCT, 7,708 guided FCT, 5,450 plain ART, and 5,250 guided ART.
 <!-- BENCHMARK_RESULTS_END -->
 
 
-
 ## LLM Usage Disclosure
 
 AI assistance was used in the making of this project. Architectural and design decisions and ensuring the code works as intended was done by a human.

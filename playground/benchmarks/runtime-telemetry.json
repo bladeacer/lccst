@@ -1,40 +1,40 @@
 {
-  "total_prompt_tokens": 84900,
-  "total_completion_tokens": 5470,
-  "total_tokens": 90370,
-  "turns": 10,
+  "total_prompt_tokens": 15220,
+  "total_completion_tokens": 14400,
+  "total_tokens": 29620,
+  "turns": 7,
   "active_mcps": [
     "lccst-telemetry"
   ],
   "breakdown": {
     "python-http-server": {
       "plain": {
-        "prompt_tokens": 11700,
-        "completion_tokens": 520
+        "prompt_tokens": 5170,
+        "completion_tokens": 2050
       },
       "skill-guided": {
-        "prompt_tokens": 14600,
-        "completion_tokens": 970
+        "prompt_tokens": 2100,
+        "completion_tokens": 3200
       }
     },
     "react-timer": {
       "plain": {
-        "prompt_tokens": 7800,
-        "completion_tokens": 350
+        "prompt_tokens": 450,
+        "completion_tokens": 650
       },
       "skill-guided": {
-        "prompt_tokens": 18500,
-        "completion_tokens": 1370
+        "prompt_tokens": 2800,
+        "completion_tokens": 2900
       }
     },
     "go-login-crud": {
       "plain": {
-        "prompt_tokens": 9800,
-        "completion_tokens": 600
+        "prompt_tokens": 1200,
+        "completion_tokens": 1500
       },
       "skill-guided": {
-        "prompt_tokens": 22500,
-        "completion_tokens": 1660
+        "prompt_tokens": 3500,
+        "completion_tokens": 4100
       }
     }
   }

@@ -118,10 +118,10 @@ def _fct_overhead(r: BenchmarkReport) -> float:
 
 
 def _art_overhead(r: BenchmarkReport) -> float:
-    """Return ART overhead as a decimal (0.5 = 50% overhead)."""
+    """Return ART overhead as a decimal (negative = token savings)."""
     if r.total_art_plain == 0:
         return 0.0
-    return max((r.total_art_guided - r.total_art_plain) / r.total_art_plain, 0)
+    return (r.total_art_guided - r.total_art_plain) / r.total_art_plain
 
 
 def _parse_robustness_section(
@@ -307,25 +307,28 @@ def get_agent_reports(
     return reports
 
 
-def _composite_score(
-    r: BenchmarkReport, reports: list[BenchmarkReport]
-) -> float:
-    """Normalized composite: higher = better, accounts for score, pass rate, and token overhead."""
-    max_guided = max(x.avg_guided_score for x in reports) or 1
-    max_plain = max(x.avg_plain_score for x in reports) or 1
-    max_fct_oh = max(_fct_overhead(x) for x in reports) or 1
-    max_art_oh = max(_art_overhead(x) for x in reports) or 1
-    guided_norm = r.avg_guided_score / max_guided
-    plain_norm = r.avg_plain_score / max_plain
+def _composite_score(r: BenchmarkReport) -> float:
+    """Composite score using fixed weights and raw metric values.
+
+    Higher is better. Weights:
+    - Guided robustness: 40%
+    - Plain robustness: 10%
+    - Pass rate: 10%
+    - FCT efficiency: 20% (lower overhead = higher score)
+    - ART efficiency: 20% (lower overhead or savings = higher score)
+    """
+    guided = r.avg_guided_score
+    plain = r.avg_plain_score
     pass_rate = r.passed_count / max(len(r.projects), 1)
-    fct_penalty = _fct_overhead(r) / max_fct_oh
-    art_penalty = _art_overhead(r) / max_art_oh
+    fct_oh = _fct_overhead(r)
+    art_oh = _art_overhead(r)
+
     return (
-        guided_norm * 40
-        + plain_norm * 10
+        guided * 0.4
+        + plain * 0.1
         + pass_rate * 10
-        - fct_penalty * 20
-        - art_penalty * 20
+        - fct_oh * 20
+        - art_oh * 20
     )
 
 
@@ -335,7 +338,8 @@ def pick_top_n(
     ],
     n: int = 3,
 ) -> list[BenchmarkReport]:
-    """Pick top N agent-models by performance and token efficiency."""
+    """Pick top N agent-models by performance and token efficiency, rejecting
+    any report whose average guided robustness score is below 100%."""
     latest: list[BenchmarkReport] = []
     for versions in reports_map.values():
         if not versions:
@@ -343,10 +347,12 @@ def pick_top_n(
         versions.sort(key=lambda x: x[0], reverse=True)
         latest.append(versions[0][1])
 
+    latest = [r for r in latest if r.avg_guided_score >= 100]
+
     if not latest:
         return []
 
-    latest = sorted(latest, key=lambda r: _composite_score(r, latest[:]), reverse=True)
+    latest = sorted(latest, key=lambda r: _composite_score(r), reverse=True)
     return latest[:n]
 
 
@@ -713,7 +719,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
         tag = f"{r.agent_name}-{r.model_name}"
         r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
         r_art = pct_delta(r.total_art_plain, r.total_art_guided)
-        composite = _composite_score(r, reports)
+        composite = _composite_score(r)
 
         if i == 1:
             verdict = "Best overall"
@@ -754,13 +760,11 @@ def update_readme(table_content: str, count: int = 0) -> None:
     if start_marker in text and end_marker in text:
         before = text.split(start_marker, 1)[0]
         after_full = text.split(end_marker, 1)[1]
-        # Strip old legacy content (static comparison table + prose summary)
-        # that used to sit after the end marker. Find the next heading.
         next_section = re.search(r"\n### ", after_full)
         if next_section:
-            after = after_full[next_section.start():]
+            after = "\n\n" + after_full[next_section.start():].lstrip("\n")
         else:
-            after = after_full
+            after = "\n\n" + after_full.lstrip("\n")
         new_text = before + wrapped + after
     else:
         # Fallback: insert after the Verification Matrix heading
