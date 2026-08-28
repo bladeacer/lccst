@@ -10,7 +10,7 @@ mechanics; `README.md` wins for user-facing claims.
 LCCST (Locust) is a deterministic workspace gatekeeper. It decomposes
 codebase changes into isolated, test-verified, atomic Git commits. The core
 deliverable is a single-file MCP server (`src/index.ts`) plus a protocol
-specification (`SKILL.md`). Documentation uses Simplified Technical English
+specification (`SKILL.md`). The skill file itself uses Simplified Technical English
 (STE) and British English.
 
 ## Documentation Style
