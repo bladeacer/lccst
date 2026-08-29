@@ -454,8 +454,7 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
             "| ART (Plain) | ART (Guided) |"
         )
         sep = (
-            "| :--- | :--- | :--- | :--- | :--- "
-            "| :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
+            "| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
         )
         parts.append(header)
         parts.append(sep)
@@ -487,7 +486,7 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
         heavy_fct = report.heaviest_fct_project
 
         summary = (
-            f"| **Summary** | | | | **Workspace Totals / Avg** "
+            f"| **Summary** | | | | | **Workspace Totals / Avg** "
             f"| **{avg_p}/100** | **{avg_g}/100** "
             f"| **{passed}/{n} Passed** "
             f"| **{fmt_int(report.total_fct_plain)}** "

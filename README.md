@@ -1,131 +1,21 @@
+![Logo Poster](./logo-poster.png)
+
 # LCCST (Locust)
 
-A deterministic workspace gatekeeper. It enforces architectural cohesion and SOLID invariants through a lean execution protocol. Decomposes codebase changes into isolated, test-verified, atomic Git commits.
-
-Locust acts as a structural integrity guardian for codebase health, test coverage, and architectural boundaries.
+A deterministic workspace gatekeeper that decomposes codebase changes into isolated, test-verified, atomic Git commits. Enforces architectural cohesion and SOLID invariants through a lean execution protocol.
 
 > "Swarming your messy diffs before they reach production."
-
-The execution model is a flat 3-step path: wipe stale artefacts, seed via `/init`, then generate application files directly. Architectural guardrails and ecosystem discovery remain active during code generation.
 
 ## Runtime Modes
 
 ### Bare Skill Mode
 
-The protocol specification (`SKILL.md`) loads directly into the LLM context window. The model follows the rules manually. No MCP server required.
+Load `SKILL.md` directly into the LLM context window. The model follows the rules manually. No MCP server required.
 
 ### MCP Server Mode
 
-The MCP server at `src/index.ts` (built to `dist/index.js`) exposes the full protocol via tools. AI agents call `/init`, `/audit`, `/swarm`, `/tooling`, `/lint`, `/format`, `/test`, `/build`, `/verify`, `/compliance`, and `/version` programmatically.
+The MCP server at `src/index.ts` (built to `dist/index.js`) exposes eleven tools programmatically:
 
-The server is self-contained in a single file. See `src/index.ts` for implementation details.
-
-```bash
-# Go Example
-/init -> Detects go.mod -> swarm runs `go test ./...`
-# Rust Example
-/init -> Detects Cargo.toml -> swarm runs `cargo test`
-# Python Example
-/init -> Detects pyproject.toml -> swarm runs `uv run pytest`
-# Node.js Example
-/init -> Detects package.json -> swarm runs `pnpm test`
-# Julia Example
-/init -> Detects Project.toml -> swarm runs `julia --project=. -e "using Pkg; Pkg.test()"`
-# CMake Example
-/init -> Detects CMakeLists.txt -> swarm runs `cmake --build .`
-```
-
-## Installation
-
-### Option A: GitHub Releases (Recommended)
-
-Download the latest release assets from the [releases page](https://github.com/bladeacer/lccst/releases). Each release bundles `dist/index.js`, `SKILL.md`, `dist/index.d.ts`, `LICENSE`, and `README.md`.
-
-After downloading, set the correct path to `dist/index.js` in your agent configuration file. No `npm install` or build is needed.
-
-### Option B: Zero-Setup Declarative Ingestion
-
-For instruction-driven workflows or platforms that do not need background processes.
-
-#### Claude Code CLI
-
-Inject the specification directly via runtime file referencing:
-
-```bash
-claude "Review the active git diff using the parameters in ./SKILL.md"
-```
-
-#### GitHub Copilot & OpenCode Agents
-
-Reference or pin the file within your conversational prompt context using `@` or `#` shortcuts. Attach `#SKILL.md` or `@SKILL.md` into your chat input interface.
-
-#### Codex & Independent Agent Harnesses
-
-Pipe the raw text content into initialisation runs:
-
-```bash
-cat SKILL.md | your-agent-runner "Apply this system execution skill"
-```
-
-#### Project-Level Workspace Binding (Automated Rule Locking)
-
-To permanently bind an AI agent to the Locust framework constraints, save or symlink `SKILL.md` directly into your repository root:
-- **Cursor IDE:** Save file as `.cursorrules` in your project root.
-- **Cline / VS Code AI Agents:** Save file as `.clinerules` in your project root.
-- **GitHub Copilot (Editor):** Save file as `.github/copilot-instructions.md`.
-
-#### Global Editor Profiles
-
-To apply these rules globally, copy the raw content of `SKILL.md` and paste it inside your editor's global behavioural configuration field:
-- **Cursor:** `Settings -> Features -> Rules for AI`
-- **Windsurf:** `Settings -> Memories`
-- **VS Code (Cline / Continue):** `~/.vscode/globalRules.json`
-- **JetBrains (AI Assistant):** `Settings -> Tools -> AI Assistant -> Custom Prompts`
-- **GitHub Copilot (CLI):** Set `GITHUB_COPILOT_INSTRUCTIONS` or append to `~/.github/copilot-instructions.md`.
-
-### Option C: Universal Package Registry Integration
-
-For platforms that natively implement the decentralised Agent Skills Standard:
-
-```bash
-npx skills add bladeacer/lccst
-```
-
-Once mapped, invoke the system execution pipeline via your terminal runner profile or active agent interface:
-
-```bash
-/lccst
-```
-
-### Option D: Model Context Protocol (MCP) Server Setup
-
-Clone the repository and install dependencies:
-
-```bash
-git clone --depth 1 https://github.com/bladeacer/lccst
-cd lccst
-pnpm install
-pnpm run build
-```
-
-For AI runners that support automated standard I/O communication daemons.
-
-Add the following configuration object to your global or project-level MCP server connection arrays:
-
-```json
-{
-  "mcpServers": {
-    "lccst": {
-      "command": "node",
-      "args": ["/absolute/path/to/lccst/dist/index.js"]
-    }
-  }
-}
-```
-
-> **Important:** Replace `/absolute/path/to/lccst/dist/index.js` with the actual path to `dist/index.js`.
-
-The MCP server exposes eleven tools for programmatic use:
 - **`init`** -- Map project conventions and verify environment
 - **`audit`** -- Scan workspace diffs and generate commit plan
 - **`swarm`** -- Execute the full discovery-cluster-test-commit loop
@@ -138,74 +28,97 @@ The MCP server exposes eleven tools for programmatic use:
 - **`compliance`** -- Audit deliverable tiers
 - **`version`** -- Report the current LCCST version
 
-Every path-taking tool accepts a `path` argument. The default `.` resolves to the client project's cwd. Absolute paths are preserved. `~` expands to your home directory. Relative paths resolve under the workspace root. To override the workspace root, set the `LCCST_WORKSPACE` environment variable.
+Every path-taking tool accepts a `path` argument (default `.`). Absolute paths preserved; `~` expands to `$HOME`; set `LCCST_WORKSPACE` to override the workspace root. See `src/index.ts` for implementation details.
 
-#### OpenCode Setup
+```bash
+# Init detects the manifest and runs the native test command:
+/init -> Detects go.mod     -> swarm runs `go test ./...`
+/init -> Detects Cargo.toml -> swarm runs `cargo test`
+/init -> Detects pyproject.toml -> swarm runs `uv run pytest`
+/init -> Detects package.json -> swarm runs `pnpm test`
+/init -> Detects CMakeLists.txt -> swarm runs `cmake --build .`
+```
 
-OpenCode uses an `opencode.jsonc` file at the project root for MCP server configuration and skill registration.
+## Installation
 
-##### Registering the Main LCCST MCP Server
+### Option A: GitHub Releases (Recommended)
 
-Add the following to your `opencode.jsonc`:
+Download the latest release from the [releases page](https://github.com/bladeacer/lccst/releases). Each release bundles `dist/index.js`, `SKILL.md`, `dist/index.d.ts`, `LICENSE`, and `README.md`. Set the path to `dist/index.js` in your agent config. No install or build needed.
 
-```jsonc
+### Option B: Zero-Setup Declarative Ingestion
+
+For instruction-driven workflows that need no background processes.
+
+- **Claude Code CLI:** `claude "Review the active git diff using the parameters in ./SKILL.md"`
+- **GitHub Copilot & OpenCode:** Attach `#SKILL.md` or `@SKILL.md` in chat
+- **Codex & harnesses:** `cat SKILL.md | your-agent-runner "Apply this system execution skill"`
+- **Project-level binding:** Symlink `SKILL.md` as `.cursorrules`, `.clinerules`, or `.github/copilot-instructions.md`
+- **Global profiles:** Paste into Cursor Rules, Windsurf Memories, VS Code `globalRules.json`, or JetBrains Custom Prompts
+
+### Option C: Universal Package Registry
+
+```bash
+npx skills add bladeacer/lccst
+/lccst
+```
+
+### Option D: MCP Server Setup
+
+```bash
+git clone --depth 1 https://github.com/bladeacer/lccst
+cd lccst && pnpm install && pnpm run build
+```
+
+Add to your MCP config:
+
+```json
 {
-  "$schema": "https://opencode.ai/config.json",
-  "mcp": {
+  "mcpServers": {
     "lccst": {
-      "type": "local",
-      "command": ["node", "/absolute/path/to/lccst/dist/index.js"],
-      "enabled": true
+      "command": "node",
+      "args": ["/absolute/path/to/lccst/dist/index.js"]
     }
   }
 }
 ```
 
-Replace the path with your actual `dist/index.js` location. The server is disabled by default (`enabled: false`). Flip it to `true` to keep it active for a session. Inside benchmark playground workspaces the main server stays disabled so runs remain isolated from protocol tooling.
+> Replace the path with your actual `dist/index.js`. The server is disabled by default (`enabled: false`).
 
-##### Referencing as a Skill
-
-The `SKILL.md` file is an [Agent Skill](https://agentskills.io/specification). OpenCode automatically discovers skills named `SKILL.md` at the project root. To invoke Locust within a conversation, use the `/lccst` command or reference `@SKILL.md` in your prompt.
-
-##### Available Test Scripts
-
-```bash
-pnpm run build      # Bundle deps + source -> dist/index.js
-pnpm run test       # Run all tests
-pnpm run test:swarm # Swarm library unit tests only
-pnpm run test:mcp   # MCP server integration tests only
-pnpm run bump 3.0.1 # Bump version across all files
-```
+**OpenCode:** Add the above to `opencode.jsonc` under `mcp.lccst`. The `SKILL.md` is auto-discovered as an Agent Skill -- use `/lccst` or `@SKILL.md` to invoke it.
 
 ## Development
 
-Agents working on this repository should read `AGENTS.md` for build and test commands, deliverable tiers, changelog conventions, and structural invariants.
-
-### Developer Dependencies
+Read `AGENTS.md` for build/test commands, deliverable tiers, and structural invariants.
 
 | Tool | Version | Purpose |
 |------|---------|---------|
 | pnpm | >= 9 | Package manager |
 | TypeScript | >= 5.4 | Compiling engine source |
 
-Benchmarking has its own set of dependencies. See [playground README](/playground/README.md).
+```bash
+pnpm run build      # Bundle deps + source -> dist/index.js
+pnpm run test       # Run all tests
+pnpm run test:swarm # Swarm library unit tests only
+pnpm run test:mcp   # MCP server integration tests only
+pnpm run bump 1.0.0 # Bump version across all files
+```
+
+Benchmarking has its own dependencies -- see [`playground/README.md`](playground/README.md).
 
 ## Playground and Benchmarking
 
-See [`playground/README.md`](playground/README.md) for the benchmarking suite
-that measures token impact of skill-guided vs plain code generation across
-three reference projects (Python HTTP server, React timer, Go login CRUD).
+Measures token impact of skill-guided vs plain code generation across three reference projects (Python HTTP server, React timer, Go login CRUD).
 
 <!-- BENCHMARK_RESULTS_START -->
 
 #### opencode-zen/opencode/ling-3.0-flash-free: skill version v3.1.0
 
 | Provider | Harness | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | `opencode-zen` | **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 528 | 2,221 | 3,900 | 1,850 |
 | `opencode-zen` | **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 428 | 992 | 750 | 1,600 |
 | `opencode-zen` | **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 65/100 | **100/100** | PASSED | 812 | 4,495 | 800 | 1,800 |
-| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,768** | **7,708** | **5,450** | **5,250** |
+| **Summary** | | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,768** | **7,708** | **5,450** | **5,250** |
 
 > **Highest ART subproject:** `python-http-server` consumed the most guided
 > runtime tokens.
@@ -217,11 +130,11 @@ three reference projects (Python HTTP server, React timer, Go login CRUD).
 #### opencode-zen/opencode/deepseek-v4-flash-free: skill version v3.3.0
 
 | Provider | Harness | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | `opencode-zen` | **opencode** | `deepseek-v4-flash-free` | `v3.3.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 617 | 3,337 | 98,400 | 34,000 |
 | `opencode-zen` | **opencode** | `deepseek-v4-flash-free` | `v3.3.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 445 | 1,336 | 31,900 | 35,700 |
 | `opencode-zen` | **opencode** | `deepseek-v4-flash-free` | `v3.3.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 795 | 4,436 | 33,300 | 38,200 |
-| **Summary** | | | | **Workspace Totals / Avg** | **34/100** | **100/100** | **3/3 Passed** | **1,857** | **9,109** | **163,600** | **107,900** |
+| **Summary** | | | | | **Workspace Totals / Avg** | **34/100** | **100/100** | **3/3 Passed** | **1,857** | **9,109** | **163,600** | **107,900** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
 > tokens.
@@ -233,11 +146,11 @@ three reference projects (Python HTTP server, React timer, Go login CRUD).
 #### opencode-zen/opencode/hy3-free: skill version v3.4.0
 
 | Provider | Harness | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | `opencode-zen` | **opencode** | `hy3-free` | `v3.4.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 562 | 2,129 | 12,220 | 15,570 |
 | `opencode-zen` | **opencode** | `hy3-free` | `v3.4.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 352 | 933 | 8,150 | 19,870 |
 | `opencode-zen` | **opencode** | `hy3-free` | `v3.4.0` | `lccst-telemetry` | **go-login-crud** | 65/100 | **100/100** | PASSED | 909 | 4,072 | 10,400 | 24,160 |
-| **Summary** | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,823** | **7,134** | **30,770** | **59,600** |
+| **Summary** | | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,823** | **7,134** | **30,770** | **59,600** |
 
 > **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
 > tokens.
@@ -314,7 +227,7 @@ The logo and posters use [the Iceberg Dark colour scheme by cocopon](https://coc
 
 The [Agent Skills specification](https://agentskills.io/specification).
 
-Skill writing and docs follows ASD-STE100 Simplified Technical English. The [SimpleEnglish skill](https://github.com/AminBlg/SimpleEnglish) guides this work.
+Skill writing and docs follow ASD-STE100 Simplified Technical English, guided by the [SimpleEnglish skill](https://github.com/AminBlg/SimpleEnglish).
 
 ## License
 
