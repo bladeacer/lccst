@@ -1,0 +1,25 @@
+{
+  "$schema": "https://app.kilo.ai/config.json",
+  "mcp": {
+    "headroom": {
+      "type": "local",
+      "command": [
+        "sh",
+        "-c",
+        "HEADROOM_TELEMETRY=off HEADROOM_CODE_AWARE_ENABLED=1 headroom proxy --code-graph --memory & sleep 2 && headroom mcp serve"
+      ],
+      "enabled": true
+    },
+    "lccst": {
+      "enabled": false
+    },
+    "lccst-telemetry": {
+      "type": "local",
+      "command": [
+        "node",
+        "../benchmarks/mcp-telemetry/build/index.js"
+      ],
+      "enabled": true
+    }
+  }
+}

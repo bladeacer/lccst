@@ -115,6 +115,7 @@ bench-cleanup:
 	@rm -f playground/$(AGENT_MODEL)/README.md
 	@rm -f playground/$(AGENT_MODEL)/guide.md
 	@rm -f playground/$(AGENT_MODEL)/opencode.jsonc
+	@rm -f playground/$(AGENT_MODEL)/kilo.json
 	@rm -rf playground/$(AGENT_MODEL)/go-login-crud
 	@rm -rf playground/$(AGENT_MODEL)/python-http-server
 	@rm -rf playground/$(AGENT_MODEL)/react-timer
@@ -137,6 +138,7 @@ bench-update:
 clean-telemetry:
 	@echo "[Harness] Flushing trace telemetry caches..."
 	@rm -f playground/$(AGENT_MODEL)/opencode.jsonc
+	@rm -f playground/$(AGENT_MODEL)/kilo.json
 	@rm -f playground/$(AGENT_MODEL)/playground/benchmarks/runtime-telemetry.json
 	@rm -f playground/$(AGENT_MODEL)/runtime-telemetry.json
 	@rm -f playground/benchmarks/runtime-telemetry.json

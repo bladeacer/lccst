@@ -94,11 +94,19 @@ make benchmark-free HARNESS=your-harness PROVIDER=your-provider MODEL_NAME=your-
 # You can set values to override the defaults used in the Makefile
 make HARNESS=your-harness PROVIDER=your-provider MODEL_NAME=your-model
 
+# Hook in a custom agent config (e.g. Kilo) by passing it as CONFIG_FILE.
+# The repo-root kilo.json wires up the headroom MCP plus lccst-telemetry
+# (the main lccst server stays disabled, matching the playground convention).
+# Provider/harness are passed as values to drive the folder name + report tags.
+make benchmark-free \
+  HARNESS=kilo PROVIDER=tencent MODEL_NAME=hy3-free \
+  CONFIG_FILE=kilo.json
+
 # 3. Exit once done. Folder cleanup and benchmark files writing
 # will happen automatically
 
 # 4. View versioned evaluation output report logs
-# Folder name is provider-harness-model, e.g. opencode-zen-opencode-hy3-free
+# Folder name is provider-harness-model, e.g. tencent-kilo-hy3-free
 cat ./benchmarks/${PROVIDER}-${HARNESS}-${MODEL_NAME}/benchmark-report-v*.md
 
 # 5. Aggregated results in README (project root)
