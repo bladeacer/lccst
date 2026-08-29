@@ -9,9 +9,15 @@ export const payload = {
 };
 
 export const expectedResponse = (response: any): boolean => {
+  const text = response.result?.content?.[0]?.text;
+  if (!text) return false;
+  const parsed = JSON.parse(text);
   return (
     response.id === 8 &&
     response.result?.content?.[0]?.type === "text" &&
-    response.result.content[0].text.includes("Makefile targets")
+    typeof text === "string" &&
+    parsed.success === true &&
+    parsed.step === "/tooling" &&
+    parsed.payload?.make_targets !== undefined
   );
 };

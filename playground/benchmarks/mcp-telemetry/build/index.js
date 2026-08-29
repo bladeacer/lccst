@@ -61,7 +61,7 @@ function updateMetrics(subproject, variant, promptTokens, completionTokens) {
 }
 const server = new McpServer({
     name: "lccst-telemetry",
-    version: "3.4.0"
+    version: "3.5.0"
 });
 server.tool("log_turn_telemetry", "Commit operational token usage statistics partitioned by subproject and strategy variant.", {
     subproject: z.enum(["python-http-server", "react-timer", "go-login-crud"]),

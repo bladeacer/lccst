@@ -1,165 +1,37 @@
 # LCCST Playground
 
-Benchmarking harness for measuring the impact of skill-guided vs plain code
-generation across three reference projects.
+Implementation workspace for three reference projects used in benchmark evaluation.
 
-## Runtime Modes
+## Projects
 
-LCCST can operate in two modes:
+### Python HTTP Server
+A single-file HTTP server with CRUD for users. Includes input validation, email regex, rate limiting, and type hints. Tests run via `uv run pytest`.
 
-* **Bare prompt** -- Load `SKILL.md` directly into your LLM context window.
-  The model follows the protocol manually (fallback language detection, manual
-  approval steps).
-* **MCP server** -- Run `node dist/index.js` to serve the protocol as tools.
-  The entire server is self-contained in `src/index.ts`, compiling to a single
-  distributable `dist/index.js`.
+### React Timer
+A TypeScript stopwatch with start, stop, and reset functionality. Split into a Timer class and `TimerDisplay` React component with a `formatTime()` utility. Tests use Jest, ts-jest, and @testing-library/react.
 
-## Benchmark project dependencies
+### Go Login CRUD
+A layered Go server with model, repository, handler, middleware, and cache components. Uses interfaces and dependency injection. Tests run via `go test ./tests/ -v`.
+
+## Environment
 
 | Tool | Version | Purpose |
 |------|---------|---------|
 | Node.js | >= 18 | Running the LCCST MCP server |
-| pnpm | >= 9 | Package manager (engine + playground Node projects) |
+| pnpm | >= 9 | Package manager for Node projects |
 | TypeScript | >= 5.4 | Compiling engine source |
 | Python | >= 3.10 | Running playground benchmarks |
 | Go | >= 1.21 | Reference project in playground |
-| uv | >= 0.4 | Python package manager (benchmark deps) |
+| uv | >= 0.4 | Python package manager |
 
-## Quick Start
+## Setup
 
-Direct your agent to make use of guide.md to implement the code then run the
-benchmarks.
+Install the `headroom` MCP server. Follow the setup instructions at the [headroom repository](https://github.com/chopratejas/headroom). Headroom saves token usage while preserving context.
 
-Prompt your agent with the full prompt in [agent-prompt.md](./agent-prompt.md).
+## Implementation Guide
 
-### Setup
+See [`guide.md`](./guide.md) for project-specific constraints, mitigation rules, and known token traps. The guide covers TypeScript, pnpm, Python uv, and Go module layout concerns.
 
-Install `headroom` MCP.
+## Benchmarking
 
-It is used for all benchmarks but not mentioned by the benchmarking.
-Follow their setup instructions.
-
-- [headroom repo](https://github.com/chopratejas/headroom)
-
-`headroom` is used to save on token usage while still preserving context.
-
-## Benchmarking & Token Telemetry
-
-To measure both **File-Content Tokens (FCT)** and **Agent Runtime Tokens (ART)**,
-the benchmark must be executed through the orchestration framework. This
-connects your local agent configuration to our decoupled
-telemetry tracker.
-
-### 1. Build the MCP Telemetry Server
-
-Ensure the low-level base MCP dependencies are compiled locally down to an
-active JavaScript target:
-
-```bash
-cd ./benchmarks/mcp-telemetry
-pnpm install
-pnpm run build
-```
-
-### 2. Configure your agent
-Inject the local custom server reference mapping into your workspace
-configuration block. Use the two-level step-out (`../../`) array
-configuration to bridge the subproject runtimes safely:
-
-For example, in your agent's configuration file:
-
-```json
-{
-  "mcp": {
-    "lccst-telemetry": {
-      "type": "local",
-      "command": [
-        "node",
-        "../../playground/benchmarks/mcp-telemetry/build/index.js"
-      ],
-      "enabled": true
-    }
-  }
-}
-```
-
-### 3. Execute Workflow Lifecycle
-
-```bash
-# 1. Clean previous caches and structure the isolation clean-room e.g.
-make benchmark-free HARNESS=your-harness PROVIDER=your-provider MODEL_NAME=your-model
-
-# 2. Run your agent in a NEW SESSION, check lccst-telemetry MCP is active
-# paste the prompt, let it run.
-# You can set values to override the defaults used in the Makefile
-make HARNESS=your-harness PROVIDER=your-provider MODEL_NAME=your-model
-
-# Hook in a custom agent config (e.g. Kilo) by passing it as CONFIG_FILE.
-# The repo-root kilo.json wires up the headroom MCP plus lccst-telemetry
-# (the main lccst server stays disabled, matching the playground convention).
-# Provider/harness are passed as values to drive the folder name + report tags.
-make benchmark-free \
-  HARNESS=kilo PROVIDER=tencent MODEL_NAME=hy3-free \
-  CONFIG_FILE=kilo.json
-
-# 3. Exit once done. Folder cleanup and benchmark files writing
-# will happen automatically
-
-# 4. View versioned evaluation output report logs
-# Folder name is provider-harness-model, e.g. tencent-kilo-hy3-free
-cat ./benchmarks/${PROVIDER}-${HARNESS}-${MODEL_NAME}/benchmark-report-v*.md
-
-# 5. Aggregated results in README (project root)
-cat README.md
-```
-
-Run this in project root, not this directory.
-
-## Methodology & Scoring Framework
-
-Each project contains two implementations: a minimal "plain" version and a
-structured "skill-guided" version following the protocol rules in `SKILL.md`.
-
-The benchmark harness enforces **protocol invariants** that isolate plain from
-guided runs and restrict agent tooling to prevent context bleeding. These rules
-are documented in [`guide.md`](./guide.md#protocol-invariants-for-agent-runs)
-and are applied by the runner, not by SKILL.md itself.
-
-The evaluation framework captures data across two metrics:
-1. **File Payload Footprint (FCT):** Structural robustness, syntax verbosity,
-   and test file generation weight calculated via `tiktoken` (cl100k_base).
-2. **Execution Cost Overhead (ART):** Direct token usage transaction records
-   captured in `runtime-telemetry.json` by the active JSON-RPC stdio channel.
-
-### Robustness Score Calculation
-
-Robustness scores are programmatically normalized to a 100-point scale based on
-a strict combination of runtime testing and code feature mapping:
-
-1. **Base Verification (50 pts):** Awarded automatically if the subproject's
-   native unit test suite exits with a successful code (`PASSED`). Retaining or
-   failing tests natively yields a maximum of 15 points, while timeouts or env
-   failures drop the baseline score to 5 points. Unguided "plain" code automatically
-   scores 0 here as they fail to generate or execute testing suites.
-2. **Static Feature Discovery (Up to 50 pts):** The evaluation framework uses
-   targeted regex engines to discover required structural guarantees:
-   * **Explicit Typing:** Identifies type definitions, interfaces, strict
-     function signatures, schemas, or contract variables.
-   * **Security Measures:** Discovers authentication schemes, tokens, hashing
-     algorithms, crypto params, rate limiters, or input sanitizers.
-   * **Robustness Guardrails:** Scans for explicit try/catch blocks, native error
-     propagation routines, exception traps, or error returns.
-
-### Profile Weight Calibration Matrix
-
-To prevent architectural bias across different software stacks, features that
-are irrelevant to a subproject's target domain are omitted from its total point
-denominator. The resulting raw score is then normalized to a 100-point scale:
-
-$$\text{Final Score} = \left( \frac{\text{Earned Points}}{\text{Max Denominator}} \right) \times 100$$
-
-| Project Submodule Target | Base Test | Typing | Security | Error Handle | Max Denom | Final Scale |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **`python-http-server`** | 50 pts | +17 pts | +17 pts | +16 pts | **100 Pts** | **100% Max** |
-| **`react-timer`** | 50 pts | +17 pts | 0 pts   | 0 pts   | **67 Pts** | **100% Max** |
-| **`go-login-crud`** | 50 pts | +17 pts | +17 pts | +16 pts | **100 Pts** | **100% Max** |
+The benchmark suite measures token impact of skill-guided versus plain code generation. See the [`README.md`](../README.md) in the project root for the full benchmarking suite and results.

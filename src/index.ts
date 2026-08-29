@@ -7,6 +7,24 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { execSync } from "child_process";
 
+// --- Structured JSON envelope ------------------------------------
+interface Envelope {
+  success: boolean;
+  step: string;
+  payload: Record<string, unknown>;
+  next_action: string;
+}
+
+function envelope(
+  step: string,
+  payload: Record<string, unknown>,
+  next_action: string,
+  success: boolean = true,
+): { content: { type: "text"; text: string }[] } {
+  const env: Envelope = { success, step, payload, next_action };
+  return { content: [{ type: "text", text: JSON.stringify(env) }] };
+}
+
 // --- Runtime context ------------------------------------------------
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, ".."); // lccst install root (SKILL.md, package.json)
@@ -332,7 +350,7 @@ export function clusterHunks(lines: string[]): Cluster[] {
 // --- MCP Server -----------------------------------------------------
 const server = new McpServer({
   name: "lccst-locust",
-  version: "3.4.0",
+  version: "3.5.0",
 });
 
 // Prompt: load SKILL.md into context
@@ -372,18 +390,16 @@ server.registerTool("init", {
   new SwarmState(target).write({ phase: "init" });
   logEvent(target, { event: "init", project: env.project.type, manifest: env.project.manifest });
 
-  const lines: string[] = [
-    `Target: ${target}`,
-    `Project type: ${env.project.type}`,
-    `Manifest: ${env.project.manifest || "(none detected)"}`,
-    `Tools available: ${Object.entries(env.tools).filter(([, v]) => v).map(([k]) => k).join(", ") || "none"}`,
-    `Test command: ${env.project.testCommand.join(" ") || "(none)"}`,
-    `Makefile targets: ${tooling.makeTargets.join(", ") || "(none)"}`,
-    `Script helpers: ${tooling.shellScripts.join(", ") || "(none)"}`,
-  ];
-  if (env.conventions.length > 0) lines.push(`Conventions: ${env.conventions.join(", ")}`);
-
-  return { content: [{ type: "text", text: lines.join("\n") }] };
+  return envelope("/init", {
+    target,
+    project_type: env.project.type,
+    manifest: env.project.manifest || "(none detected)",
+    tools_available: Object.entries(env.tools).filter(([, v]) => v).map(([k]) => k).join(", ") || "none",
+    test_command: env.project.testCommand.join(" ") || "(none)",
+    make_targets: tooling.makeTargets.join(", ") || "(none)",
+    script_helpers: tooling.shellScripts.join(", ") || "(none)",
+    conventions: env.conventions,
+  }, "Run /swarm to begin execution.");
 });
 
 // Tool: /audit
@@ -398,10 +414,10 @@ server.registerTool("audit", {
 
   const state = new SwarmState(target);
   state.write({ phase: "audit" });
+  logEvent(target, { event: "audit_start" });
 
   let staged = "";
   let unstaged = "";
-  logEvent(target, { event: "audit_start" });
   try {
     staged = execSync("git diff --cached --stat", { cwd: target, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
     unstaged = execSync("git diff --stat", { cwd: target, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString().trim();
@@ -409,38 +425,28 @@ server.registerTool("audit", {
     return { content: [{ type: "text", text: `${target} is not a git repository, or git is unavailable.` }] };
   }
 
-  const plan: string[] = [`Audit plan for ${target}`, ""];
-  let totalFiles = 0;
+  if (!staged && !unstaged) {
+    return envelope("/audit", { phase: "clean", path: target }, "Working tree clean.");
+  }
+
+  const stagedLines = staged.split("\n").map(l => l.trim()).filter(Boolean);
+  const unstagedLines = unstaged.split("\n").map(l => l.trim()).filter(Boolean);
+  const stagedClusters = stagedLines.length > 0 ? clusterHunks(stagedLines) : [];
+  const unstagedClusters = unstagedLines.length > 0 ? clusterHunks(unstagedLines) : [];
+  const totalFiles = stagedLines.length + unstagedLines.length;
 
   if (staged) {
-    const lines = staged.split("\n").map(l => l.trim()).filter(Boolean);
-    const clusters = clusterHunks(lines);
-    totalFiles += lines.length;
-    plan.push(`Staged changes: ${lines.length} file(s)`, "");
-    clusters.forEach((c, i) => {
-      plan.push(`${i + 1}. ${c.scope}: ${c.files.join(", ")}`);
-      plan.push(`   Suggested: ${c.suggestion}`);
-    });
-    state.write({ clusters: clusters.map(c => c.suggestion) });
+    state.write({ clusters: stagedClusters.map(c => c.suggestion) });
   }
 
-  if (unstaged) {
-    const lines = unstaged.split("\n").map(l => l.trim()).filter(Boolean);
-    const clusters = clusterHunks(lines);
-    totalFiles += lines.length;
-    if (plan.length > 1) plan.push("");
-    plan.push(`Unstaged changes: ${lines.length} file(s) (not yet staged)`, "");
-    clusters.forEach((c, i) => {
-      plan.push(`${i + 1}. ${c.scope}: ${c.files.join(", ")}`);
-      plan.push(`   Suggested: ${c.suggestion}`);
-    });
-  }
-
-  if (!staged && !unstaged) {
-    return { content: [{ type: "text", text: `Working tree clean -- no changes to audit at ${target}.` }] };
-  }
-
-  return { content: [{ type: "text", text: plan.join("\n") }] };
+  return envelope("/audit", {
+    path: target,
+    staged_files: stagedLines.length,
+    unstaged_files: unstagedLines.length,
+    total_files: totalFiles,
+    staged: stagedClusters.map(c => ({ scope: c.scope, files: c.files, suggestion: c.suggestion })),
+    unstaged: unstagedClusters.map(c => ({ scope: c.scope, files: c.files, suggestion: c.suggestion })),
+  }, "Review the commit plan above.");
 });
 
 // Tool: /swarm
@@ -449,6 +455,7 @@ server.registerTool("swarm", {
   inputSchema: {
     path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root."),
     dryRun: z.boolean().optional().default(false).describe("Dry-run mode (no mutations)."),
+    abort: z.boolean().optional().default(false).describe("Abort an interrupted swarm and clear state."),
   },
 }, async (args) => {
   const target = resolveTarget(args?.path);
@@ -456,13 +463,21 @@ server.registerTool("swarm", {
     return { content: [{ type: "text", text: targetError(args?.path) }] };
   }
   const dryRun = args?.dryRun === true;
+  const abort = args?.abort === true;
+
+  if (abort) {
+    const state = new SwarmState(target);
+    state.clear();
+    return envelope("/swarm", { phase: "aborted", path: target }, "State cleared. Run /init to begin again.");
+  }
+
   const state = new SwarmState(target);
   state.write({ phase: "swarm" });
 
   const project = detectProject(target);
   logEvent(target, { event: "swarm_start", project: project.type, dryRun });
   if (!project.testCommand.length) {
-    return { content: [{ type: "text", text: `No test runner detected for ${target}. Cannot execute swarm.` }] };
+    return envelope("/swarm", { phase: "error", reason: "no_test_runner" }, "No test runner detected. Cannot execute swarm.", false);
   }
 
   const tooling = discoverTooling(target);
@@ -470,44 +485,38 @@ server.registerTool("swarm", {
   const formatCmd = resolveCommand(target, "format");
   const testCmd = resolveCommand(target, "test");
 
-  const report: string[] = [
-    `Swarm execution started at ${target}`,
-    `Project: ${project.type} (${project.manifest})`,
-    `Native tooling: ${makeTargets}`,
-    `Test command: ${testCmd?.join(" ") || "(none detected)"}`,
-    `Dry-run: ${dryRun}`,
-    "",
-    `Phase 1/4: Discover & Format -- ${formatCmd?.join(" ") || "skipped"}`,
-    `Phase 2/4: Hunk Clustering -- pending git analysis`,
-    `Phase 3/4: Targeted Testing -- ${testCmd?.join(" ") || "(none detected)"}`,
-    `Phase 4/4: Atomic Commit -- conventional commit generation`,
-    "",
-    `State tracking: ${state.path}`,
-  ];
+  if (!dryRun) {
+    state.write({ phase: "swarm_discover" });
+  }
 
-  if (!dryRun) state.write({ phase: "swarm_discover" });
-
-  return { content: [{ type: "text", text: report.join("\n") }] };
+  return envelope("/swarm", {
+    phase: "swarm_discover",
+    project: project.type,
+    manifest: project.manifest,
+    dry_run: dryRun,
+    test_command: testCmd?.join(" ") || "(none detected)",
+  }, dryRun ? "Dry-run complete. No state persisted." : "Phase 2/4: Hunk Clustering.");
 });
 
 // --- Shared runner for project-step tools ----------------------------
-function runStepTool(kind: ProjectStep, args?: { path?: string }): { content: { type: "text"; text: string }[] } {
+function runStepTool(kind: ProjectStep, args?: { path?: string; dryRun?: boolean }): { content: { type: "text"; text: string }[] } {
   const target = resolveTarget(args?.path);
   if (!target) {
     return { content: [{ type: "text", text: targetError(args?.path) }] };
   }
+  const dryRun = args?.dryRun === true;
   const cmd = resolveCommand(target, kind);
   if (!cmd) {
-    return { content: [{ type: "text", text: `No ${kind} command detected for ${target}.` }] };
+    return envelope(kind, { phase: "skipped", reason: "no_command" }, `No ${kind} command detected.`);
+  }
+  if (dryRun) {
+    return envelope(kind, { phase: "dry_run", command: cmd }, `[DRY-RUN] ${cmd.join(" ")}`);
   }
   const result = runCommand(cmd, target);
   logEvent(target, { event: `${kind}_run`, command: cmd.join(" "), exitCode: result.code });
-  const lines = [
-    `[${kind}] ${cmd.join(" ")}`,
-    `Exit code: ${result.code}`,
-    result.output ? `\n${result.output}` : "(no output)",
-  ];
-  return { content: [{ type: "text", text: lines.join("\n") }] };
+  const state = new SwarmState(target);
+  state.clear();
+  return envelope(kind, { phase: "complete", command: cmd.join(" "), exitCode: result.code }, result.output ? result.output : "(no output)");
 }
 
 // Tool: /tooling
@@ -520,11 +529,11 @@ server.registerTool("tooling", {
     return { content: [{ type: "text", text: targetError(args?.path) }] };
   }
   const t = discoverTooling(target);
-  const lines: string[] = [`Tooling for ${target}`, ""];
-  lines.push(`Makefile targets: ${t.makeTargets.join(", ") || "(none)"}`);
-  lines.push(`Shell/script helpers: ${t.shellScripts.join(", ") || "(none)"}`);
-  lines.push(`package.json scripts: ${Object.keys(t.packageScripts).join(", ") || "(none)"}`);
-  return { content: [{ type: "text", text: lines.join("\n") }] };
+  return envelope("/tooling", {
+    make_targets: t.makeTargets,
+    shell_scripts: t.shellScripts,
+    package_scripts: Object.keys(t.packageScripts),
+  }, "Tooling inventory complete.");
 });
 
 // Tool: /lint
@@ -554,28 +563,37 @@ server.registerTool("build", {
 // Tool: /verify
 server.registerTool("verify", {
   description: "Run the full quality gate: format, lint, test, build. Skips steps with no detected command.",
-  inputSchema: { path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root.") },
+  inputSchema: {
+    path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root."),
+    dryRun: z.boolean().optional().default(false).describe("Dry-run mode (no mutations)."),
+  },
 }, async (args) => {
   const target = resolveTarget(args?.path);
   if (!target) {
     return { content: [{ type: "text", text: targetError(args?.path) }] };
   }
+  const dryRun = args?.dryRun === true;
   const steps: ProjectStep[] = ["format", "lint", "test", "build"];
-  const report: string[] = [`Quality gate for ${target}`, ""];
+  const results: Record<string, unknown> = {};
   let failed = 0;
   for (const step of steps) {
     const cmd = resolveCommand(target, step);
     if (!cmd) {
-      report.push(`[SKIP] ${step} -- no command detected`);
+      results[step] = "skipped";
+      continue;
+    }
+    if (dryRun) {
+      results[step] = "dry_run";
       continue;
     }
     const result = runCommand(cmd, target);
     logEvent(target, { event: `${step}_run`, command: cmd.join(" "), exitCode: result.code });
-    report.push(`[${result.code === 0 ? "OK" : "FAIL"}] ${step}: ${cmd.join(" ")}`);
+    results[step] = { exitCode: result.code, output: result.output };
     if (result.code !== 0) failed++;
   }
-  report.push("", `Result: ${failed === 0 ? "PASS" : `${failed} failing step(s)`}`);
-  return { content: [{ type: "text", text: report.join("\n") }] };
+  const state = new SwarmState(target);
+  state.clear();
+  return envelope("/verify", { dry_run: dryRun, steps: results, failures: failed }, failed === 0 ? "PASS" : `${failed} failing step(s)`);
 });
 
 // Tool: /compliance
@@ -589,18 +607,16 @@ server.registerTool("compliance", {
   }
   const report = auditCompliance(target);
   logEvent(target, { event: "compliance_audit", report });
-  const lines = [
-    `Compliance audit for ${target}`,
-    "",
-    "MUST HAVE",
-    `  Unit tests: ${report.mustHave.unitTests ? "PRESENT" : "MISSING"}`,
-    `  Docstrings: ${report.mustHave.docstrings ? "PRESENT" : "MISSING"}`,
-    "",
-    "NICE TO HAVE",
-    `  API docs: ${report.niceToHave.apiDocs ? "PRESENT" : "MISSING"}`,
-    `  Changelog: ${report.niceToHave.changelog ? "PRESENT" : "MISSING"}`,
-  ];
-  return { content: [{ type: "text", text: lines.join("\n") }] };
+  return envelope("/compliance", {
+    must_have: {
+      unit_tests: report.mustHave.unitTests,
+      docstrings: report.mustHave.docstrings,
+    },
+    nice_to_have: {
+      api_docs: report.niceToHave.apiDocs,
+      changelog: report.niceToHave.changelog,
+    },
+  }, "Audit complete.");
 });
 
 // Tool: /version
@@ -613,7 +629,7 @@ server.registerTool("version", {
     const pkg = JSON.parse(fs.readFileSync(path.resolve(ROOT, "package.json"), "utf-8"));
     pkgVersion = pkg.version ?? "(unknown)";
   } catch { /* ignore */ }
-  return { content: [{ type: "text", text: `LCCST v${pkgVersion}` }] };
+  return envelope("/version", { version: pkgVersion }, `LCCST v${pkgVersion}`);
 });
 
 // --- Start transport (only when run directly, not when imported) ----
