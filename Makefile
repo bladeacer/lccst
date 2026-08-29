@@ -1,9 +1,11 @@
 .PHONY: help default build test tag release clean clean-telemetry bench-update benchmark-free bench-report bench-cleanup telemetry-build benchmark-dryrun
 
 VERSION      ?= $(shell node -p "require('./package.json').version")
-AGENT_NAME   ?= opencode
+HARNESS      ?= opencode
+AGENT_NAME   ?= $(HARNESS)
+PROVIDER     ?= opencode-zen
 MODEL_NAME   ?= deepseek-v4-flash-free
-AGENT_MODEL  := $(AGENT_NAME)-$(MODEL_NAME)
+AGENT_MODEL  := $(PROVIDER)-$(HARNESS)-$(MODEL_NAME)
 BENCH_DIR    := playground/benchmarks
 CONFIG_FILE  ?=
 
@@ -28,7 +30,8 @@ help:
 	@echo "  make help               Show this message"
 	@echo ""
 	@echo "Variables:"
-	@echo "  VERSION=$(VERSION)      AGENT_NAME=$(AGENT_NAME)  MODEL_NAME=$(MODEL_NAME)"
+	@echo "  VERSION=$(VERSION)      HARNESS=$(HARNESS)  PROVIDER=$(PROVIDER)  MODEL_NAME=$(MODEL_NAME)"
+	@echo "  AGENT_MODEL=$(AGENT_MODEL)   (provider-harness-model)"
 	@echo "  CONFIG_FILE=$(CONFIG_FILE)   Path to custom agent config template"
 	@echo ""
 	@echo "Example:"
@@ -96,13 +99,14 @@ else
 	@echo "$$GENERATE_OPECODE_CONFIG" > playground/$(AGENT_MODEL)/opencode.jsonc
 endif
 	@echo "[Harness] Starting interactive agent terminal session..."
-	$(AGENT_NAME) playground/$(AGENT_MODEL)
+	$(HARNESS) playground/$(AGENT_MODEL)
 	+$(MAKE) bench-report
 	+$(MAKE) bench-cleanup
 
 bench-report:
 	@echo "[Harness] Parsing compiled outputs and runtime telemetry logs..."
-	python3 $(BENCH_DIR)/run_benchmark.py $(AGENT_MODEL) --install-deps
+	python3 $(BENCH_DIR)/run_benchmark.py $(AGENT_MODEL) \
+		--provider $(PROVIDER) --harness $(HARNESS) --model $(MODEL_NAME) --install-deps
 	@echo "[Harness] Report generated. Use 'make bench-cleanup' to remove workspace files."
 
 bench-cleanup:

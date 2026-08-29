@@ -87,18 +87,19 @@ For example, in your agent's configuration file:
 
 ```bash
 # 1. Clean previous caches and structure the isolation clean-room e.g.
-make benchmark-free AGENT_NAME=your-agent MODEL_NAME=your-model
+make benchmark-free HARNESS=your-harness PROVIDER=your-provider MODEL_NAME=your-model
 
 # 2. Run your agent in a NEW SESSION, check lccst-telemetry MCP is active
 # paste the prompt, let it run.
 # You can set values to override the defaults used in the Makefile
-make AGENT_NAME=your-agent MODEL_NAME=your-model
+make HARNESS=your-harness PROVIDER=your-provider MODEL_NAME=your-model
 
 # 3. Exit once done. Folder cleanup and benchmark files writing
 # will happen automatically
 
 # 4. View versioned evaluation output report logs
-cat ./benchmarks/${AGENT_NAME}-${MODEL_NAME}/benchmark-report-v*.md
+# Folder name is provider-harness-model, e.g. opencode-zen-opencode-hy3-free
+cat ./benchmarks/${PROVIDER}-${HARNESS}-${MODEL_NAME}/benchmark-report-v*.md
 
 # 5. Aggregated results in README (project root)
 cat README.md

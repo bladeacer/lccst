@@ -2,10 +2,16 @@
 """Agent-agnostic benchmark: measures tokens, lines, features, and test results
 for plain vs skill-guided implementations across all three projects.
 
+The workspace folder is named ``provider-harness-model`` (e.g.
+``opencode-zen-opencode-hy3-free``) so results can be compared across
+providers, harnesses, and models.
+
 Usage:
-    python3 run_benchmark.py <agent-name-model> [--install-deps]
+    python3 run_benchmark.py <provider-harness-model> \
+        [--provider opencode-zen] [--harness opencode] [--model hy3-free] [--install-deps]
 """
 
+import argparse
 import json
 import os
 import re
@@ -279,18 +285,40 @@ def synthesize_missing_breakdown(art_data, results):
     art_data["breakdown"] = synthetic
 
 
-def main():
-    if len(sys.argv) < 2:
-        print(__doc__)
-        sys.exit(1)
+def parse_agent_identity(agent_tag, provider, harness, model):
+    """Resolve the provider/harness/model triple from explicit flags or the
+    agent-tag directory name (``provider-harness-model``)."""
+    prefix = f"{provider}-{harness}-"
+    if model is None:
+        if agent_tag.startswith(prefix):
+            model = agent_tag[len(prefix):]
+        else:
+            model = agent_tag
+    return provider, harness, model
 
-    agent_tag = sys.argv[1]
+
+def main():
+    parser = argparse.ArgumentParser(
+        description="Agent-agnostic benchmark: measures tokens, lines, features, "
+                    "and test results for plain vs skill-guided implementations."
+    )
+    parser.add_argument("agent_tag", help="Agent directory name (provider-harness-model)")
+    parser.add_argument("--provider", default="opencode-zen", help="Model provider, e.g. opencode-zen")
+    parser.add_argument("--harness", default="opencode", help="Agent/harness name, e.g. opencode")
+    parser.add_argument("--model", default=None, help="Model name, e.g. hy3-free (derived from tag if omitted)")
+    parser.add_argument("--install-deps", action="store_true", help="Install pnpm deps for react-timer")
+    args = parser.parse_args()
+
+    provider, harness, model = parse_agent_identity(
+        args.agent_tag, args.provider, args.harness, args.model
+    )
+    agent_tag = args.agent_tag
     agent_dir = PLAYGROUND / agent_tag
     if not agent_dir.is_dir():
         print(f"Agent directory not found: {agent_dir}")
         sys.exit(1)
 
-    if "--install-deps" in sys.argv:
+    if args.install_deps:
         react_dir = agent_dir / "react-timer" / "skill-guided"
         if (react_dir / "package.json").exists() and not (react_dir / "node_modules").exists():
             print("Installing pnpm dependencies for react-timer...")
@@ -312,7 +340,7 @@ def main():
     art_data = load_merged_telemetry(agent_tag)
     synthesize_missing_breakdown(art_data, results)
 
-    report_content = generate_markdown(results, agent_tag, skill_ver, art_data)
+    report_content = generate_markdown(results, provider, harness, model, agent_tag, skill_ver, art_data)
     report_dir = PLAYGROUND / "benchmarks" / agent_tag
     report_dir.mkdir(parents=True, exist_ok=True)
     
@@ -326,7 +354,7 @@ def main():
     print(f"\nReport generated and archived cleanly at: {report_file}")
 
 
-def generate_markdown(results, agent_tag, skill_ver, art_data):
+def generate_markdown(results, provider, harness, model, agent_tag, skill_ver, art_data):
     total_plain_tokens = sum(r["plain"]["total_tokens"] for r in results.values())
     total_guided_tokens = sum(r["guided"]["total_tokens"] for r in results.values())
     total_plain_lines = sum(r["plain"]["total_lines"] for r in results.values())
@@ -339,7 +367,10 @@ def generate_markdown(results, agent_tag, skill_ver, art_data):
 
     md = f"""# LCCST Playground Benchmark Report
 
-**Agent Configuration:** {agent_tag}
+**Provider:** {provider}
+**Harness:** {harness}
+**Model:** {model}
+**Agent Tag:** {agent_tag}
 **Active Ecosystem MCPs:** `{mcp_string}`
 **Skill Protocol Engine:** {skill_ver}
 **Python Runtime:** {tool_versions['python']} | **pnpm:** {tool_versions['pnpm']} | **Go:** {tool_versions['go']}

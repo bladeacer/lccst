@@ -26,8 +26,8 @@ playground/
         index.ts                    # Low-level Server instance logic
       build/
         index.js                    # Compiled stdio runtime endpoint
-    {agent-name}-{model-name}/      # Preserved benchmarking artifacts
-  {agent-name}-{model-name}/        # Isolated sandboxed workspace root
+    {provider}-{harness}-{model-name}/  # Preserved benchmarking artifacts
+  {provider}-{harness}-{model-name}/    # Isolated sandboxed workspace root
     runtime-telemetry.json          # Shared runtime telemetry data
     python-http-server/
       plain/                        # Minimal unguided execution root
@@ -122,13 +122,15 @@ uv sync                           # installs tiktoken for accurate token counts
 cd ../..
 
 # From repository root:
-python3 playground/benchmarks/run_benchmark.py <agent-tag> [--install-deps]
+python3 playground/benchmarks/run_benchmark.py <provider-harness-model> \
+    --provider <provider> --harness <harness> --model <model-name> [--install-deps]
 ```
 
-Where `<agent-tag>` matches the agent directory name, e.g.:
+Where `<provider-harness-model>` matches the agent directory name, e.g.:
 
 ```bash
-python3 playground/benchmarks/run_benchmark.py opencode-deepseek-v4-flash-free --install-deps
+python3 playground/benchmarks/run_benchmark.py opencode-zen-opencode-deepseek-v4-flash-free \
+    --provider opencode-zen --harness opencode --model deepseek-v4-flash-free --install-deps
 ```
 
 The `--install-deps` flag installs dependencies (npm, not pnpm, for React timer) before benchmarking.
@@ -158,7 +160,7 @@ if pnpm-specific build approval is needed.
 
 ## Reproducing Benchmarks
 
-1. **Set up the workspace**: Create `playground/{your-agent-tag}/` with the three project
+1. **Set up the workspace**: Create `playground/{provider-harness-model}/` with the three project
    directories.
 2. **Generate plain implementations**: Without consulting SKILL.md, write minimal working code for
    each project.
@@ -175,15 +177,15 @@ if pnpm-specific build approval is needed.
    * **Node/React**: `pnpm install` in `react-timer/skill-guided/`. If pnpm v11+ blocks build
      scripts, add `.npmrc` with `allow-builds=unrs-resolver` or approve via `pnpm approve-builds`.
    * **Go**: `go mod tidy` in `go-login-crud/skill-guided/`. No external deps beyond stdlib.
-5. **Run the benchmark**: `python3 playground/benchmarks/run_benchmark.py {your-agent-tag}
-   --install-deps`
-6. **Read the report**: `playground/benchmarks/{your-agent-tag}/benchmark-report.md`
+5. **Run the benchmark**: `python3 playground/benchmarks/run_benchmark.py {provider-harness-model}
+   --provider <provider> --harness <harness> --model <model-name> --install-deps`
+6. **Read the report**: `playground/benchmarks/{provider-harness-model}/benchmark-report.md`
 
 ## Adding New Agents
 
 1. Create your implementation directory:
    ```
-   playground/{agent-name}-{model-name}/
+   playground/{provider}-{harness}-{model-name}/
      python-http-server/{plain,skill-guided}/
      react-timer/{plain,skill-guided}/
      go-login-crud/{plain,skill-guided}/

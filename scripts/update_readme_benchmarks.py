@@ -41,8 +41,9 @@ class ProjectResult:
 
 @dataclass
 class BenchmarkReport:
-    """Parsed report for one agent-model-version combination."""
+    """Parsed report for one provider-harness-model-version combination."""
 
+    provider: str
     agent_name: str
     model_name: str
     skill_version: str
@@ -243,10 +244,13 @@ def _fill_art_values(
 
 
 def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
-    """Parse a benchmark report markdown file into structured data."""
-    agent_m = re.search(
-        r"\*\*Agent Configuration:\*\*\s*(\S+)", text
-    )
+    """Parse a benchmark report markdown file into structured data.
+
+    Prefers explicit Provider/Harness/Model headers written by current
+    run_benchmark.py. Falls back to the legacy ``Agent Configuration`` line
+    (``harness-model``), defaulting the provider to ``opencode-zen`` which was
+    the only provider used historically.
+    """
     skill_m = re.search(
         r"\*\*Skill Protocol Engine:\*\*\s*(.+?)(?:\s*\*|$)",
         text,
@@ -254,12 +258,24 @@ def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
     tools_m = re.search(
         r"\*\*Active Ecosystem MCPs:\*\*\s*`(.+?)`", text
     )
-    if not agent_m:
-        return None
 
-    parts = agent_tag.split("-", 1)
-    agent_name = parts[0] if len(parts) == 2 else agent_tag
-    model_name = parts[1] if len(parts) == 2 else ""
+    prov_m = re.search(r"\*\*Provider:\*\*\s*(\S+)", text)
+    harn_m = re.search(r"\*\*Harness:\*\*\s*(\S+)", text)
+    model_m = re.search(r"\*\*Model:\*\*\s*(\S+)", text)
+
+    if prov_m and harn_m and model_m:
+        provider = prov_m.group(1)
+        agent_name = harn_m.group(1)
+        model_name = model_m.group(1)
+    else:
+        agent_m = re.search(r"\*\*Agent Configuration:\*\*\s*(\S+)", text)
+        if not agent_m:
+            return None
+        parts = agent_m.group(1).split("-", 1)
+        provider = "opencode-zen"
+        agent_name = parts[0] if len(parts) == 2 else agent_m.group(1)
+        model_name = parts[1] if len(parts) == 2 else ""
+
     skill_version = skill_m.group(1).strip().lstrip("v") if skill_m else ""
     context_tools = tools_m.group(1) if tools_m else ""
 
@@ -270,6 +286,7 @@ def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
     _fill_art_values(text, projects)
 
     return BenchmarkReport(
+        provider=provider,
         agent_name=agent_name,
         model_name=model_name,
         skill_version=skill_version,
@@ -423,14 +440,14 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
     for report in reports:
         ver_label = report.skill_version
         heading = (
-            f"#### {report.agent_name}-{report.model_name}: "
+            f"#### {_fmt_slash_tag(report)}: "
             f"skill version v{ver_label}"
         )
         parts.append(heading)
         parts.append("")
 
         header = (
-            "| Agent Runtime | LLM Engine | Skill Layer "
+            "| Provider | Harness | Model | Skill Layer "
             "| Context Tools (MCP) | Subproject "
             "| Plain Score | Skill-Guided | Test Status "
             "| FCT (Plain) | FCT (Guided) "
@@ -438,8 +455,7 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
         )
         sep = (
             "| :--- | :--- | :--- | :--- | :--- "
-            "| :---: | :---: | :---: "
-            "| :---: | :---: | :---: | :---: |"
+            "| :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
         )
         parts.append(header)
         parts.append(sep)
@@ -447,6 +463,7 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
         for proj in report.projects:
             status = "PASSED" if proj.test_passed else "FAILED"
             row = (
+                f"| `{report.provider}` "
                 f"| **{report.agent_name}** "
                 f"| `{report.model_name}` "
                 f"| `v{report.skill_version}` "
@@ -518,7 +535,7 @@ def generate_comparison_table(reports: list[BenchmarkReport]) -> str:
 
     parts = []
     headers = " | ".join(
-        f"{r.agent_name}-{r.model_name}" for r in reports
+        _fmt_backtick_tag(r) for r in reports
     )
     parts.append(f"| Metric | {headers} |")
     parts.append("| --- |" + " --- |" * len(reports))
@@ -543,7 +560,11 @@ def generate_comparison_table(reports: list[BenchmarkReport]) -> str:
 
 
 def _fmt_backtick_tag(r: BenchmarkReport) -> str:
-    return f"`{r.agent_name}-{r.model_name}`"
+    return f"`{r.provider}-{r.agent_name}-{r.model_name}`"
+
+
+def _fmt_slash_tag(r: BenchmarkReport) -> str:
+    return f"{r.provider}/{r.agent_name}/{r.model_name}"
 
 
 def _fmt_names(reports: list[BenchmarkReport]) -> str:
@@ -586,7 +607,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
     if perfect:
         if len(perfect) == 1:
             p = perfect[0]
-            tag = f"{p.agent_name}-{p.model_name}"
+            tag = _fmt_backtick_tag(p)
             p_fct = pct_delta(p.total_fct_plain, p.total_fct_guided)
             p_art = pct_delta(p.total_art_plain, p.total_art_guided)
             te.append(
@@ -613,7 +634,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
             te.append(_fmt_intro_line(perfect))
 
             best_pp = max(perfect, key=lambda r: r.avg_plain_score)
-            bp_tag = f"{best_pp.agent_name}-{best_pp.model_name}"
+            bp_tag = _fmt_backtick_tag(best_pp)
             bp_fct = pct_delta(
                 best_pp.total_fct_plain, best_pp.total_fct_guided
             )
@@ -631,7 +652,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
 
             eff_pp = min(perfect, key=_fct_overhead)
             if eff_pp is not best_pp:
-                eff_tag = f"{eff_pp.agent_name}-{eff_pp.model_name}"
+                eff_tag = _fmt_backtick_tag(eff_pp)
                 eff_fct = pct_delta(
                     eff_pp.total_fct_plain, eff_pp.total_fct_guided
                 )
@@ -650,7 +671,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
                 if r is not best_pp and r is not eff_pp
             ]
             for r in remaining:
-                tag = f"{r.agent_name}-{r.model_name}"
+                tag = _fmt_backtick_tag(r)
                 r_fct = pct_delta(
                     r.total_fct_plain, r.total_fct_guided
                 )
@@ -662,7 +683,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
 
     if imperfect:
         for r in imperfect:
-            tag = f"{r.agent_name}-{r.model_name}"
+            tag = _fmt_backtick_tag(r)
             worst = min(r.projects, key=lambda p: p.guided_score)
             r_fct = pct_delta(
                 r.total_fct_plain, r.total_fct_guided
@@ -700,7 +721,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
         + lowest_abs.total_art_plain + lowest_abs.total_art_guided
     )
     ltu = [
-        f"{lowest_abs.agent_name}-{lowest_abs.model_name} consumed "
+        f"{_fmt_backtick_tag(lowest_abs)} consumed "
         f"the fewest tokens overall "
         f"({fmt_int(lowest_abs_total)}): "
         f"{fmt_int(lowest_abs.total_fct_plain)} plain FCT, "
@@ -716,7 +737,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
         "| ---: | :--- | :---: | :---: | :---: | :---: | :--- |",
     ]
     for i, r in enumerate(reports, 1):
-        tag = f"{r.agent_name}-{r.model_name}"
+        tag = _fmt_backtick_tag(r)
         r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
         r_art = pct_delta(r.total_art_plain, r.total_art_guided)
         composite = _composite_score(r)
@@ -807,7 +828,7 @@ def main() -> None:
     )
     for r in top:
         print(
-            f"  {r.agent_name}-{r.model_name} "
+            f"  {_fmt_backtick_tag(r)} "
             f"(v{r.skill_version}, "
             f"avg guided: {r.avg_guided_score:.0f}%)"
         )

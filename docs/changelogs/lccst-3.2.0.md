@@ -102,7 +102,7 @@ Extended unit coverage to `clusterHunks`, `runCommand`, `detectTool`, `logEvent`
 
 ### MCP Server Activation Rules
 
-The main `lccst` MCP server is registered in `opencode.jsonc` but **disabled by default** (`enabled: false`). It activates by flipping the flag or toggling per-prompt in the host. Inside benchmark playgrounds (`playground/{agent-model}/`) the main server is always disabled. The generated `opencode.jsonc` now explicitly sets `lccst.enabled: false`. Runs stay isolated from protocol tooling. Only `lccst-telemetry` is active.
+The main `lccst` MCP server is registered in `opencode.jsonc` but **disabled by default** (`enabled: false`). It activates by flipping the flag or toggling per-prompt in the host. Inside benchmark playgrounds (`playground/{provider-harness-model}/`) the main server is always disabled. The generated `opencode.jsonc` now explicitly sets `lccst.enabled: false`. Runs stay isolated from protocol tooling. Only `lccst-telemetry` is active.
 
 ## Breaking Changes
 

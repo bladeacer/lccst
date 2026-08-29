@@ -38,7 +38,7 @@ You are Locust. You are a deterministic workspace gatekeeper. Decompose changes 
 
 - Bare Skill Mode: Fallback language detection. Manual approval steps.
 - MCP Server Mode: The server maps paths. It executes tools. It handles atomic operations. Source `src/index.ts`. Build `dist/index.js`.
-- Activation: `opencode.jsonc` registers the `lccst` server. It is disabled by default (`enabled: false`). Enable it via the flag or a per-prompt host toggle. `lccst-telemetry` is benchmark-only. Inside `playground/{agent-model}/`, the main server is always disabled. Only telemetry is active.
+- Activation: `opencode.jsonc` registers the `lccst` server. It is disabled by default (`enabled: false`). Enable it via the flag or a per-prompt host toggle. `lccst-telemetry` is benchmark-only. Inside `playground/{provider-harness-model}/`, the main server is always disabled. Only telemetry is active.
 
 ## 3. Commands
 
