@@ -2,7 +2,9 @@
 
 # LCCST (Locust)
 
-A deterministic workspace gatekeeper that decomposes codebase changes into isolated, test-verified, atomic Git commits. Enforces architectural cohesion and SOLID invariants through a lean execution protocol.
+A deterministic workspace gatekeeper that decomposes codebase changes into
+isolated, test-verified, atomic Git commits. Enforces architectural cohesion
+and SOLID invariants through a lean execution protocol.
 
 > "Swarming your messy diffs before they reach production."
 
@@ -10,7 +12,8 @@ A deterministic workspace gatekeeper that decomposes codebase changes into isola
 
 ### Bare Skill Mode
 
-Load `SKILL.md` directly into the LLM context window. The model follows the rules manually. No MCP server required.
+Load `SKILL.md` directly into the LLM context window. The model follows the
+rules manually. No MCP server required.
 
 ### MCP Server Mode
 
@@ -28,7 +31,12 @@ The MCP server at `src/index.ts` (built to `dist/index.js`) exposes eleven tools
 - **`compliance`** -- Audit deliverable tiers
 - **`version`** -- Report the current LCCST version
 
-Every path-taking tool accepts a `path` argument (default `.`). Absolute paths preserved; `~` expands to `$HOME`; set `LCCST_WORKSPACE` to override the workspace root. See `src/index.ts` for implementation details.
+These tools map 1:1 to the slash commands documented in `SKILL.md`. The skill
+runs standalone; the server is an optional programmatic front end.
+
+Every path-taking tool accepts a `path` argument (default `.`). Absolute paths
+preserved; `~` expands to `$HOME`; set `LCCST_WORKSPACE` to override the
+workspace root. See `src/index.ts` for implementation details.
 
 ```bash
 # Init detects the manifest and runs the native test command:
@@ -39,11 +47,39 @@ Every path-taking tool accepts a `path` argument (default `.`). Absolute paths p
 /init -> Detects CMakeLists.txt -> swarm runs `cmake --build .`
 ```
 
+## Core Philosophy
+
+- **UNIX philosophy over framework:** One skill file and one server file. No
+  scaffolding the domain does not justify. Over-engineering is a correctness
+  defect.
+- **User conventions first:** Existing patterns, manifest commands, and
+  explicit preferences take priority. Atomic hunk isolation, the Tooling
+  Ladder, and strict test-pass verification are non-negotiable.
+- **Quality over velocity:** Structural integrity and complete test
+  verification beat raw speed. Token discipline applies to output, not
+  internal reasoning.
+- **Granularity over convenience:** Locality Clustering groups diffs by domain
+  so each atomic commit rolls back cleanly. The extra commits buy a clear,
+  reversible history.
+- **Proportional defence:** Validation, rate limiting, and caching apply only
+  where module exposure justifies them. Omit fabricated attack or load
+  scenarios.
+- **Ecosystem-native discovery:** LSP, Tree-sitter, and native test runners
+  trace side effects; the Tooling Ladder prefers project scripts over bare
+  binaries.
+- **Token investment:** LCCST puns on low-cost asset management while
+  clustering by locality. Tokens are strategic capital -- spent on tests,
+  typing, and the Tooling Ladder, not on boilerplate.
+
 ## Installation
 
 ### Option A: GitHub Releases (Recommended)
 
-Download the latest release from the [releases page](https://github.com/bladeacer/lccst/releases). Each release bundles `dist/index.js`, `SKILL.md`, `dist/index.d.ts`, `LICENSE`, and `README.md`. Set the path to `dist/index.js` in your agent config. No install or build needed.
+Download the latest release from the
+[releases page](https://github.com/bladeacer/lccst/releases). Each release
+bundles `dist/index.js`, `SKILL.md`, `dist/index.d.ts`, `LICENSE`, and
+`README.md`. Set the path to `dist/index.js` in your agent config. No install
+or build needed.
 
 ### Option B: Zero-Setup Declarative Ingestion
 
@@ -52,8 +88,10 @@ For instruction-driven workflows that need no background processes.
 - **Claude Code CLI:** `claude "Review the active git diff using the parameters in ./SKILL.md"`
 - **GitHub Copilot & OpenCode:** Attach `#SKILL.md` or `@SKILL.md` in chat
 - **Codex & harnesses:** `cat SKILL.md | your-agent-runner "Apply this system execution skill"`
-- **Project-level binding:** Symlink `SKILL.md` as `.cursorrules`, `.clinerules`, or `.github/copilot-instructions.md`
-- **Global profiles:** Paste into Cursor Rules, Windsurf Memories, VS Code `globalRules.json`, or JetBrains Custom Prompts
+- **Project-level binding:** Symlink `SKILL.md` as `.cursorrules`,
+  `.clinerules`, or `.github/copilot-instructions.md`
+- **Global profiles:** Paste into Cursor Rules, Windsurf Memories, VS Code
+  `globalRules.json`, or JetBrains Custom Prompts
 
 ### Option C: Universal Package Registry
 
@@ -69,7 +107,7 @@ git clone --depth 1 https://github.com/bladeacer/lccst
 cd lccst && pnpm install && pnpm run build
 ```
 
-Add to your MCP config:
+Add to your harness config:
 
 ```json
 {
@@ -82,9 +120,14 @@ Add to your MCP config:
 }
 ```
 
-> Replace the path with your actual `dist/index.js`. The server is disabled by default (`enabled: false`).
+> Replace the path with your actual `dist/index.js`. The server is disabled by
+> default (`enabled: false`).
+> 
+> Note: A harness is a programme you use to interface with and run AI models
 
-**OpenCode:** Add the above to `opencode.jsonc` under `mcp.lccst`. The `SKILL.md` is auto-discovered as an Agent Skill -- use `/lccst` or `@SKILL.md` to invoke it.
+**OpenCode:** Add the above to `opencode.jsonc` under `mcp.lccst`. The
+`SKILL.md` is auto-discovered as an Agent Skill -- use `/lccst` or `@SKILL.md`
+to invoke it.
 
 ## Development
 
@@ -107,7 +150,8 @@ Benchmarking has its own dependencies -- see [`playground/README.md`](playground
 
 ## Playground and Benchmarking
 
-Measures token impact of skill-guided vs plain code generation across three reference projects (Python HTTP server, React timer, Go login CRUD).
+Measures token impact of skill-guided vs plain code generation across three
+reference projects (Python HTTP server, React timer, Go login CRUD).
 
 <!-- BENCHMARK_RESULTS_START -->
 
@@ -215,19 +259,22 @@ ART.
 
 ## LLM Usage Disclosure
 
-AI assistance was used in the making of this project. Architectural and design decisions and ensuring the code works as intended was done by a human.
+AI assistance was used in the making of this project. Architectural and design
+decisions and ensuring the code works as intended was done by a human.
 
 ## Credits
 
 Locust was heavily inspired by [ponytail](https://github.com/DietrichGebert/ponytail).
 
-The logo and posters use [the Iceberg Dark colour scheme by cocopon](https://cocopon.github.io/iceberg.vim/).
+The logo and posters use
+[the Iceberg Dark colour scheme by cocopon](https://cocopon.github.io/iceberg.vim/).
 
 [IBM Plex Mono](https://github.com/IBM/plex) was used for typography.
 
 The [Agent Skills specification](https://agentskills.io/specification).
 
-Skill writing and docs follow ASD-STE100 Simplified Technical English, guided by the [SimpleEnglish skill](https://github.com/AminBlg/SimpleEnglish).
+Skill writing and docs follow ASD-STE100 Simplified Technical English, guided
+by the [SimpleEnglish skill](https://github.com/AminBlg/SimpleEnglish).
 
 ## License
 

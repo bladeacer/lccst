@@ -28,9 +28,13 @@ All MCP tools now return a structured JSON envelope containing `success`, `step`
 
 Native workspace runners now take explicit precedence over bare binaries. The protocol dictates preferring `pnpm exec jest` or `uv run pytest` over global `jest` or `pytest`. This prevents environment leaks when running commands in Bare Skill Mode.
 
-### Token Investment Philosophy Merged
+### Token Investment Philosophy Moved
 
-The token economy guidance has been merged into the core mandate section. The philosophy is now concise: invest tokens where robustness depends on them. Do not spend tokens on trivial corrections.
+The token economy guidance moved out of `SKILL.md` into the `README.md` Core Philosophy section. The skill keeps only the proportionality principle in its mandate. The philosophy is now concise: invest tokens where robustness depends on them. Do not spend tokens on trivial corrections.
+
+### Skill and README Separation
+
+`SKILL.md` is now standalone: it describes the protocol as slash commands and exact conventions without referencing the MCP server, its modes, activation, or tool parity. `README.md` documents the one-to-one mapping between tools and slash commands and regains a concise Core Philosophy section (UNIX-style minimalism, user conventions first, quality over velocity, locality clustering, proportional defence, and token investment).
 
 ## Breaking Changes
 
