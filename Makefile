@@ -91,6 +91,7 @@ benchmark-free: clean-telemetry telemetry-build
 	@cp SKILL.md playground/$(AGENT_MODEL)/SKILL.md
 	@cp playground/README.md playground/$(AGENT_MODEL)/README.md
 	@cp playground/guide.md playground/$(AGENT_MODEL)/guide.md
+	@cp playground/agent-prompt.md playground/$(AGENT_MODEL)/agent-prompt.md
 ifdef CONFIG_FILE
 	@echo "[Harness] Using custom agent config template: $(CONFIG_FILE)"
 	@cp "$(CONFIG_FILE)" playground/$(AGENT_MODEL)/
@@ -114,6 +115,7 @@ bench-cleanup:
 	@rm -f playground/$(AGENT_MODEL)/SKILL.md
 	@rm -f playground/$(AGENT_MODEL)/README.md
 	@rm -f playground/$(AGENT_MODEL)/guide.md
+	@rm -f playground/$(AGENT_MODEL)/agent-prompt.md
 	@rm -f playground/$(AGENT_MODEL)/opencode.jsonc
 	@rm -f playground/$(AGENT_MODEL)/kilo.json
 	@rm -rf playground/$(AGENT_MODEL)/go-login-crud
