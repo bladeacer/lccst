@@ -35,6 +35,9 @@ except ImportError:
 else:
     ENCODER = tiktoken.get_encoding("cl100k_base")
 
+if "--uv" in sys.argv:
+    sys.argv.remove("--uv")
+
 PLAYGROUND = Path(__file__).resolve().parent.parent
 
 PROJECTS = {

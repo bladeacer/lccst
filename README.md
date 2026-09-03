@@ -254,6 +254,11 @@ ART.
 | 2 | `opencode-zen-opencode-deepseek-v4-flash-free` | 34/100 | 100/100 | +391% | -34% | Strong contender |
 | 3 | `opencode-zen-opencode-hy3-free` | 40/100 | 100/100 | +291% | +94% | Strong contender |
 
+See [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark runs.
+
+> Only benchmark runs which perform well enough are included
+
+
 <!-- BENCHMARK_RESULTS_END -->
 
 

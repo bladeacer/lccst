@@ -18,6 +18,7 @@ from typing import Any
 
 BENCH_DIR = Path("playground/benchmarks")
 README_PATH = Path("README.md")
+RANKING_PATH = Path("model-ranking.md")
 TOP_N = 5
 
 ART_RE = re.compile(r"\*\*(\d+)\s+tokens?\*\*")
@@ -768,6 +769,95 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
     return "\n\n".join(sections)
 
 
+def _verdict(composite: float, avg_guided: float) -> str:
+    if avg_guided >= 100 and composite >= 40:
+        return "Best overall"
+    if avg_guided >= 100:
+        return "Strong contender"
+    if composite >= 40:
+        return "Strong contender"
+    if composite >= 20:
+        return "Promising"
+    if composite >= 0:
+        return "Quality concern"
+    return "Avoid using"
+
+
+def generate_full_ranking_table(reports: list[BenchmarkReport]) -> str:
+    """Generate a full ranking table for ALL reports, sorted best to worst."""
+    if not reports:
+        return ""
+
+    ranked = sorted(reports, key=_composite_score, reverse=True)
+
+    header = (
+        "| Rank | Agent-Model | Skill Version "
+        "| Avg Guided | Avg Plain "
+        "| Pass Rate "
+        "| FCT Plain | FCT Guided | FCT Overhead "
+        "| ART Plain | ART Guided | ART Overhead "
+        "| Composite | Verdict |"
+    )
+    sep = (
+        "| ---: | :--- | :---: "
+        "| :---: | :---: "
+        "| :---: "
+        "| :---: | :---: | :---: "
+        "| :---: | :---: | :---: "
+        "| :---: | :--- |"
+    )
+    rows = [header, sep]
+
+    for i, r in enumerate(ranked, 1):
+        tag = _fmt_backtick_tag(r)
+        r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
+        r_art = pct_delta(r.total_art_plain, r.total_art_guided)
+        fct_oh = f"{r_fct}%" if r_fct != "--" else "--"
+        art_oh = f"{r_art}%" if r_art != "--" else "N/A"
+        if r.total_art_plain == 0 and r_fct != "--":
+            art_oh = "clean baseline"
+        composite = _composite_score(r)
+        verdict = _verdict(composite, r.avg_guided_score)
+        pass_rate = f"{r.passed_count}/{len(r.projects)}"
+
+        rows.append(
+            f"| {i} | {tag} | v{r.skill_version} "
+            f"| {r.avg_guided_score:.0f}/100 | {r.avg_plain_score:.0f}/100 "
+            f"| {pass_rate} "
+            f"| {fmt_int(r.total_fct_plain)} | {fmt_int(r.total_fct_guided)} | {fct_oh} "
+            f"| {fmt_int(r.total_art_plain)} | {fmt_int(r.total_art_guided)} | {art_oh} "
+            f"| {composite:.1f} | {verdict} |"
+        )
+
+    return "\n".join(rows)
+
+
+def write_ranking_file(reports: list[BenchmarkReport]) -> None:
+    """Write the full model ranking to model-ranking.md."""
+    if not reports:
+        return
+
+    ranked = sorted(reports, key=_composite_score, reverse=False)
+    now = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")
+
+    lines = [
+        "# Model Ranking",
+        "",
+        f"Generated: {now}",
+        f"Total runs: {len(ranked)}",
+        "",
+        "> Ranked from best to worst by composite score. "
+        "Composite score weights guided robustness (40%), plain robustness (10%), "
+        "pass rate (10%), FCT efficiency (20%), and ART efficiency (20%).",
+        "",
+        generate_full_ranking_table(ranked),
+        "",
+    ]
+
+    RANKING_PATH.write_text("\n".join(lines), encoding="utf-8")
+    print(f"Wrote {RANKING_PATH} with {len(ranked)} ranked runs.")
+
+
 def update_readme(table_content: str, count: int = 0) -> None:
     """Replace the benchmark table section in README.md."""
     text = README_PATH.read_text(encoding="utf-8")
@@ -820,6 +910,15 @@ def main() -> None:
         print("No benchmark reports found.", file=sys.stderr)
         sys.exit(1)
 
+    latest: list[BenchmarkReport] = []
+    for versions in reports_map.values():
+        if not versions:
+            continue
+        versions.sort(key=lambda x: x[0], reverse=True)
+        r = versions[0][1]
+        if r.avg_guided_score >= 100:
+            latest.append(r)
+
     top = pick_top_n(reports_map)
     print(
         f"Found {len(reports_map)} agent-model(s), "
@@ -837,7 +936,10 @@ def main() -> None:
     summary = generate_summary_sections(top)
     combined = f"{table}\n\n### Benchmark Summary\n\n{comparison}\n\n{summary}"
     combined = _wrap_benchmark_text(combined)
+    combined += "\n\nSee [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark runs.\n\n> Only benchmark runs which perform well enough are included\n"
     update_readme(combined, len(top))
+
+    write_ranking_file(latest)
 
 
 if __name__ == "__main__":

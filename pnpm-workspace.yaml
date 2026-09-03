@@ -1,5 +1,6 @@
 packages:
   - "playground/*/*/skill-guided"
+  - "playground/*/*/skill-guided/*"
   - "playground/benchmarks"
 
 onlyBuiltDependencies:
