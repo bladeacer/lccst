@@ -126,6 +126,52 @@ When executing the Go Login CRUD subproject, agents loop on package main import 
 | httptest.NewRequest + SetPathValue not called for path parameters | Handler uses r.PathValue("id") which returns empty string if path value not set on the test request | Call req.SetPathValue("id", "...") after constructing the test request when using Go 1.22+ routing patterns. |
 | Benchmark error-handling regex does not match if err := ...; err != nil | The benchmark scans for the contiguous substring if\s+err\s*!\=\s*nil. Go's idiomatic form separates if err from != nil by the pre-call statement | Use the two-line form: err := call(); if err != nil { ... }. The regex matches if err != nil only when err and != are adjacent in the same statement. |
 
+## Platform-Specific Notes
+
+### pnpm v11 Build Approval
+
+pnpm v11 requires explicit approval for packages that run build scripts.
+Dependencies like `unrs-resolver` (a Jest transitive dep) block install and
+test until approved:
+
+- Per-project: Create `.npmrc` with `allow-builds=unrs-resolver`.
+- Workspace-wide: Add to root `pnpm-workspace.yaml`:
+
+  ```yaml
+  onlyBuiltDependencies:
+    - unrs-resolver
+  ```
+
+- Interactive: Run `pnpm approve-builds` in the project directory.
+
+Once approved, regenerate the lockfile with `pnpm install --no-frozen-lockfile`.
+
+### React and TypeScript Setup Checklist
+
+The skill-guided React Timer needs these config files to bypass common pitfalls:
+
+| File | Purpose |
+|------|---------|
+| `package.json` | Dependencies: jest, ts-jest, @testing-library/react, typescript, react, react-dom |
+| `tsconfig.json` | `compilerOptions.jsx: "react-jsx"`, `rootDir`, `strict` mode |
+| `jest.config.js` | `preset: "ts-jest"`, `testEnvironment: "jsdom"`, `roots` pointing to `tests/` |
+| `.npmrc` (if needed) | `allow-builds=unrs-resolver` for pnpm v11 build approval |
+
+### Go Test Package Isolation
+
+Go test files inside a `tests/` subdirectory must use a separate package name
+(`package tests`). They cannot import from `package main` (the `cmd/server`
+package). Structure handler tests to import `internal/repository` and
+`internal/handler` directly and wire them in test setup.
+
+### uv for Python
+
+Python projects use `uv` for dependency management. The `pyproject.toml` can
+declare dev dependencies under `[dependency-groups]` (PEP 735) or
+`[tool.uv] dev-dependencies`. Run `uv sync` to install, then `uv run pytest`
+to execute tests. The benchmark script unsets `VIRTUAL_ENV` before running
+Python tests to avoid venv mismatch.
+
 ## Traceability
 
 Each benchmark report includes the SKILL.md version, the agent tag, Python, pnpm, and Go versions detected at runtime, and a full breakdown of tokens, lines, and features per project. This ensures results are reproducible and comparable across agents and toolchain versions.

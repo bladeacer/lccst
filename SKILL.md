@@ -53,6 +53,15 @@ non-negotiable.
 
 ## 2. Runtime
 
+### Mode Gating
+
+Remain in Read/Plan Mode by default. Output one terse summary line per anomaly;
+do not emit full commit bodies, templates, or implementation code. Latch into
+Active Execution only after the user issues a target feature instruction,
+confirms an audit summary, or invokes `/swarm` / `/verify`. Reserve high
+completion-token overhead for Active Execution. Passive inspection stays
+ultra-lean.
+
 - Bare Skill Mode: Fallback language detection. Manual approval steps.
 
 ## 3. Commands
@@ -91,10 +100,11 @@ Use them standalone or inside `/swarm` and `/verify`.
   binaries. Prefer `pnpm exec jest` or `uv run pytest` over global `jest` or
   `pytest`. This prevents environment leaks when running commands in Bare Skill
   Mode.
-- Defensive rules: Every transport entry point must include boundary validation,
-  typed errors, and rate throttling. Other controls (caching, repository-layer
-  isolation) apply only where exposure justifies them. Omit fabricated attack or
-  load scenarios.
+- Defensive rules: Bound to `mode`. In `lean` mode (pure logic/UI helpers),
+  transport entry points need only boundary validation and typed errors. In
+  `strict` mode (default), network and data handlers also require rate
+  throttling, structured errors, and architectural isolation. Caching applies
+  only where lookup cost justifies it. Omit fabricated attack or load scenarios.
 - Verify first: Cross-reference manifests, compilers, and LSP. No guessing.
 
 Modes:
