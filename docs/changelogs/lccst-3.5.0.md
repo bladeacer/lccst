@@ -40,7 +40,14 @@ The token economy guidance moved out of `SKILL.md` into the `README.md` Core Phi
 
 ### Restored `pnpm-lock.yaml`
 
-Restored the `pnpm-lock.yaml` lockfile to version control. It had been removed in commit `a4b13d8` and added to `.gitignore`, which caused the CI `pnpm install --frozen-lockfile` step in `.github/workflows/ci.yml` to fail because no lockfile was present. The lockfile is now tracked again and `--frozen-lockfile` runs cleanly.
+Restored the `pnpm-lock.yaml` lockfile to version control. It had been
+removed in commit `a4b13d8` and added to `.gitignore`, which caused the CI
+`pnpm install --frozen-lockfile` step in `.github/workflows/ci.yml` to fail
+because no lockfile was present. The lockfile was regenerated against the
+current `pnpm-workspace.yaml` (the August `chore: bump pnpm deps` commit
+added an `overrides` block that the pre-`a4b13d8` lockfile did not capture,
+which caused `ERR_PNPM_LOCKFILE_CONFIG_MISMATCH` on first CI run after
+restoration). `--frozen-lockfile` now resolves cleanly on a clean runner.
 
 ## Performance
 
