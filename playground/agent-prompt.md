@@ -32,4 +32,4 @@ Once the blind deletion pass is executed, run the /init workspace scan command n
    - `prompt_tokens`: <true_count>
    - `completion_tokens`: <true_count>
 
-   Place the telemetry call at the end of the phase. You may follow it with a brief next-step summary so the orchestrator retains context between turns.
+Place the telemetry call at the end of the phase. You may follow it with a brief next-step summary so the orchestrator retains context between turns.
