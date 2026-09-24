@@ -2,176 +2,369 @@
 
 ## Purpose
 
-This guide describes the three reference projects and their implementation constraints. Follow it to build the plain and skill-guided variants.
+This guide defines the three benchmark subprojects, the two implementation
+variants, and the clean-room rules for each run. Use the target specification
+in this guide. For a skill-guided run, also apply `SKILL.md`.
 
-## Projects
+The benchmark harness supplies the sandbox and records telemetry. The harness
+does not change the target specification.
+
+## Terms
+
+Use these terms with one meaning:
+
+- A **benchmark workspace** is a directory named
+  `<provider>-<harness>-<model>`.
+- A **subproject** is one of `python-http-server`, `react-timer`, or
+  `go-login-crud`.
+- A **variant** is `plain` or `skill-guided`.
+- A **target path** is the path below the benchmark workspace that contains one
+  subproject.
+- A **target specification** defines the required behaviour and file layout for
+  a subproject.
+- A **source file** is a project file that matches a scanner path.
+- A **test file** is a test file that matches a scanner path.
+- The **scanner** is the file matcher and feature detector in
+  `benchmarks/run_benchmark.py`.
+- A **mode** is the LCCST `strict` or `lean` defence level. A mode is not a
+  benchmark variant.
+
+## Variant contract
+
+The benchmark prompt defines the variant sequence before implementation starts.
+Follow this contract exactly:
+
+- For `plain`, do not load or apply the rules in `SKILL.md`. Implement the
+  smallest working program that meets the target specification. Do not add
+  tests, manifests, or layers unless the target specification requires them.
+- For `skill-guided`, load and apply `SKILL.md`. Add the required structure,
+  type boundaries, tests, and public docstrings.
+- For both variants, stay inside the benchmark workspace. Do not read, write,
+  or delete files outside it.
+- For both variants, call `log_turn_telemetry` at the end of each requested
+  implementation phase. Pass `subproject`, `variant`, `prompt_tokens`, and
+  `completion_tokens`. Do not submit telemetry when a token count is
+  unavailable. Telemetry is benchmark instrumentation, not part of the plain
+  implementation.
+
+The harness does not run plain-variant tests. It measures plain source files
+and feature markers. It runs the skill-guided test command for each subproject.
+
+## Project targets
 
 ### 1. Python HTTP Server
 
-A single-file Python HTTP server with CRUD for users (GET, POST, PUT, DELETE). The skill-guided variant adds input validation, email regex, rate limiting, and type hints. Tests run via `uv run pytest`. Dependencies are installed with `uv sync` from `pyproject.toml`.
+The plain variant provides user create, read, update, and delete operations:
+`GET`, `POST`, `PUT`, and `DELETE`.
+
+The skill-guided variant must:
+
+- Add boundary validation for request data.
+- Add an email regular expression.
+- Add a rate limiter that reads `DISABLE_RATE_LIMIT` at module import time.
+- Add type hints.
+- Add a `pyproject.toml` manifest with a test dependency.
+
+Put skill-guided source files at the root of `skill-guided/`. Put skill-guided
+tests in `skill-guided/tests/`. The scanner does not count
+`skill-guided/src/*.py`.
+
+Run the benchmark test command from `python-http-server/skill-guided/`:
+
+```bash
+uv run python3 -m pytest tests/ -v --tb=short
+```
+
+The harness sets `DISABLE_RATE_LIMIT=1` and removes `VIRTUAL_ENV` for this
+command. The test process and the server must use the same interpreter.
 
 ### 2. React Timer
 
-A vanilla HTML and JavaScript stopwatch with start, stop, and reset. The skill-guided variant uses TypeScript (`.tsx`) split into a Timer class and `TimerDisplay` React component with a `formatTime()` utility. Tests use Jest, ts-jest, and @testing-library/react. Install with `pnpm install`.
+The plain variant uses HTML and JavaScript. It provides start, stop, and reset
+actions.
+
+The skill-guided variant uses TypeScript and React. It must contain:
+
+- A `Timer` class for timer state
+- A `TimerDisplay` component for the view
+- A `formatTime()` utility
+- Tests for timer logic and component rendering
+
+The scanner reads only these skill-guided paths:
+
+```text
+skill-guided/src/*.tsx
+skill-guided/tests/*.tsx
+```
+
+Use the `.tsx` extension for all skill-guided source and test files, even when
+a file contains no JSX. A `.ts` file is outside the scanner patterns.
+
+Run the benchmark test command from `react-timer/skill-guided/`:
+
+```bash
+npx --no-install jest --no-coverage
+```
+
+Use `pnpm install` for dependencies. The project can define `pnpm test`, but
+the benchmark harness uses the command above. Do not install Jest globally.
 
 ### 3. Go Login CRUD
 
-A single `main.go` with all-in-one server, SHA-256 hashing, and in-memory store. The skill-guided variant uses a layered architecture with model, repository, handler, middleware, and cache components. Tests run via `go test ./tests/ -v`. The Go module has no external dependencies beyond the stdlib.
+The plain variant uses one `main.go` file. It provides login create, read,
+update, and delete operations, SHA-256 password hashing, and an in-memory
+store.
 
-## Protocol Invariants for Agent Runs
+The skill-guided variant separates these responsibilities:
 
-These invariants are enforced by the benchmark harness, not by SKILL.md itself. They isolate the agent behaviour for each run variant to prevent context bleeding between the plain and guided phases.
+- The model defines the user and password fields
+- The repository stores users through an interface
+- The handler maps HTTP requests to use cases
+- The middleware applies the request checks defined by the target specification
+- The cache stores lookup results through an interface
 
-### Strategy Gating Invariants
+The Go module uses only the standard library. Run `go mod tidy` in the
+skill-guided directory. Run the benchmark test command from that directory:
 
-If the variant is "plain", the agent must ignore all telemetry and protocol rules in SKILL.md. Write minimal code to fulfil the basic target specs without running tests or invoking MCP telemetry. If the variant is "skill-guided", the agent must strictly activate the pre-flight sequence and telemetry checkpoints defined in SKILL.md.
+```bash
+go test ./tests/ -v
+```
 
-### Gated Tool Blocklist
+## Clean-room sandbox rules
 
-The following system commands are severed from the agent sandbox during benchmarking. Invoking them or attempting to simulate their output results in immediate evaluation failure:
+The sandbox prevents infrastructure changes and repeated discovery loops.
+Apply these rules before writing code.
 
-- Prohibited: ls, find, git status, git diff, git log, open.
-- Permitted: /init, rm -rf, log_turn_telemetry.
+- Do not alter, upgrade, or modify global packages at run time.
+- Do not read, write, or delete any path outside the current workspace.
+- Do not use a global test runner when a project runner exists.
+- Do not change the benchmark scanner or its file patterns.
+- Do not create a symlink to bypass a Go `internal/` boundary.
 
-## Clean-Room Environment Reference
+The following inspection commands are blocked during an agent run:
 
-The playground runner provides strict target execution invariants to stop agents from looping on infrastructure configuration. Do not alter, upgrade, or dynamically modify global packages.
+- `ls`
+- `find`
+- `git status`
+- `git diff`
+- `git log`
+- `open`
 
-- Go Environment: Version 1.26.4-X with nodwarf5. Modules are pre-initialised. Execute tests via `go test ./tests/...` or `go test ./...`.
-- Node.js and TypeScript Environment: Node.js >= 18, pnpm >= 11.3.0. Typings are pre-cached. Invoke testing via `pnpm test`. Never run bare global installations.
-- Python Environment: Version 3.13.11, manager uv >= 0.4. Run tests exclusively via `uv run pytest`. Virtual environments are kept hermetic. Note that the system python3 binary defaults to 3.14.5; always use `uv run python3` to lock to the 3.13.11 .venv version.
+Do not simulate the output of a blocked command. Use the target specification
+and the files that the task supplies.
 
-## Automated Grading Matrix
+### Supplied toolchain
 
-The benchmarking engine runs static file analyses to calculate the final robustness score. Clean-room implementations must satisfy the design criteria matching the SKILL.md protocol:
+The clean-room environment supplies these versions:
 
-| Assessment Criteria | Target Metrics for Max Score |
-|---------------------|------------------------------|
-| Separation of Concerns | Zero data-access code or inline JSON parsing inside transport layers. |
-| Interface Boundaries | Domain boundaries must interact via abstract contracts or interfaces. |
-| Test Coverage | Minimum 80% line coverage. Every domain module must have an adjacent test file. |
-| Defensive Input | Type guarding, contract validation, and sanitisation active at all entries. |
+- Go 1.26.4-X with `nodwarf5`.
+- Python 3.13.11 with `uv` 0.4 or later.
+- Node.js 18 or later with pnpm 11.3.0 or later.
+- The environment supplies pre-cached TypeScript type definitions.
 
-## Implementation Pitfalls and Loop Prevention
+The system `python3` command can resolve to Python 3.14.5. Use
+`uv run python3` to select the supplied Python 3.13.11 environment. Do not
+run bare `pytest`.
 
-The following findings were collected from actual implementation runs. Agents frequently exhaust tokens by looping on these specific issues. Enforce the mitigation rules below to avoid repeated test-fix cycles.
+## Grading contract
 
-### TypeScript and pnpm Sandbox Constraints
+The runner uses static file patterns and skill-guided test results to calculate
+a robustness score. The score is normalised to 100 for each skill-guided
+subproject.
 
-When executing the React Timer subproject, agents frequently exhaust tokens by looping on implicit type dependencies or attempting to modify root configurations.
+The following design rules define the skill-guided target specification:
 
-**Enforced Mitigation Rules for Future Runs:**
+- **Separation of concerns**: Keep data access and JSON parsing out of
+  transport code.
+- **Interfaces**: Use contracts or interfaces at domain boundaries.
+- **Tests**: Require at least 80% line coverage. Put a test file next to each
+  domain module.
+- **Input handling**: Validate types, contracts, and untrusted data at every
+  entry point.
 
-1. Pre-Baked Configuration: The runtime workspace must pre-supply a working tsconfig.json and a basic package.json with standard testing packages.
-2. Strict Module Resolution: Force the agent to use explicit relative paths and native sub-component imports (.tsx) rather than attempting to refactor global compiler paths.
-3. No Dynamic Linkage: Explicitly forbid the agent from running pnpm link or global installs during the execution loop. If a type dependency is missing, it must log the gap and proceed with static assertions.
+The runner does not calculate line coverage. The 80% value remains a project
+requirement. A test file outside the scanner paths does not contribute to the
+report.
 
-**Known Token Traps:**
+The runner gives 50 points for the skill-guided test result and up to 50
+points for feature markers. The React profile has zero security and
+error-handling points.
+Do not add unrelated security code to the React Timer.
 
-| Trap | Symptom | One-Shot Fix |
-|------|---------|--------------|
-| Missing jest-environment-jsdom | Jest 29+ does not ship jsdom. Test fails with "Test environment not found." | Add jest-environment-jsdom to devDependencies in package.json before first pnpm install. |
-| allow-builds blocks Jest deps | pnpm v11 refuses to build unrs-resolver, halting install | Create .npmrc with allow-builds=unrs-resolver before install. |
-| formatTime floating-point drift | Math.floor((5.3 - 5) * 10) yields 2 due to IEEE 754 precision | Use Math.floor((seconds - totalSecs) * 10 + 0.0001) or Math.round((seconds - totalSecs) * 10). |
-| TimerDisplay double-render via useState | Component wraps time in state, causing initial render to show stale 0 | Render formatTime(time) directly from props. Remove local state. |
-| jest-dom v6 toHaveTextContent ts-jest type error | ts-jest diagnostics fail: Property toHaveTextContent does not exist | Assert on .textContent property instead: expect(el.textContent).toBe("..."). |
-| Benchmark under-counts guided source files | Scanner picks only .ts/.tsx source and .test.ts/.test.tsx test files; config files are invisible to metrics | Place all functional source under src/ and all tests under tests/ with correct extensions. Config-only files do not count toward robustness. |
-| .ts extension blindness for feature detection | Pure .ts utility modules are invisible to the benchmark scanner, which only matches skill-guided/src/*.tsx and skill-guided/tests/*.tsx | Give all source and test files the .tsx extension even if they contain no JSX. Feature detection only scans matched files. |
-| pnpm workspace isolation | pnpm install reports "Already up to date" but node_modules is empty; Jest exits with "command not found" | Ensure the root pnpm-workspace.yaml includes a packages: key with playground project paths. Without this, pnpm silently skips installation. |
+## React Timer rules
 
-**Rubric ceiling for this project:** The React Timer maximum interpretable score is 67/100 (50 for passing tests plus 17 for typing). The scanner's has_security regex targets auth, hash, and token patterns absent in any stopwatch, and has_error_handling targets exception-catching patterns unused in well-structured declarative React. Do not loop on security or error-handling improvements for this subproject; they cannot raise the score. A project-aware benchmark script normalises this ceiling to 100/100 by weighting only relevant criteria per project.
+These rules prevent repeated TypeScript and pnpm failures.
 
-### Python uv and Test Isolation Constraints
+### Required configuration
 
-When executing the Python HTTP Server subproject, agents loop on import path resolution, rate-limiter mocking strategy, and email regex false positives.
+Supply a working `package.json` and `tsconfig.json` before the first install.
+Use explicit relative imports for source files. Do not run `pnpm link`. Do not
+install a global package. If a type dependency is missing, record its name and
+continue with the available files.
 
-**Enforced Mitigation Rules for Future Runs:**
+Use this configuration checklist:
 
-1. Test-Friendly Rate Limiting: The rate limiter must check an environment variable (DISABLE_RATE_LIMIT) to allow tests to bypass throttling without mocking time.monotonic(). Do not attempt to mock or monkey-patch time.
-2. Explicit Test Runner Path: Run tests exclusively via `uv run python3 -m pytest tests/ -v --tb=short`. Do not use bare pytest which may resolve the wrong interpreter or missing .venv.
-3. No Global sys.path Mutation: The test file must import the server module with a relative `from server import ...` and a `# noqa: E402` comment if placed after the os.environ override. Never mutate sys.path.
+- `package.json`: Include `jest`, `ts-jest`, `@testing-library/react`,
+  `typescript`, `react`, and `react-dom`.
+- `tsconfig.json`: Set `compilerOptions.jsx: "react-jsx"`, `rootDir`, and
+  `strict` mode.
+- `jest.config.js`: Set `preset: "ts-jest"`, `testEnvironment: "jsdom"`, and
+  `roots` to `tests/`.
+- `.npmrc`: When pnpm requires build approval, add
+  `allow-builds=unrs-resolver`.
 
-**Known Token Traps:**
+### Known traps
 
-| Trap | Symptom | One-Shot Fix |
-|------|---------|--------------|
-| Rate-limiter blocks tests in CI | time.monotonic() is unmockable in simple unittest; tests timeout | Gate rate limiter behind DISABLE_RATE_LIMIT env var; set it at module import time. |
-| Email regex too strict or loose | Common valid emails like user+tag@domain.co get rejected | Use ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ derived from RFC 5322 simplified. |
-| ID type mismatch in assertions | Plain version uses int IDs, guided uses uuid strings; comparing causes failure | Decide ID strategy per variant: plain uses sequential int, guided uses uuid.uuid4(). |
-| uv sync venv path collision | Running uv run pytest from root picks wrong venv if parent has one | Ensure VIRTUAL_ENV is unset before running; the benchmark script handles this. |
-| DISABLE_RATE_LIMIT env var not visible at import time | Setting env var inside a test function/fixture is too late: module-level code reads os.environ at import | Set os.environ["DISABLE_RATE_LIMIT"] = "1" at the TOP of the test file, before the server import, then use # noqa: E402 on the import line. |
-| Server fixture not consumed by test functions | Test suite defines a session-scoped server fixture but tests call urlopen() directly without accepting the fixture parameter | Every test function that makes HTTP requests must accept the server_url fixture as a parameter. The fixture must bind to port 0 and report the assigned port back. |
-| Module-level state shared between test thread and server thread | The users dict is cleared by an autouse fixture, but the server thread holds the same module reference | The autouse fixture clears users before each test via users.clear(). This works only when server and test run in the same process. Do not fork a subprocess for the server. |
-| python3 version mismatch with clean-room spec | python3 --version reports 3.14.5 but the clean-room env specifies 3.13.11. Running pytest directly picks the wrong interpreter | Always invoke tests via uv run python3 -m pytest. The uv run prefix locks execution to the 3.13.11 .venv interpreter. |
-| Scanner blind to src/ subdirectory | Benchmark globs scan skill-guided/*.py and skill-guided/tests/*.py only. Source at skill-guided/src/server.py is invisible to metrics | Place all Python source files at the root of skill-guided/, not under a src/ subdirectory. |
+- **Missing `jest-environment-jsdom`**: Jest 29 or later does not provide the
+  jsdom test environment. Add `jest-environment-jsdom` to `devDependencies`
+  before `pnpm install`.
+- **pnpm build approval stops Jest**: pnpm 11 blocks `unrs-resolver`. Add
+  `allow-builds=unrs-resolver` before installation.
+- **`formatTime` floating-point drift**: A value such as `5.3` can produce the
+  wrong decimal digit. Use
+  `Math.floor((seconds - totalSecs) * 10 + 0.0001)` or
+  `Math.round((seconds - totalSecs) * 10)`.
+- **`TimerDisplay` stores a copy in state**: The first render can show the old
+  value `0`. Render `formatTime(time)` from props. Remove the local state.
+- **`ts-jest` rejects `toHaveTextContent`**: The type definition for
+  `toHaveTextContent` is missing. Read `.textContent` and compare it with
+  `expect(...).toBe(...)`.
+- **A skill-guided `.ts` file is not counted**: The scanner matches `.tsx` paths
+  only. Rename the source and test files to `.tsx`.
+- **Workspace install is empty**: pnpm reports that it is up to date, but Jest
+  is not found. Add a `packages` key with the playground project paths to the
+  root `pnpm-workspace.yaml`. Run `pnpm install` again.
 
-### Go Module Layout and Test Isolation Constraints
+## Python rules
 
-When executing the Go Login CRUD subproject, agents loop on package main import restrictions, internal/ directory visibility, and test output assertions.
+These rules prevent import, rate-limit, and environment failures.
 
-**Enforced Mitigation Rules for Future Runs:**
+### Required test setup
 
-1. Never Import package main from Tests: Go test files in a tests/ subdirectory use package tests and cannot import cmd/server (which is package main). Wire handlers directly in test setup by importing internal/repository and internal/handler.
-2. Strict internal/ Boundaries: The Go toolchain enforces that packages under internal/ are only importable by code rooted at the parent of internal/. Keep all domain logic under internal/ and all entry points in cmd/server. Do not attempt to bypass this with symlinks.
-3. Password Field Test Strategy: The User.Password struct field has json:"-" which excludes it from JSON serialization, but the Go field still holds a value. To verify passwords are not leaked, test JSON marshalling explicitly: marshal to JSON, unmarshal to a map, and assert the password key is absent. Never assert user.Password == "".
+1. Make the rate limiter read `DISABLE_RATE_LIMIT` at module import time.
+2. Run tests only with `uv run python3 -m pytest tests/ -v --tb=short`.
+3. Import the server with `from server import ...`.
+4. If a test process needs the override, set
+   `os.environ["DISABLE_RATE_LIMIT"] = "1"` before you import the server.
+5. Add `# noqa: E402` to the import line after the environment override.
+6. Do not mutate `sys.path` and do not mock `time.monotonic()`.
 
-**Known Token Traps:**
+### Known traps
 
-| Trap | Symptom | One-Shot Fix |
-|------|---------|--------------|
-| package tests cannot access main | Handler tests fail to compile: imports cmd/server | Never import cmd/server. Create handler via handler.NewUserHandler(repo) directly. |
-| json:"-" field test fails | user.Password != "" assertion fails because the field IS set internally | Assert on JSON output: json.Marshal(user), unmarshal to map, check for absence of password key. |
-| Cached test results hide fixes | go test ./tests/ -v returns cached PASS after code changes | Append -count=1 to force uncached execution: go test ./tests/ -v -count=1. |
-| Module path mismatch across files | One internal file imports path with wrong layout or missing prefixes | Audit all import statements to match the single module path declared in go.mod. |
-| httptest.NewRequest + SetPathValue not called for path parameters | Handler uses r.PathValue("id") which returns empty string if path value not set on the test request | Call req.SetPathValue("id", "...") after constructing the test request when using Go 1.22+ routing patterns. |
-| Benchmark error-handling regex does not match if err := ...; err != nil | The benchmark scans for the contiguous substring if\s+err\s*!\=\s*nil. Go's idiomatic form separates if err from != nil by the pre-call statement | Use the two-line form: err := call(); if err != nil { ... }. The regex matches if err != nil only when err and != are adjacent in the same statement. |
+- **The rate limiter blocks tests**: Tests wait for a throttle window. Set
+  `DISABLE_RATE_LIMIT=1` before you import the server.
+- **The email expression is too narrow**: An address such as `user+tag@domain.co`
+  is rejected. Use the project expression
+  `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`.
+- **IDs have different types**: Plain tests use integers, while skill-guided
+  tests use UUID strings. Keep the ID strategy separate for each variant.
+- **`uv` selects the parent environment**: The interpreter or virtual
+  environment does not match the supplied environment. Remove `VIRTUAL_ENV`
+  before the command.
+- **The environment variable is set too late**: Module code reads the old
+  value at import time. Set the variable before you import the server.
+- **A test does not consume the server fixture**: The test calls `urlopen()`
+  without accepting the `server_url` fixture. Add the fixture parameter to
+  each HTTP test. Bind the fixture to port `0` and return the assigned URL.
+- **A forked server has separate state**: The test thread and server thread
+  use different module state. Run the server and tests in one process. Use
+  `users.clear()` before each test.
+- **Python is not 3.13.11**: `python3` reports a different system version. Use
+  `uv run python3` for the test command.
+- **Python source is under `src/`**: The scanner does not count the file. Put
+  skill-guided source files at the root of `skill-guided/`.
 
-## Platform-Specific Notes
+## Go rules
 
-### pnpm v11 Build Approval
+These rules prevent package, password, and test-command failures.
 
-pnpm v11 requires explicit approval for packages that run build scripts.
-Dependencies like `unrs-resolver` (a Jest transitive dep) block install and
-test until approved:
+### Package boundaries
 
-- Per-project: Create `.npmrc` with `allow-builds=unrs-resolver`.
-- Workspace-wide: Add to root `pnpm-workspace.yaml`:
+- Put domain logic under `internal/`.
+- Put the server entry point under `cmd/server/`.
+- Put tests under `tests/` and use `package tests`.
+- Do not import `package main` from `tests/`.
+- Call `handler.NewUserHandler(repo)` in the test setup.
+- Do not use a symlink to bypass the `internal/` import boundary.
 
-  ```yaml
-  onlyBuiltDependencies:
-    - unrs-resolver
-  ```
+### Password tests
 
-- Interactive: Run `pnpm approve-builds` in the project directory.
+The `User.Password` field has the JSON tag `json:"-"`. The field can still
+contain a value in memory. To test password privacy, marshal the user to JSON.
+Unmarshal the JSON into a map. Make sure that the map has no `password` key.
+Do not test `user.Password == ""`.
 
-Once approved, regenerate the lockfile with `pnpm install --no-frozen-lockfile`.
+### Known traps
 
-### React and TypeScript Setup Checklist
+- **`package tests` imports `package main`**: The test package cannot compile.
+  Import `internal/repository` and `internal/handler` directly.
+- **A password field is not absent from JSON**: The direct field comparison is
+  the wrong test. Examine the JSON keys for the password field.
+- **Go returns a cached test result**: The output says `PASS` after a code
+  change. Add `-count=1` to the test command when a manual check needs fresh
+  results.
+- **A module path does not match an import**: The Go compiler cannot find an
+  internal package. Compare every import with the module path in `go.mod`.
+- **A path value is empty in a test request**: `r.PathValue("id")` returns an
+  empty string. Call `req.SetPathValue("id", "...")` after
+  `httptest.NewRequest`.
+- **The scanner checks error branches**: The scanner looks for `if err != nil`,
+  `try`, `except`, `raise`, or a returned error. Keep the condition in the
+  form `if err != nil` for clarity.
 
-The skill-guided React Timer needs these config files to bypass common pitfalls:
+## Platform setup
 
-| File | Purpose |
-|------|---------|
-| `package.json` | Dependencies: jest, ts-jest, @testing-library/react, typescript, react, react-dom |
-| `tsconfig.json` | `compilerOptions.jsx: "react-jsx"`, `rootDir`, `strict` mode |
-| `jest.config.js` | `preset: "ts-jest"`, `testEnvironment: "jsdom"`, `roots` pointing to `tests/` |
-| `.npmrc` (if needed) | `allow-builds=unrs-resolver` for pnpm v11 build approval |
+### pnpm 11 build approval
 
-### Go Test Package Isolation
+pnpm 11 requires approval for packages that run build scripts. The Jest
+dependency `unrs-resolver` can stop an install until it is approved.
 
-Go test files inside a `tests/` subdirectory must use a separate package name
-(`package tests`). They cannot import from `package main` (the `cmd/server`
-package). Structure handler tests to import `internal/repository` and
-`internal/handler` directly and wire them in test setup.
+Use one of these methods:
 
-### uv for Python
+- Add `allow-builds=unrs-resolver` to the project `.npmrc` file.
+- Add `onlyBuiltDependencies: [unrs-resolver]` to the workspace
+  `pnpm-workspace.yaml` file.
+- Run `pnpm approve-builds` in the project directory.
 
-Python projects use `uv` for dependency management. The `pyproject.toml` can
-declare dev dependencies under `[dependency-groups]` (PEP 735) or
-`[tool.uv] dev-dependencies`. Run `uv sync` to install, then `uv run pytest`
-to execute tests. The benchmark script unsets `VIRTUAL_ENV` before running
-Python tests to avoid venv mismatch.
+After approval, regenerate the project lockfile with
+`pnpm install --no-frozen-lockfile`.
+
+### React and TypeScript files
+
+Keep the scanner paths and the module layout aligned:
+
+```text
+skill-guided/
+  package.json
+  tsconfig.json
+  jest.config.js
+  src/
+    Timer.tsx
+    TimerDisplay.tsx
+    formatTime.tsx
+  tests/
+    Timer.test.tsx
+    TimerDisplay.test.tsx
+```
+
+Configuration files do not add points for detected features. Functional
+source and test files must use the scanner paths and the `.tsx` extension.
+
+### Python environment
+
+Declare development dependencies in `[dependency-groups]` or
+`[tool.uv] dev-dependencies`. Run `uv sync` in the skill-guided project. The
+benchmark removes `VIRTUAL_ENV` before it starts the Python test process. Use
+`uv run python3` to select the supplied interpreter.
+
+### Go test packages
+
+Keep test files under `tests/`. Use `package tests`. Set up the repository and
+handler in the test setup. Do not import `cmd/server` from a test package.
 
 ## Traceability
 
-Each benchmark report includes the SKILL.md version, the agent tag, Python, pnpm, and Go versions detected at runtime, and a full breakdown of tokens, lines, and features per project. This ensures results are reproducible and comparable across agents and toolchain versions.
+Each benchmark report records the `SKILL.md` version, agent tag, provider,
+harness, model, Python version, pnpm version, and Go version. It also records
+file counts, lines, characters, tokens, test results, and feature markers.
+These fields make runs comparable across agents and toolchain versions.
