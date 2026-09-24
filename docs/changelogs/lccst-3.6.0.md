@@ -32,6 +32,12 @@ Applied the vendored Simple English skill to the changed documentation. The
 text uses short sentences, condition-first instructions, clear subjects, and
 one term for each concept. Historical benchmark reports remain unchanged.
 
+### Agent Instructions
+
+Updated `AGENTS.md` to use the same STE and British English rules. The file
+defines language requirements, exact command wording, deliverable tiers, and
+clear version and MCP instructions.
+
 ## Breaking Changes
 
 None. The server runtime, MCP tools, and telemetry interface are unchanged.
