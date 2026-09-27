@@ -38,6 +38,28 @@ Updated `AGENTS.md` to use the same STE and British English rules. The file
 defines language requirements, exact command wording, deliverable tiers, and
 clear version and MCP instructions.
 
+## New Features
+
+### Server Security Hardening
+
+Replaced `execSync(command.join(" "), ...)` with `execFileSync(command[0], command.slice(1), ...)` in `runCommand`. This prevents shell injection via command arguments and removes the shell from the execution path.
+
+### Verify Stops on First Failure
+
+The `/verify` tool now stops at the first failing step instead of running all steps regardless. This saves execution time and makes the failure point clear.
+
+## Bug Fixes
+
+### State No Longer Cleared by Individual Step Tools
+
+The `runStepTool` function (used by `/lint`, `/format`, `/test`, `/build`) no longer clears `.lccst/state.json` after each run. Only `/swarm` and `/verify` clear the state file. Previously, running `/lint` then `/test` would lose the state written by `/init` or `/audit`.
+
+## Correctness
+
+### Docstring Detection Tightened
+
+Removed `"# "` and `"// "` from the docstring markers in `auditCompliance`. These matched any comment, not just docstrings. The remaining markers are `/**`, `"""`, `///`, and `## `.
+
 ## Breaking Changes
 
 None. The server runtime, MCP tools, and telemetry interface are unchanged.

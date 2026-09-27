@@ -5,7 +5,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
-import { execSync } from "child_process";
+import { execSync, execFileSync } from "child_process";
 
 // --- Structured JSON envelope ------------------------------------
 interface Envelope {
@@ -211,7 +211,7 @@ export function auditCompliance(root: string): ComplianceReport {
 
 function hasDocstringInSrc(dir: string): boolean {
   if (!fs.existsSync(dir)) return false;
-  const markers = ["/**", "\"\"\"", "///", "## ", "# ", "// "];
+  const markers = ["/**", "\"\"\"", "///", "## "];
   const walk = (current: string, depth: number): boolean => {
     if (depth > 4) return false;
     for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
@@ -238,7 +238,7 @@ export interface RunResult {
 
 export function runCommand(command: string[], cwd: string): RunResult {
   try {
-    const output = execSync(command.join(" "), { cwd, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString();
+    const output = execFileSync(command[0], command.slice(1), { cwd, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"] }).toString();
     return { command, output: output.trim(), code: 0 };
   } catch (e: any) {
     const stderr = e?.stderr?.toString?.() ?? "";
@@ -514,8 +514,6 @@ function runStepTool(kind: ProjectStep, args?: { path?: string; dryRun?: boolean
   }
   const result = runCommand(cmd, target);
   logEvent(target, { event: `${kind}_run`, command: cmd.join(" "), exitCode: result.code });
-  const state = new SwarmState(target);
-  state.clear();
   return envelope(kind, { phase: "complete", command: cmd.join(" "), exitCode: result.code }, result.output ? result.output : "(no output)");
 }
 
@@ -589,7 +587,10 @@ server.registerTool("verify", {
     const result = runCommand(cmd, target);
     logEvent(target, { event: `${step}_run`, command: cmd.join(" "), exitCode: result.code });
     results[step] = { exitCode: result.code, output: result.output };
-    if (result.code !== 0) failed++;
+    if (result.code !== 0) {
+      failed++;
+      break;
+    }
   }
   const state = new SwarmState(target);
   state.clear();
