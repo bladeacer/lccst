@@ -44,11 +44,35 @@ make build              # Bundle src/index.ts -> dist/index.js with esbuild and 
 make test               # Run all unit and integration tests.
 make test_swarm         # Run swarm unit tests.
 make test_telemetry     # Run telemetry MCP unit tests.
+make test_picker        # Run benchmark picker unit tests.
+make test_picker_tty    # Run benchmark picker tests in a pseudo terminal.
+make test_e2e           # Run telemetry end-to-end tests on real harnesses.
 make test_mcp           # Run MCP integration tests.
+make benchmark-free     # Pick a model, then run the full benchmark.
+make bench-list         # List the models that the picker offers.
 make benchmark-dryrun  # Test main and telemetry MCP connections.
 make clean              # Remove dist/.
 make help               # List all targets.
 ```
+
+The benchmark picker drives `make benchmark-free`. It asks for a harness and a
+model, then calls the target again with `BENCH_PICK=0` and the chosen values.
+Set `BENCH_PICK=0` to skip the picker and pass `HARNESS`, `PROVIDER`,
+`MODEL_NAME`, and `BENCH_MODEL_ID` on the command line.
+
+The picker starts a real model, so it refuses to run without a terminal. Set
+`BENCH_ALLOW_PIPE=1` only when a script must choose a model. `make bench-list`
+needs no terminal.
+
+The run happens in a clean room outside the repository, under
+`$(BENCH_TMP)/lccst-bench-$(AGENT_MODEL)`. The target seeds `SKILL.md`,
+`README.md`, `guide.md`, and `agent-prompt.md` into the clean room, and copies
+`agent-prompt.md` to `AGENTS.md` so that the harness injects it. The target
+then starts the harness in the foreground with the `BENCH_TASK` prompt, so the
+user can steer the run. A harness that leaves with a non-zero status does not
+stop the target, because the settle step and the report must still run. The
+target settles the token counts, writes the report, removes the clean room, and
+refreshes the README table.
 
 Use `pnpm` version 9 or later. Pin the Node.js version in `.node-version`.
 

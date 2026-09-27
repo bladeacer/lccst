@@ -903,12 +903,20 @@ def update_readme(table_content: str, count: int = 0) -> None:
     print(f"Updated {README_PATH} with {count} agent-model table(s).")
 
 
+NO_FINDINGS = (
+    "_No findings yet. Run `make benchmark-free HARNESS=<harness>`, then "
+    "`make bench-report`._"
+)
+
+
 def main() -> None:
     """Entry point."""
     reports_map = get_agent_reports()
     if not reports_map:
-        print("No benchmark reports found.", file=sys.stderr)
-        sys.exit(1)
+        print("No benchmark reports found. The README table stays empty.")
+        update_readme(NO_FINDINGS, 0)
+        RANKING_PATH.unlink(missing_ok=True)
+        return
 
     latest: list[BenchmarkReport] = []
     for versions in reports_map.values():
@@ -930,6 +938,12 @@ def main() -> None:
             f"(v{r.skill_version}, "
             f"avg guided: {r.avg_guided_score:.0f}%)"
         )
+
+    if not top:
+        print("No run reached the inclusion threshold. The README table stays empty.")
+        update_readme(NO_FINDINGS, 0)
+        RANKING_PATH.unlink(missing_ok=True)
+        return
 
     table = generate_table(top)
     comparison = generate_comparison_table(top)

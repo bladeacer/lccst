@@ -13,8 +13,11 @@
     "test:mcp": "pnpm run build && tsx scripts/test-connection.ts",
     "test:swarm": "tsx scripts/test-swarm-unit.ts",
     "test:telemetry": "tsx scripts/test-telemetry-usage.ts",
+    "test:picker": "tsx scripts/test-benchmark-picker.ts",
+    "test:picker-tty": "python3 scripts/test-picker-interactive.py",
     "test:e2e": "tsx scripts/test-telemetry-e2e.ts",
-    "test": "pnpm run test:swarm && pnpm run test:telemetry && pnpm run test:mcp",
+    "test": "pnpm run test:swarm && pnpm run test:telemetry && pnpm run test:picker && pnpm run test:picker-tty && pnpm run test:mcp",
+    "bench:list": "tsx scripts/benchmark-picker.ts --list",
     "bump": "tsx scripts/bump-version.ts"
   },
   "devDependencies": {

@@ -7,8 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverPath = path.resolve(__dirname, "../dist/index.js");
 const testsDir = path.resolve(__dirname, "../tests");
 
-// The server needs time to start and to answer. A short wait made the suite
-// fail on a loaded machine, so the runner waits for a slow start instead.
+// The server answers in about 80 ms on an idle machine, and a loaded machine
+// pushed the first answer past 250 ms, which made a fixed wait fail at random.
+// The runner therefore reads the frame as it arrives and keeps this limit only
+// for a server that stays silent.
 const RESPONSE_TIMEOUT_MS = 5000;
 
 console.log("LCCST: Commencing test suite runner parsing verification...");

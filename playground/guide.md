@@ -7,6 +7,12 @@ benchmark run. For implementation guidance, use `SKILL.md`.
 
 ## Clean-room sandbox rules
 
+The run happens in a clean room outside the repository. The harness starts in
+that directory, so no other project file can reach it. The directory holds
+`SKILL.md`, `README.md`, `guide.md`, `agent-prompt.md`, `AGENTS.md`, and the
+configuration file of the harness. The telemetry server is named by a path that
+is relative to the clean room.
+
 - Do not alter, upgrade, or modify global packages at run time.
 - Do not read, write, or delete any path outside the current workspace.
 - Do not use a global test runner when a project runner exists.
@@ -28,25 +34,37 @@ select the supplied 3.13.11 environment. Do not run bare `pytest`.
 
 ## Token accounting
 
-The `lccst-telemetry` MCP server measures the token usage of the model. At the
-end of a phase, the server reads the counts of the model turns from the host
-session store. The model does not supply the counts, because a model cannot
-know its own token usage.
+The `lccst-telemetry` MCP server measures the token usage of the model. The
+model does not supply the counts, because a model cannot know its own token
+usage. The measurement runs in two steps:
 
-The server needs two items from the host:
+1. The model calls the tool at the end of the phase. The tool stores the time
+   span of the phase.
+2. The settle step reads the counts of every model turn of that span.
 
-- The host session store. The server reads the file that `OPENCODE_DB` names.
-  Without the variable, the file sits in the host data directory.
-- The host session identifier, or a session for the workspace directory. The
-  host sends the identifier in the tool call metadata.
+The two steps are separate because a harness writes the counts of a turn when
+the turn ends. The counts of the last turn of a phase therefore appear after
+the tool call returns.
+
+The settle step reads the store of the harness that ran the phase. The reader
+names no harness. It looks for a store in these places:
+
+- The file that `LCCST_TELEMETRY_DB` names.
+- Every file that a variable with the suffix `_DB` names.
+- Every database file one directory deep under the data directory of the
+  user, which is `XDG_DATA_HOME` or `~/.local/share`.
+
+The reader uses the first store that holds a session of the workspace. The
+session comes from the tool call metadata when the harness sends one, and from
+the newest session of the workspace directory otherwise.
 
 The server needs Node.js 22.5 or later, because it reads the store with
 `node:sqlite`.
 
-If the host supplies neither item, the server reports an error. The report
-then states that no runtime tokens were measured. Do not enter an estimate.
+If no store holds a session, the settle step reports that the phase has no
+count, and the report says so. Do not enter an estimate.
 
-Cache read tokens are counted apart from prompt tokens, because the host
+Cache read tokens are counted apart from prompt tokens, because a harness
 re-reads the context on every turn.
 
 ## pnpm 11 build approval

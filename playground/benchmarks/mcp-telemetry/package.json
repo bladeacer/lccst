@@ -1,0 +1,25 @@
+{
+  "name": "lccst-telemetry",
+  "version": "3.7.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
+  "bin": {
+    "lccst-telemetry": "./build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node ./build/index.js",
+    "settle": "node ./build/settle.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "typescript": "^5.4.0"
+  }
+}

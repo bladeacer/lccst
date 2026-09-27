@@ -1,13 +1,16 @@
 import { spawnSync } from "child_process";
 import fs from "fs";
+import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
-const E2E_ROOT = path.join(ROOT, "playground", "e2e");
 const SERVER = path.join(ROOT, "playground", "benchmarks", "mcp-telemetry", "build");
 const SETTLE = path.join(SERVER, "settle.js");
+// The workspace sits outside the repository, so a harness can never reach a
+// tracked file of the project from its own workspace.
+const E2E_ROOT = path.join(os.tmpdir(), "lccst-telemetry-e2e");
 
 interface Harness {
   /** Name of the harness command. */
@@ -71,6 +74,9 @@ function writeConfig(workspace: string, harness: Harness): void {
   const relativeServer = path.relative(workspace, path.join(SERVER, "index.js"));
   const config = {
     $schema: "https://opencode.ai/config.json",
+    // The snapshot feature of a harness writes into a git repository. The
+    // workspace of this test holds no work, so the feature stays off.
+    snapshot: false,
     mcp: {
       "lccst-telemetry": {
         type: "local",
@@ -113,8 +119,8 @@ function runCase(harness: Harness): void {
   const workspace = path.join(E2E_ROOT, harness.name);
   fs.rmSync(workspace, { recursive: true, force: true });
   fs.mkdirSync(path.join(workspace, "config"), { recursive: true });
-  // The workspace is its own project root, so no ancestor configuration of the
-  // repository can add or replace a server.
+  // The workspace is its own project root, so no ancestor configuration can add
+  // or replace a server.
   spawnSync("git", ["init", "--quiet"], { cwd: workspace, stdio: "ignore" });
   writeConfig(workspace, harness);
 

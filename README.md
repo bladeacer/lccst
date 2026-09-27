@@ -143,9 +143,15 @@ pnpm run build           # Bundle deps + source -> dist/index.js
 pnpm run test            # Run all tests
 pnpm run test:swarm      # Swarm library unit tests only
 pnpm run test:telemetry  # Telemetry MCP unit tests only
+pnpm run test:picker     # Benchmark picker unit tests only
+pnpm run test:e2e        # Telemetry end-to-end tests on real harnesses
 pnpm run test:mcp        # MCP server integration tests only
+pnpm run bench:list      # Models that the benchmark picker offers
 pnpm run bump 1.0.0      # Bump version across all files
 ```
+
+The end-to-end test starts a real harness with a real model, so it needs a
+network connection. Set `E2E_HARNESS` or `LCCST_E2E_MODEL` to narrow the run.
 
 Benchmarking has its own dependencies -- see [`playground/README.md`](playground/README.md).
 
@@ -154,140 +160,37 @@ Benchmarking has its own dependencies -- see [`playground/README.md`](playground
 Measures token impact of skill-guided vs plain code generation across three
 reference projects (Python HTTP server, React timer, Go login CRUD).
 
-> **How runtime tokens are measured.** Since `v3.7.0`, the `lccst-telemetry`
-> MCP server reads the token counts of each model turn from the host session
-> store. Before `v3.7.0`, the counts came from the model under test, so the
-> Agent Runtime Tokens (ART) columns of the older runs are estimates. Compare
-> ART only between runs of the same kind.
+```bash
+make benchmark-free     # Ask for a harness and a model, then run the benchmark
+make bench-list         # Show the models that the picker offers
+```
+
+The picker lists the free models of every harness that the path holds, and it
+accepts a filter. The run then happens in a clean room outside the repository.
+The target seeds `SKILL.md`, `README.md`, `guide.md`, and `agent-prompt.md`
+into the clean room, injects `agent-prompt.md` as the project instructions, and
+starts the harness in the foreground so you can steer it. The target settles
+the token counts, writes the report, removes the clean room, and refreshes the
+table below. Set `BENCH_PICK=0` to skip the picker and pass `HARNESS`,
+`PROVIDER`, and `MODEL_NAME` yourself.
+
+The picker needs a terminal, because the run that follows costs model tokens.
+Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
+
+> **How runtime tokens are measured.** A model cannot read its own token usage,
+> so the `lccst-telemetry` MCP server measures it. The model marks the end of
+> each phase, and the settle step then reads the token counts of every model
+> turn of that phase from the store of the harness that ran it. The reader
+> names no harness, so the same server measures `opencode` and `kilo`.
+>
+> Every run before `v3.7.0` used counts that the model under test supplied, so
+> those Agent Runtime Tokens (ART) figures are estimates. The old findings are
+> removed. The table below fills again after the next benchmark run.
 
 <!-- BENCHMARK_RESULTS_START -->
 
-#### opencode-zen/opencode/ling-3.0-flash-free: skill version v3.1.0
-
-| Provider | Harness | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `opencode-zen` | **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 528 | 2,221 | 3,900 | 1,850 |
-| `opencode-zen` | **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 428 | 992 | 750 | 1,600 |
-| `opencode-zen` | **opencode** | `ling-3.0-flash-free` | `v3.1.0` | `lccst-telemetry` | **go-login-crud** | 65/100 | **100/100** | PASSED | 812 | 4,495 | 800 | 1,800 |
-| **Summary** | | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,768** | **7,708** | **5,450** | **5,250** |
-
-> **Highest ART subproject:** `python-http-server` consumed the most guided
-> runtime tokens.
-> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
-> tokens.
-> Skill-guided implementation used **+336%** more FCT and **-4%** more ART
-> compared to plain implementation across the workspace suite.
-
-#### opencode-zen/opencode/deepseek-v4-flash-free: skill version v3.3.0
-
-| Provider | Harness | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `opencode-zen` | **opencode** | `deepseek-v4-flash-free` | `v3.3.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 617 | 3,337 | 98,400 | 34,000 |
-| `opencode-zen` | **opencode** | `deepseek-v4-flash-free` | `v3.3.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 445 | 1,336 | 31,900 | 35,700 |
-| `opencode-zen` | **opencode** | `deepseek-v4-flash-free` | `v3.3.0` | `lccst-telemetry` | **go-login-crud** | 49/100 | **100/100** | PASSED | 795 | 4,436 | 33,300 | 38,200 |
-| **Summary** | | | | | **Workspace Totals / Avg** | **34/100** | **100/100** | **3/3 Passed** | **1,857** | **9,109** | **163,600** | **107,900** |
-
-> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
-> tokens.
-> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
-> tokens.
-> Skill-guided implementation used **+391%** more FCT and **-34%** more ART
-> compared to plain implementation across the workspace suite.
-
-#### opencode-zen/opencode/hy3-free: skill version v3.4.0
-
-| Provider | Harness | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `opencode-zen` | **opencode** | `hy3-free` | `v3.4.0` | `lccst-telemetry` | **python-http-server** | 32/100 | **100/100** | PASSED | 562 | 2,129 | 12,220 | 15,570 |
-| `opencode-zen` | **opencode** | `hy3-free` | `v3.4.0` | `lccst-telemetry` | **react-timer** | 22/100 | **100/100** | PASSED | 352 | 933 | 8,150 | 19,870 |
-| `opencode-zen` | **opencode** | `hy3-free` | `v3.4.0` | `lccst-telemetry` | **go-login-crud** | 65/100 | **100/100** | PASSED | 909 | 4,072 | 10,400 | 24,160 |
-| **Summary** | | | | | **Workspace Totals / Avg** | **40/100** | **100/100** | **3/3 Passed** | **1,823** | **7,134** | **30,770** | **59,600** |
-
-> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
-> tokens.
-> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
-> tokens.
-> Skill-guided implementation used **+291%** more FCT and **+94%** more ART
-> compared to plain implementation across the workspace suite.
-
-
-### Benchmark Summary
-
-| Metric | `opencode-zen-opencode-ling-3.0-flash-free` | `opencode-zen-opencode-deepseek-v4-flash-free` | `opencode-zen-opencode-hy3-free` |
-| --- | --- | --- | --- |
-| Plain score | 40/100 | 34/100 | 40/100 |
-| Guided score | 100/100 | 100/100 | 100/100 |
-| Plain FCT | 1,768 | 1,857 | 1,823 |
-| Guided FCT | 7,708 | 9,109 | 7,134 |
-| FCT overhead | +336% | +391% | +291% |
-| Plain ART | 5,450 | 163,600 | 30,770 |
-| Guided ART | 5,250 | 107,900 | 59,600 |
-| ART overhead | -4% | -34% | +94% |
-| Tests passed | 3/3 | 3/3 | 3/3 |
-
-#### Token Efficiency
-
-All evaluated models (`opencode-zen-opencode-ling-3.0-flash-free`,
-`opencode-zen-opencode-deepseek-v4-flash-free`, and
-`opencode-zen-opencode-hy3-free`) achieved a perfect guided score of 100/100
-under the protocol. However, their resource efficiency varied significantly:
-
-* **`opencode-zen-opencode-ling-3.0-flash-free`** entered with the strongest
-  plain baseline (40/100) and reached perfection with +336% FCT and -4% ART
-  overhead -- representing a genuine quality investment rather than recovery
-  from failure.
-
-* **`opencode-zen-opencode-hy3-free`** was the most token-efficient at +291% FCT
-  with +94% ART overhead, though its lower plain baseline (40/100) means the
-  overhead figure partly reflects additional rounds of correction.
-
-* **`opencode-zen-opencode-deepseek-v4-flash-free`** also delivered a perfect
-  guided score, with +391% FCT and -34% ART overhead.
-
-Across all runners, `go-login-crud` remained the most resource-intensive
-subproject.
-
-#### Least Token Usage
-
-`opencode-zen-opencode-ling-3.0-flash-free` consumed the fewest tokens overall
-(20,176): 1,768 plain FCT, 7,708 guided FCT, 5,450 plain ART, and 5,250 guided
-ART.
-
-#### Overall Top Models
-
-| Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
-| ---: | :--- | :---: | :---: | :---: | :---: | :--- |
-| 1 | `opencode-zen-opencode-ling-3.0-flash-free` | 40/100 | 100/100 | +336% | -4% | Best overall |
-| 2 | `opencode-zen-opencode-deepseek-v4-flash-free` | 34/100 | 100/100 | +391% | -34% | Strong contender |
-| 3 | `opencode-zen-opencode-hy3-free` | 40/100 | 100/100 | +291% | +94% | Strong contender |
-
-See [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark runs.
-
-> Only benchmark runs which perform well enough are included
-
+_No findings yet. Run `make benchmark-free HARNESS=<harness>`, then `make bench-report`._
 
 <!-- BENCHMARK_RESULTS_END -->
 
 
-## LLM Usage Disclosure
-
-AI assistance was used in the making of this project. Architectural and design
-decisions and ensuring the code works as intended was done by a human.
-
-## Credits
-
-Locust was heavily inspired by [ponytail](https://github.com/DietrichGebert/ponytail).
-
-The logo and posters use
-[the Iceberg Dark colour scheme by cocopon](https://cocopon.github.io/iceberg.vim/).
-
-[IBM Plex Mono](https://github.com/IBM/plex) was used for typography.
-
-The [Agent Skills specification](https://agentskills.io/specification).
-
-Skill writing and docs follow ASD-STE100 Simplified Technical English, guided
-by the [SimpleEnglish skill](https://github.com/AminBlg/SimpleEnglish).
-
-## License
-
-This project is open-source and licensed under the terms of the MIT License.

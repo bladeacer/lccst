@@ -1,7 +1,9 @@
 # LCCST Playground Agent Instructions
 
-You are running one benchmark phase in an isolated workspace. The current
-working directory is the only workspace you can access.
+This file arrives as the project instructions of the workspace, in the file
+`AGENTS.md`. The harness sends the first task with it. You are running one
+benchmark phase in an isolated workspace. The current working directory is the
+only workspace you can access.
 
 ## 1. Read the assignment
 
@@ -89,13 +91,14 @@ Call `log_turn_telemetry` once at the end of each phase. A phase is one
 subproject variant. For `skill-guided`, the phase includes the test run. For
 `plain`, the phase ends when the target specification is complete.
 
-Pass only the `subproject` and the `variant`. The server reads the token
-counts from the host session store. Do not pass token values. Do not state a
-token count. You cannot know the token count of your own turn.
+Pass only the `subproject` and the `variant`. The tool marks the end of the
+phase. Do not pass token values. Do not state a token count. You cannot know
+the token count of your own turn.
 
-If the tool returns an error, state that the count is unavailable. Do not use
-placeholders or estimates. Do not call the tool before the phase starts or
-again for the same phase.
+The harness settles the counts after the phase, so the tool result holds no
+count. If the tool returns an error, state that the phase was not recorded. Do
+not use placeholders or estimates. Do not call the tool before the phase
+starts or again for the same phase.
 
 The telemetry call must be the last tool operation in the phase. You can
 write one short next-step summary after the call.
