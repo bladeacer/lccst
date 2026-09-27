@@ -24,7 +24,7 @@ Do not use a mode name in place of a variant name.
 CAUTION: The following deletion removes the contents of the six listed
 benchmark directories.
 
-Remove only these six directories before `/init`:
+Remove only these six directories before the mapping step:
 
 ```text
 python-http-server/plain/
@@ -40,9 +40,28 @@ before removing them. Do not remove any other path. Do not run `ls`, `find`,
 `git status`, `git diff`, `git log`, or `open`. Do not read, write, or
 delete any path outside the current working directory.
 
-Run `/init` after the deletion pass. It records the target path, manifest,
-tools, and conventions. Give a short architecture plan before you write
-code.
+### 2.1 Map the conventions
+
+The `lccst` MCP server is disabled in this workspace, so the `init` tool is
+not available. Do not wait for the tool. Apply the intent of the `/init`
+command yourself. Map the project conventions. Examine the environment.
+Do not write a source file in this step.
+
+Record these four items:
+
+- Record the target path. Use `<subproject>/<variant>/` inside the current
+  working directory.
+- Record the manifest. Use `pyproject.toml` for `python-http-server`,
+  `package.json` for `react-timer`, and `go.mod` for `go-login-crud`.
+- Record the tools. Use the supplied toolchain list in `guide.md`.
+- Record the conventions. Use `README.md` and `guide.md`. For `skill-guided`,
+  also use the guardrails and the deliverables in `SKILL.md`.
+
+The variant directory is empty. The manifest does not exist yet. You create
+the manifest in section 3.
+
+State the four items in one short line each. Then give a short architecture
+plan before you write code.
 
 ## 3. Implement the subproject
 
@@ -70,10 +89,12 @@ Call `log_turn_telemetry` once at the end of each phase. A phase is one
 subproject variant. For `skill-guided`, the phase includes the test run. For
 `plain`, the phase ends when the target specification is complete.
 
-Pass the exact `subproject`, `variant`, `prompt_tokens`, and
-`completion_tokens` values. Use integer counts. If the host does not expose a
-token count, do not call the tool. State that the count is unavailable. Do not
-use placeholders or estimates. Do not call the tool before the phase starts or
+Pass only the `subproject` and the `variant`. The server reads the token
+counts from the host session store. Do not pass token values. Do not state a
+token count. You cannot know the token count of your own turn.
+
+If the tool returns an error, state that the count is unavailable. Do not use
+placeholders or estimates. Do not call the tool before the phase starts or
 again for the same phase.
 
 The telemetry call must be the last tool operation in the phase. You can

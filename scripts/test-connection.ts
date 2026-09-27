@@ -7,6 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const serverPath = path.resolve(__dirname, "../dist/index.js");
 const testsDir = path.resolve(__dirname, "../tests");
 
+// The server needs time to start and to answer. A short wait made the suite
+// fail on a loaded machine, so the runner waits for a slow start instead.
+const RESPONSE_TIMEOUT_MS = 5000;
+
 console.log("LCCST: Commencing test suite runner parsing verification...");
 
 if (!fs.existsSync(testsDir)) {
@@ -58,9 +62,42 @@ function executeMcpStreamFrame(payload: object, assertFn: (res: any) => boolean)
     const processInstance = spawn("node", [serverPath]);
     let stdoutBuffer = "";
     let stderrBuffer = "";
+    let settled = false;
+
+    // Resolve the frame as soon as the server answers. The timer only covers a
+    // server that stays silent, so a slow start no longer fails the test.
+    const settle = (passed: boolean) => {
+      if (settled) return;
+      settled = true;
+      processInstance.kill();
+      resolve(passed);
+    };
+
+    const inspectStream = () => {
+      if (settled) return;
+
+      if (stderrBuffer.trim().length > 0) {
+        console.error("Runtime stream emitted unexpected stderr data:", stderrBuffer);
+        return settle(false);
+      }
+
+      // A chunk can hold half a line, so the runner waits for the line break.
+      const lineEnd = stdoutBuffer.indexOf("\n");
+      if (lineEnd < 0) return;
+
+      const frame = stdoutBuffer.slice(0, lineEnd);
+      try {
+        const parsedJson = JSON.parse(frame);
+        settle(assertFn(parsedJson));
+      } catch (err) {
+        console.error("Stream payload syntax could not be resolved to valid JSON:", stdoutBuffer);
+        settle(false);
+      }
+    };
 
     processInstance.stdout.on("data", (data) => {
       stdoutBuffer += data.toString();
+      inspectStream();
     });
 
     processInstance.stderr.on("data", (data) => {
@@ -71,26 +108,9 @@ function executeMcpStreamFrame(payload: object, assertFn: (res: any) => boolean)
     processInstance.stdin.write(JSON.stringify(payload) + "\n");
 
     setTimeout(() => {
-      processInstance.kill();
-
-      if (stderrBuffer.trim().length > 0) {
-        console.error("Runtime stream emitted unexpected stderr data:", stderrBuffer);
-        return resolve(false);
-      }
-
-      try {
-        const payloadLines = stdoutBuffer.trim().split("\n");
-        if (payloadLines[0].length === 0) {
-          console.error("Blank stdout response stream received.");
-          return resolve(false);
-        }
-        
-        const parsedJson = JSON.parse(payloadLines[0]);
-        return resolve(assertFn(parsedJson));
-      } catch (err) {
-        console.error("Stream payload syntax could not be resolved to valid JSON:", stdoutBuffer);
-        return resolve(false);
-      }
-    }, 250);
+      if (settled) return;
+      console.error("Blank stdout response stream received.");
+      settle(false);
+    }, RESPONSE_TIMEOUT_MS);
   });
 }

@@ -36,5 +36,8 @@ jobs:
       - name: Run unit tests
         run: pnpm run test:swarm
 
+      - name: Run telemetry unit tests
+        run: pnpm run test:telemetry
+
       - name: Run integration tests
         run: pnpm run test:mcp

@@ -43,6 +43,7 @@ a project command already exists.
 make build              # Bundle src/index.ts -> dist/index.js with esbuild and tsc.
 make test               # Run all unit and integration tests.
 make test_swarm         # Run swarm unit tests.
+make test_telemetry     # Run telemetry MCP unit tests.
 make test_mcp           # Run MCP integration tests.
 make benchmark-dryrun  # Test main and telemetry MCP connections.
 make clean              # Remove dist/.

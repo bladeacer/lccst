@@ -1,4 +1,4 @@
-.PHONY: help default build test tag release clean clean-telemetry bench-update benchmark-free bench-report bench-cleanup telemetry-build benchmark-dryrun
+.PHONY: help default build test tag release clean clean-telemetry bench-update benchmark-free bench-report bench-cleanup telemetry-build benchmark-dryrun test_swarm test_telemetry test_e2e test_mcp telemetry-settle
 
 VERSION      ?= $(shell node -p "require('./package.json').version")
 HARNESS      ?= opencode
@@ -18,6 +18,8 @@ help:
 	@echo "  make build              Compile TypeScript -> dist/index.js"
 	@echo "  make test               Run all tests (unit + integration)"
 	@echo "  make test_swarm         Run swarm library unit tests"
+	@echo "  make test_telemetry     Run telemetry MCP unit tests"
+	@echo "  make test_e2e           Run telemetry end-to-end tests on real harnesses"
 	@echo "  make test_mcp           Run MCP server integration tests"
 	@echo "  make tag                Create and push git tag v$(VERSION)"
 	@echo "  make release            Alias for: make tag"
@@ -46,6 +48,12 @@ test:
 
 test_swarm:
 	pnpm tsx scripts/test-swarm-unit.ts
+
+test_telemetry:
+	pnpm tsx scripts/test-telemetry-usage.ts
+
+test_e2e: telemetry-build
+	pnpm tsx scripts/test-telemetry-e2e.ts $(HARNESS)
 
 test_mcp:
 	pnpm run build && pnpm tsx scripts/test-connection.ts
@@ -104,7 +112,15 @@ endif
 	+$(MAKE) bench-report
 	+$(MAKE) bench-cleanup
 
-bench-report:
+telemetry-settle:
+	@echo "[Harness] Settling phase token counts from the host store..."
+	@FILE=$(BENCH_DIR)/runtime-telemetry.json; \
+	if [ -f playground/$(AGENT_MODEL)/runtime-telemetry.json ]; then \
+		FILE=playground/$(AGENT_MODEL)/runtime-telemetry.json; \
+	fi; \
+	node $(TELEMETRY_MCP_DIR)/build/settle.js "$$FILE" playground/$(AGENT_MODEL)
+
+bench-report: telemetry-settle
 	@echo "[Harness] Parsing compiled outputs and runtime telemetry logs..."
 	python3 $(BENCH_DIR)/run_benchmark.py $(AGENT_MODEL) \
 		--provider $(PROVIDER) --harness $(HARNESS) --model $(MODEL_NAME) --install-deps

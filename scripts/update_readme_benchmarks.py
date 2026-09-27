@@ -225,7 +225,7 @@ def _fill_art_values(
             continue
         proj_name = cells[0]
         var = cells[1].lower()
-        art_m = ART_RE.search(cells[4])
+        art_m = ART_RE.search(cells[-1])
         if art_m:
             art = int(art_m.group(1))
             key = "plain" if "plain" in var else "guided"

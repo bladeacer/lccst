@@ -1,6 +1,6 @@
 {
   "name": "lccst",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "description": "Lint, Clean, Cluster, Split, Test -- Devouring messy diffs before they reach production.",
   "type": "module",
   "main": "dist/index.js",
@@ -12,7 +12,9 @@
     "watch": "tsc --watch",
     "test:mcp": "pnpm run build && tsx scripts/test-connection.ts",
     "test:swarm": "tsx scripts/test-swarm-unit.ts",
-    "test": "pnpm run test:swarm && pnpm run test:mcp",
+    "test:telemetry": "tsx scripts/test-telemetry-usage.ts",
+    "test:e2e": "tsx scripts/test-telemetry-e2e.ts",
+    "test": "pnpm run test:swarm && pnpm run test:telemetry && pnpm run test:mcp",
     "bump": "tsx scripts/bump-version.ts"
   },
   "devDependencies": {

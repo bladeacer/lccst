@@ -139,11 +139,12 @@ Read `AGENTS.md` for build/test commands, deliverable tiers, and structural inva
 | TypeScript | >= 5.4 | Compiling engine source |
 
 ```bash
-pnpm run build      # Bundle deps + source -> dist/index.js
-pnpm run test       # Run all tests
-pnpm run test:swarm # Swarm library unit tests only
-pnpm run test:mcp   # MCP server integration tests only
-pnpm run bump 1.0.0 # Bump version across all files
+pnpm run build           # Bundle deps + source -> dist/index.js
+pnpm run test            # Run all tests
+pnpm run test:swarm      # Swarm library unit tests only
+pnpm run test:telemetry  # Telemetry MCP unit tests only
+pnpm run test:mcp        # MCP server integration tests only
+pnpm run bump 1.0.0      # Bump version across all files
 ```
 
 Benchmarking has its own dependencies -- see [`playground/README.md`](playground/README.md).
@@ -152,6 +153,12 @@ Benchmarking has its own dependencies -- see [`playground/README.md`](playground
 
 Measures token impact of skill-guided vs plain code generation across three
 reference projects (Python HTTP server, React timer, Go login CRUD).
+
+> **How runtime tokens are measured.** Since `v3.7.0`, the `lccst-telemetry`
+> MCP server reads the token counts of each model turn from the host session
+> store. Before `v3.7.0`, the counts came from the model under test, so the
+> Agent Runtime Tokens (ART) columns of the older runs are estimates. Compare
+> ART only between runs of the same kind.
 
 <!-- BENCHMARK_RESULTS_START -->
 

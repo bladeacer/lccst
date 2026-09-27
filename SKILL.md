@@ -3,7 +3,7 @@ name: lccst
 license: MIT
 metadata:
   author: bladeacer
-  version: "3.6.0"
+  version: "3.7.0"
 description: "Deterministic workspace gatekeeper. Decomposes workspace
   changes into isolated, test-verified, atomic Git commits."
 arguments:
@@ -86,6 +86,10 @@ identifiers, and quoted errors unchanged. Ask for manual approval before a
 state-changing action when the host requires it.
 
 ## 3. Commands
+
+Each entry in the list that follows defines the intent of one command. If the
+host does not expose the command server, apply the intent yourself as a
+manual step. Do not wait for a tool that the host does not provide.
 
 - `/init`: Map project conventions. Examine the environment. Do not change
   source files.

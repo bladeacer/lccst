@@ -26,6 +26,29 @@ Blocked inspection commands: `ls`, `find`, `git status`, `git diff`,
 The system `python3` can resolve to Python 3.14.5. Use `uv run python3` to
 select the supplied 3.13.11 environment. Do not run bare `pytest`.
 
+## Token accounting
+
+The `lccst-telemetry` MCP server measures the token usage of the model. At the
+end of a phase, the server reads the counts of the model turns from the host
+session store. The model does not supply the counts, because a model cannot
+know its own token usage.
+
+The server needs two items from the host:
+
+- The host session store. The server reads the file that `OPENCODE_DB` names.
+  Without the variable, the file sits in the host data directory.
+- The host session identifier, or a session for the workspace directory. The
+  host sends the identifier in the tool call metadata.
+
+The server needs Node.js 22.5 or later, because it reads the store with
+`node:sqlite`.
+
+If the host supplies neither item, the server reports an error. The report
+then states that no runtime tokens were measured. Do not enter an estimate.
+
+Cache read tokens are counted apart from prompt tokens, because the host
+re-reads the context on every turn.
+
 ## pnpm 11 build approval
 
 pnpm 11 requires approval for packages that run build scripts. The Jest
