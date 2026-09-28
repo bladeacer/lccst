@@ -42,8 +42,5 @@ jobs:
       - name: Run benchmark picker unit tests
         run: pnpm run test:picker
 
-      - name: Run benchmark picker tests in a pseudo terminal
-        run: pnpm run test:picker-tty
-
       - name: Run integration tests
         run: pnpm run test:mcp

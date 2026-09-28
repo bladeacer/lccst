@@ -273,6 +273,56 @@ class HarnessVersionTest(unittest.TestCase):
         self.assertIn("7.7.9", version)
         self.assertNotIn("~~~ banner ~~~", version)
 
+    def test_a_path_in_the_home_directory_names_no_account(self):
+        """A report is committed, so it must not name the user who made it."""
+        home = str(Path.home())
+        if home in ("/", ""):
+            self.skipTest("the home directory is the root, so no path can sit below it")
+        self.assertEqual(
+            scanner.public_path(f"{home}/.local/bin/kilo"),
+            "~/.local/bin/kilo",
+        )
+
+    def test_the_home_directory_itself_becomes_a_tilde(self):
+        home = str(Path.home())
+        if home in ("/", ""):
+            self.skipTest("the home directory is the root")
+        self.assertEqual(scanner.public_path(home), "~")
+
+    def test_a_path_outside_the_home_directory_stays_unchanged(self):
+        """A system path names no user, so it needs no change."""
+        self.assertEqual(scanner.public_path("/usr/bin/opencode"), "/usr/bin/opencode")
+
+    def test_a_similar_prefix_is_not_a_home_directory(self):
+        """`<home>-backup` is not below the home directory."""
+        home = str(Path.home())
+        if home in ("/", ""):
+            self.skipTest("the home directory is the root")
+        self.assertEqual(
+            scanner.public_path(f"{home}-backup/bin/x"), f"{home}-backup/bin/x"
+        )
+
+    def test_the_reported_harness_path_holds_no_account(self):
+        """The path in the report comes from the scanner, not from the caller."""
+        home = str(Path.home())
+        if home in ("/", ""):
+            self.skipTest("the home directory is the root, so no path can sit below it")
+        stub_dir = Path(home) / ".lccst-test-bin"
+        stub_dir.mkdir(exist_ok=True)
+        stub = stub_dir / "lccst-home-harness"
+        stub.write_text("#!/bin/sh\necho 'lccst 1.2.3'\n")
+        stub.chmod(0o755)
+        original = os.environ["PATH"]
+        os.environ["PATH"] = f"{stub_dir}{os.pathsep}{original}"
+        try:
+            version = scanner.detect_harness_version("lccst-home-harness")
+        finally:
+            os.environ["PATH"] = original
+            stub.unlink(missing_ok=True)
+            stub_dir.rmdir()
+        self.assertNotIn(home, version)
+        self.assertIn("~/.lccst-test-bin/lccst-home-harness", version)
+
     def test_the_report_names_the_harness_version(self):
         text = self.build_report(harness_version="opencode v2.0.18 (/usr/bin/opencode)")
         self.assertIn("**Harness Version:** opencode v2.0.18 (/usr/bin/opencode)", text)
@@ -583,6 +633,47 @@ class GateTest(unittest.TestCase):
         self.assertIn("token", table.reject_reason(make_report(token_state=table.NO_TOKENS)))
         self.assertIn("model", table.reject_reason(make_report(model_state=table.MODEL_WRONG)))
         self.assertIn("token", table.reject_reason(make_report(prompt_state=table.PROMPT_UNVERIFIED)))
+
+    def test_reject_reason_names_a_failed_test_and_not_a_score(self):
+        """A subproject whose tests failed must be named by its test state."""
+        report = make_report()
+        report.projects[0].guided_test_status = "failed"
+        reason = table.reject_reason(report)
+        self.assertIn("failed their tests", reason)
+        self.assertIn(table.PROJECTS[0], reason)
+        self.assertIn("failed", reason)
+
+    def test_reject_reason_names_a_low_score_and_not_a_passing_test(self):
+        """A subproject whose tests passed but whose score fell needs the score.
+
+        The old message printed the test state for a subproject that passed, so
+        the line read `did not all pass: x (passed)`.
+        """
+        report = make_report()
+        report.projects[0].guided_score = 84
+        reason = table.reject_reason(report)
+        self.assertIn("scored below 100", reason)
+        self.assertIn(f"{table.PROJECTS[0]} (84/100)", reason)
+        self.assertNotIn("(passed)", reason)
+
+    def test_reject_reason_prefers_the_failed_test_over_the_low_score(self):
+        """A subproject can fail both checks, and the test failure comes first."""
+        report = make_report()
+        report.projects[0].guided_score = 84
+        report.projects[0].guided_test_status = "error"
+        reason = table.reject_reason(report)
+        self.assertIn("failed their tests", reason)
+        self.assertNotIn("scored below 100", reason)
+
+    def test_reject_reason_lists_every_failing_subproject(self):
+        """The line names each subproject that the gate rejected."""
+        report = make_report()
+        report.projects[0].guided_score = 84
+        report.projects[2].guided_score = 50
+        reason = table.reject_reason(report)
+        self.assertIn(f"{table.PROJECTS[0]} (84/100)", reason)
+        self.assertIn(f"{table.PROJECTS[2]} (50/100)", reason)
+        self.assertNotIn(f"{table.PROJECTS[1]}", reason)
 
     def test_a_report_with_no_art_is_rejected_and_earns_no_art_term(self):
         """A run that measured no tokens must not gain the efficiency weight.

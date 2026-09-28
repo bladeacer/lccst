@@ -55,7 +55,8 @@ def make_stubs(directory: Path) -> Path:
             "#!/bin/sh\n"
             'case "$1" in\n'
             f'  models) echo "{model}"; exit 0 ;;\n'
-            '  *) echo "STUB cwd=$(pwd)"; echo "STUB args: $*"; exit 0 ;;\n'
+            '  *) echo "STUB cwd=$(pwd)"; echo "STUB args: $*"; '
+            'echo "STUB state=$XDG_STATE_HOME"; exit 0 ;;\n'
             "esac\n"
         )
         stub.chmod(stub.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
@@ -150,6 +151,9 @@ def run_interactive_case() -> None:
     expect(transcript, r"Run name: " + re.escape(RUN_TAG), "the picker shows the run name")
     expect(transcript, r"STUB cwd=", "the harness starts in the clean room")
     expect(transcript, r"--prompt", "the harness receives the task prompt")
+    expect(transcript,
+           r"STUB state=/tmp/lccst-bench-" + re.escape(RUN_TAG) + r"/harness-state",
+           "the run points the state directory of the harness at the clean room")
     expect(transcript, r"Report generated", "the report step still runs")
     expect(transcript, r"Run token: ", "the run prints the token that the model must state")
 
@@ -199,8 +203,16 @@ def check_seeded_workspace(report_dir: Path) -> None:
     # plugin of the user. The run must start a private server instead.
     check("BENCH_HARNESS_PRIVATE" in makefile,
           "the run starts a private server instead of the background service")
-    check('$(HARNESS) $(BENCH_HARNESS_PRIVATE) --prompt' in makefile,
+    check('$(HARNESS) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) --prompt' in makefile,
           "the run passes the private server flag to the harness")
+    # A harness restores the model that the user last chose for each agent, and
+    # the restored model wins over the model in the configuration of the run.
+    # The run must name the model on the command line, or the run measures the
+    # model of the user.
+    check("BENCH_HARNESS_MODEL ?= $(if $(filter kilo,$(HARNESS)),--model" in makefile,
+          "the run names the model on the command line for a harness that accepts it")
+    check("XDG_STATE_HOME=$(BENCH_WORKSPACE)/harness-state" in makefile,
+          "the run points the state directory of the harness at the clean room")
 
     repo_agents = ROOT / "AGENTS.md"
     playground_prompt = ROOT / "playground" / "agent-prompt.md"

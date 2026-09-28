@@ -27,6 +27,18 @@ BENCH_HARNESS_CONFIG ?= $(if $(filter opencode,$(HARNESS)),OPENCODE_CONFIG_DIR,$
 # read the document when it started. The flag makes the harness start a private
 # server that reads only the configuration of the clean room.
 BENCH_HARNESS_PRIVATE ?= $(if $(filter opencode,$(HARNESS)),--standalone,)
+# The state directory of a harness holds the model that the user last chose for
+# each agent. A harness restores that model after it starts, and the restored
+# model wins over the model in the configuration of the run. The run would then
+# measure the model of the user, so the run names the model on the command line.
+# Kilo accepts `--model`. The OpenCode terminal interface has no such flag, so
+# the run relies on the configuration of the clean room for that harness.
+BENCH_HARNESS_MODEL ?= $(if $(filter kilo,$(HARNESS)),--model $(BENCH_MODEL_ID),)
+# The state directory also holds the prompt history and the list of recent
+# models of the user. A run must not read it, so the run points the state
+# directory of the harness at the clean room. Both harnesses read the state
+# directory from `XDG_STATE_HOME`.
+BENCH_HARNESS_STATE ?= XDG_STATE_HOME=$(BENCH_WORKSPACE)/harness-state
 # The clean room sits outside the repository, so a harness can never reach a
 # tracked file of the project and no ancestor instruction file can reach it.
 # The path is resolved to an absolute form, because the separation check
@@ -236,7 +248,7 @@ benchmark-run: clean-telemetry bench-model
 	@echo "[Harness] Building the clean room for $(AGENT_MODEL)..."
 	@$(call guard_workspace)
 	@rm -rf "$(BENCH_WORKSPACE)"
-	@mkdir -p "$(BENCH_WORKSPACE)/harness-config"
+	@mkdir -p "$(BENCH_WORKSPACE)/harness-config" "$(BENCH_WORKSPACE)/harness-state"
 	@echo "[Harness] Seeding the workspace files..."
 	@$(call assert_separate_instructions)
 	@cp SKILL.md "$(BENCH_WORKSPACE)/SKILL.md"
@@ -254,7 +266,7 @@ benchmark-run: clean-telemetry bench-model
 	@echo "[Harness] Run token: $(BENCH_PROMPT_TOKEN) (the model must state it)"
 	@echo "[Harness] Starting the run in the foreground. Answer the harness, or type"
 	@echo "[Harness] a new message to steer it. The run ends when you leave the TUI."
-	@cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(HARNESS) $(BENCH_HARNESS_PRIVATE) --prompt "$(BENCH_TASK)"; \
+	@cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(BENCH_HARNESS_STATE) $(HARNESS) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) --prompt "$(BENCH_TASK)"; \
 	STATUS=$$?; \
 	if [ $$STATUS -ne 0 ]; then \
 		echo "[Harness] The harness left with status $$STATUS. The report still runs."; \

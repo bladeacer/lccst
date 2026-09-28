@@ -77,9 +77,14 @@ The target then starts the harness in the foreground with the `BENCH_TASK`
 prompt, so the user can steer the run. The run points the configuration
 directory of the harness at the clean room, and it starts a private server, so
 the plugins, skills, agents, and servers of the user cannot change the
-measurement. A background service of the user read the global configuration
-document when it started, so a run must not attach to that service. A harness
-that leaves with a non-zero status does not stop the target, because the settle
+measurement. A background service of a user read the global configuration
+document when it started, so a run must not attach to that service. The run also
+points the state directory of the harness at the clean room through
+`XDG_STATE_HOME`, and it names the model on the command line for Kilo. A harness
+restores the model that the user last chose for each agent, and the restored
+model wins over the model in the configuration of a run. A run that reads the
+state directory of the user would measure the model of the user. A harness that
+leaves with a non-zero status does not stop the target, because the settle
 step and the report must still run. The target settles the token counts, writes
 the report, removes the clean room, and refreshes the README table.
 

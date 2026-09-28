@@ -181,7 +181,10 @@ Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
 > **The run measures the model it names.** The run checks that the harness offers
 > the model before it builds the clean room, and it gives the harness its own
 > configuration directory and a private server, so the plugins, skills, agents,
-> and servers of a user cannot change the run. The report compares the model
+> and servers of a user cannot change the run. The run also gives the harness its
+> own state directory, because a harness restores the model that a user last
+> chose for each agent, and that restored model wins over the model of the run.
+> Kilo also receives the model on the command line. The report compares the model
 > identifier that the run pinned with the model that the store of the host
 > recorded. A report that names a different model is marked as wrong.
 

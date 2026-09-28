@@ -522,13 +522,25 @@ def reject_reason(r: BenchmarkReport) -> str:
     missing = [name for name in PROJECTS if name not in names]
     if missing:
         return "the run skipped " + ", ".join(missing)
-    failing = [
+    # The gate needs two facts per subproject: the skill-guided tests must pass,
+    # and the skill-guided robustness score must be 100. The two checks fail in
+    # different ways, so the reason names the check that failed. Printing the
+    # test state for a subproject whose tests passed states the opposite of the
+    # reason for the rejection.
+    untested = [
         f"{project.name} ({project.test_status})"
         for project in r.projects
-        if project.guided_score < 100 or project.test_status != "passed"
+        if project.test_status != "passed"
     ]
-    if failing:
-        return "the skill-guided subprojects did not all pass: " + ", ".join(failing)
+    if untested:
+        return "the skill-guided subprojects failed their tests: " + ", ".join(untested)
+    weak = [
+        f"{project.name} ({project.guided_score}/100)"
+        for project in r.projects
+        if project.guided_score < 100
+    ]
+    if weak:
+        return "the skill-guided subprojects scored below 100: " + ", ".join(weak)
     return "the report passes every check"
 
 

@@ -323,28 +323,50 @@ def compute_robustness_score(variant_result, project_name):
     return min(int(score / ceiling * 100), 100)
 
 
+def public_path(path):
+    """Shorten a path that starts in the home directory of the user.
+
+    A report is committed to the repository, so it must not name the account of
+    the user who ran it. The function replaces the home prefix with `~`, and it
+    leaves every other path alone, because a system path such as `/usr/bin`
+    names no user.
+    """
+    text = str(path)
+    home = os.path.expanduser("~")
+    if not home or home == os.sep:
+        return text
+    if text == home:
+        return "~"
+    if text.startswith(home + os.sep):
+        return "~" + text[len(home):]
+    return text
+
+
 def detect_harness_version(harness):
     """Read the version of the harness that ran the run.
 
     A harness version changes the prompt, the tool list, and the token
     accounting, so a report that names no version cannot be reproduced. The
     function asks the harness itself, and it returns the path of the command
-    with the version, because two installs of one harness can differ.
+    with the version, because two installs of one harness can differ. The path
+    is shortened, so the report names no account of the user.
     """
     path = shutil.which(harness)
     if not path:
         return f"{harness} is not on the path"
+
+    shown = public_path(path)
 
     try:
         result = subprocess.run(
             [harness, "--version"], capture_output=True, text=True, timeout=20
         )
     except Exception:
-        return f"{harness} at {path}, version not reported"
+        return f"{harness} at {shown}, version not reported"
 
     raw = (result.stdout or result.stderr or "").strip()
     if not raw:
-        return f"{harness} at {path}, version not reported"
+        return f"{harness} at {shown}, version not reported"
 
     # A harness may print a banner before the version, so the function keeps the
     # last line that holds a version number.
@@ -356,7 +378,7 @@ def detect_harness_version(harness):
             break
     if not version:
         version = raw.splitlines()[-1].strip()
-    return f"{version} ({path})"
+    return f"{version} ({shown})"
 
 
 def detect_tool_versions():

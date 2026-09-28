@@ -7,6 +7,30 @@ reader names no harness and no model.
 
 ## Correctness
 
+### A Rejected Run Names the Check That Failed
+
+The log of `make bench-update` printed one reason for a rejected run. The reason
+read `the skill-guided subprojects did not all pass`, and it then listed a
+subproject with its test state. A subproject whose tests passed but whose
+robustness score fell below 100 was therefore listed as `(passed)` under a
+sentence that said the tests did not pass. The line contradicted itself.
+
+The gate needs two facts per subproject. The skill-guided tests must pass, and
+the skill-guided robustness score must be 100. The reason now names the check
+that failed. A subproject with a failed test is named by its test state, and a
+subproject with a low score is named by its score.
+
+### A Report Names No Account of the User
+
+The report stated the path of the harness command. A harness that a user
+installed under the home directory wrote a path such as
+`/home/tester/.local/share/pnpm/bin/kilo` into a report that the repository
+commits.
+
+The scanner now shortens a path that starts in the home directory. The prefix
+becomes `~`, so the report reads `~/.local/share/pnpm/bin/kilo`. A system path
+such as `/usr/bin/opencode` names no user, so it stays unchanged.
+
 ### The Model Cannot Supply Its Own Token Count
 
 The `log_turn_telemetry` tool asked the model under test for `prompt_tokens`
@@ -136,7 +160,34 @@ run that pins a model the harness does not offer. The run depends on the target,
 and the default value of `BENCH_MODEL_ID` now names a model that the default
 harness offers.
 
+### A Run Names the Model on the Command Line
+
+Kilo restored the model that the user last chose for each agent, and the
+restored model won over the model in the configuration of a run. A run of Kilo
+therefore measured the model of the user. The model of a user changes with the
+last session, so the same run of the same model could measure two models, and a
+run could measure a model that the report never names.
+
+A harness keeps the model of each agent in its state directory. The run now
+points that directory at the clean room through `XDG_STATE_HOME`, so no harness
+can read the state of a user. Kilo accepts the model on the command line, and
+the run names it there. The OpenCode terminal interface has no model flag, so
+the run keeps the configuration of the clean room as its only source for that
+harness.
+
 ## Consistency
+
+### The Continuous Integration Job Does Not Run a Benchmark
+
+The job ran `make test_picker_tty`, which forks a pseudo terminal and runs the
+whole `make benchmark-free` pipeline. The step therefore built the clean room,
+started a private server, and wrote a report. The report step needs `uv`, which
+the GitHub runner image does not ship, so the step always failed.
+
+A benchmark measures a model, so it does not belong in the job. The job now
+runs the unit tests, the telemetry unit tests, the picker unit tests, and the
+integration tests. The pseudo terminal test stays in `make test_picker_tty`,
+where `uv` is present.
 
 ### The Prompt and Guide Describe the Two Steps
 
