@@ -20,6 +20,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -320,6 +321,42 @@ def compute_robustness_score(variant_result, project_name):
 
     ceiling = SCORE_PASSED + profile["max_typing"] + profile["max_security"] + profile["max_error_handling"]
     return min(int(score / ceiling * 100), 100)
+
+
+def detect_harness_version(harness):
+    """Read the version of the harness that ran the run.
+
+    A harness version changes the prompt, the tool list, and the token
+    accounting, so a report that names no version cannot be reproduced. The
+    function asks the harness itself, and it returns the path of the command
+    with the version, because two installs of one harness can differ.
+    """
+    path = shutil.which(harness)
+    if not path:
+        return f"{harness} is not on the path"
+
+    try:
+        result = subprocess.run(
+            [harness, "--version"], capture_output=True, text=True, timeout=20
+        )
+    except Exception:
+        return f"{harness} at {path}, version not reported"
+
+    raw = (result.stdout or result.stderr or "").strip()
+    if not raw:
+        return f"{harness} at {path}, version not reported"
+
+    # A harness may print a banner before the version, so the function keeps the
+    # last line that holds a version number.
+    version = ""
+    for line in reversed(raw.splitlines()):
+        text = line.strip()
+        if re.search(r"\d+\.\d+", text):
+            version = text
+            break
+    if not version:
+        version = raw.splitlines()[-1].strip()
+    return f"{version} ({path})"
 
 
 def detect_tool_versions():
@@ -654,8 +691,13 @@ def test_status_text(variant_result):
 
 
 def generate_markdown(results, provider, harness, model, model_id, agent_tag,
-                      skill_ver, record, encoder_loaded):
-    """Build the report of one run."""
+                      skill_ver, record, encoder_loaded, harness_version=None):
+    """Build the report of one run.
+
+    The function states the harness version, because a harness version changes
+    the prompt, the tool list, and the token accounting. A report that names no
+    version cannot be reproduced.
+    """
     plain_fct = sum(results[p]["plain"]["total_tokens"] for p in PROJECT_ORDER)
     guided_fct = sum(results[p]["skill-guided"]["total_tokens"] for p in PROJECT_ORDER)
     plain_lines = sum(results[p]["plain"]["total_lines"] for p in PROJECT_ORDER)
@@ -697,10 +739,22 @@ def generate_markdown(results, provider, harness, model, model_id, agent_tag,
     if encoder:
         notes.append(encoder)
 
+    harness_note = ""
+    if harness_version and "not reported" in harness_version or (
+        harness_version and "not on the path" in harness_version
+    ):
+        harness_note = (
+            "> **Harness version unreported.** The report names no harness "
+            "version, so the run cannot be reproduced. "
+            f"{harness_version}."
+        )
+        notes.append(harness_note)
+
     md = f"""# LCCST Playground Benchmark Report
 
 **Provider:** {provider}
 **Harness:** {harness}
+**Harness Version:** {harness_version or 'not stated'}
 **Model:** {model}
 **Requested Model ID:** {model_id or 'not stated'}
 **Agent Tag:** {agent_tag}
@@ -820,7 +874,7 @@ def main():
 
     report = generate_markdown(
         results, provider, harness, model, args.model_id, agent_tag,
-        skill_ver, record, encoder_loaded
+        skill_ver, record, encoder_loaded, detect_harness_version(harness)
     )
     report_dir = PLAYGROUND / "benchmarks" / agent_tag
     report_dir.mkdir(parents=True, exist_ok=True)

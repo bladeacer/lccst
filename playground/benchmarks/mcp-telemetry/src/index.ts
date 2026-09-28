@@ -7,6 +7,7 @@ import {
   readTelemetry,
   recordPhase,
   resolveTelemetryFile,
+  resolveWorkspace,
   writeTelemetry
 } from "./telemetry.js";
 import { readHostSessionId } from "./usage.js";
@@ -33,7 +34,7 @@ server.tool(
   async (args, extra) => {
     const phase = `${args.subproject} (${args.variant})`;
 
-    const check = checkPhase(process.cwd(), args.subproject, args.variant);
+    const check = checkPhase(resolveWorkspace(), args.subproject, args.variant);
     if (!check.ready) {
       process.stderr.write(`[Telemetry] Refused an early phase call for ${phase}.\n`);
       return {

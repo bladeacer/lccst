@@ -29,14 +29,47 @@ export function emptyTelemetry() {
         breakdown: {}
     };
 }
-/** Locate the telemetry file of the running workspace. */
+/**
+ * Locate the telemetry file of the running workspace.
+ *
+ * The variable wins, because the harness passes the path in the environment of
+ * the server. Without the variable the file belongs in the working directory of
+ * the server, which is the workspace of the run. The function must not fall back
+ * to the file of this source tree: a run whose server lost the variable would
+ * then write into the repository, and the phases of one run would land in the
+ * file that another run reads.
+ */
 export function resolveTelemetryFile() {
     const configured = process.env[TELEMETRY_VARIABLE];
     if (configured) {
         return configured;
     }
     const workspaceTelemetry = path.resolve(process.cwd(), "runtime-telemetry.json");
-    return fs.existsSync(workspaceTelemetry) ? workspaceTelemetry : PRIMARY_TELEMETRY;
+    try {
+        if (fs.statSync(process.cwd()).isDirectory()) {
+            return workspaceTelemetry;
+        }
+    }
+    catch {
+        return workspaceTelemetry;
+    }
+    return PRIMARY_TELEMETRY;
+}
+/**
+ * Locate the workspace of the run.
+ *
+ * A harness does not start a server in the directory of the run, so the working
+ * directory of the server is not the workspace. The variable that names the
+ * telemetry file sits in the workspace, so its directory is the workspace. The
+ * function falls back to the working directory, which is the workspace for a
+ * server that a harness starts in place.
+ */
+export function resolveWorkspace() {
+    const configured = process.env[TELEMETRY_VARIABLE];
+    if (configured) {
+        return path.dirname(path.resolve(configured));
+    }
+    return process.cwd();
 }
 /** Read a telemetry file. A missing or damaged file starts a new record. */
 export function readTelemetry(targetFile) {

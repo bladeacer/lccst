@@ -23,8 +23,10 @@ BENCH_CONFIG   ?= $(if $(filter opencode,$(HARNESS)),opencode.json,kilo.json)
 BENCH_HARNESS_CONFIG ?= $(if $(filter opencode,$(HARNESS)),OPENCODE_CONFIG_DIR,$(if $(filter kilo,$(HARNESS)),KILO_CONFIG_DIR,HARNESS_CONFIG_DIR))
 # The clean room sits outside the repository, so a harness can never reach a
 # tracked file of the project and no ancestor instruction file can reach it.
+# The path is resolved to an absolute form, because the separation check
+# compares the workspace with the repository directory.
 BENCH_TMP      ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
-BENCH_WORKSPACE := $(BENCH_TMP)/lccst-bench-$(AGENT_MODEL)
+BENCH_WORKSPACE := $(abspath $(BENCH_TMP))/lccst-bench-$(AGENT_MODEL)
 # Path of the telemetry server, relative to the workspace.
 BENCH_MCP_PATH  = $(shell python3 -c "import os; print(os.path.relpath('$(CURDIR)/$(TELEMETRY_MCP_DIR)/build/index.js', '$(BENCH_WORKSPACE)'))")
 # The task that the picker hands to the harness.
@@ -41,6 +43,23 @@ define guard_workspace
 	esac; \
 	case "$(CURDIR)" in \
 		"$(BENCH_WORKSPACE)"*) echo "[Harness] Refusing to remove the repository."; exit 1 ;; \
+	esac;
+endef
+
+# Refuse a workspace that sits inside the repository. A harness reads the
+# instructions of every directory above its workspace, so a workspace inside the
+# repository would send the repository `AGENTS.md` to the model under test. The
+# two documents have different purposes: the repository file states the rules for
+# maintaining LCCST, and the playground prompt assigns the benchmark phases.
+define assert_separate_instructions
+	case "$(BENCH_WORKSPACE)" in \
+		"$(CURDIR)"*) \
+			echo "[Harness] Refusing a workspace inside the repository."; \
+			echo "[Harness] The harness reads the instructions of every parent"; \
+			echo "[Harness] directory, so the repository AGENTS.md would reach"; \
+			echo "[Harness] the model. Set BENCH_TMP to a directory outside the"; \
+			echo "[Harness] repository."; \
+			exit 1 ;; \
 	esac;
 endef
 
@@ -139,6 +158,11 @@ telemetry-build:
 # The name of the harness file is fixed, so the token comes from the content.
 BENCH_PROMPT_TOKEN ?= $(shell python3 -c "import hashlib;print(hashlib.sha256(open('playground/agent-prompt.md','rb').read()).hexdigest()[:8])")
 
+# The instructions of the run are `playground/agent-prompt.md`. The `AGENTS.md`
+# of this repository is a different document, and it never reaches a run. The
+# repository is not an ancestor of the clean room, and the run points the
+# configuration directory of the harness at the clean room.
+
 # Every run writes its own telemetry file. A shared file would mix the phases of
 # two runs, and a later report would sum the counts of both.
 BENCH_TELEMETRY_FILE := $(BENCH_WORKSPACE)/runtime-telemetry.json
@@ -160,6 +184,7 @@ define GENERATE_HARNESS_CONFIG
     "lccst-telemetry": {
       "type": "local",
       "command": ["node", "$(BENCH_MCP_PATH)"],
+      "cwd": "$(BENCH_WORKSPACE)",
       "environment": {
         "LCCST_TELEMETRY_FILE": "$(BENCH_TELEMETRY_FILE)"
       },
@@ -207,6 +232,7 @@ benchmark-run: clean-telemetry bench-model
 	@rm -rf "$(BENCH_WORKSPACE)"
 	@mkdir -p "$(BENCH_WORKSPACE)/harness-config"
 	@echo "[Harness] Seeding the workspace files..."
+	@$(call assert_separate_instructions)
 	@cp SKILL.md "$(BENCH_WORKSPACE)/SKILL.md"
 	@cp playground/README.md "$(BENCH_WORKSPACE)/README.md"
 	@cp playground/guide.md "$(BENCH_WORKSPACE)/guide.md"
@@ -218,6 +244,7 @@ benchmark-run: clean-telemetry bench-model
 	+$(MAKE) --no-print-directory bench-config
 	@echo "[Harness] Workspace: $(BENCH_WORKSPACE)"
 	@echo "[Harness] Harness:  $(HARNESS) with $(BENCH_MODEL_ID)"
+	@$(HARNESS) --version 2>&1 | head -2 | sed 's/^/[Harness] Version: /' || true
 	@echo "[Harness] Run token: $(BENCH_PROMPT_TOKEN) (the model must state it)"
 	@echo "[Harness] Starting the run in the foreground. Answer the harness, or type"
 	@echo "[Harness] a new message to steer it. The run ends when you leave the TUI."

@@ -37,6 +37,11 @@ function withTempDir(fn: (dir: string) => void) {
   finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
+/** Build one throwaway directory that holds a store file. */
+function storeDir(): string {
+  return fs.mkdtempSync(path.join(os.tmpdir(), "lccst-telemetry-store-"));
+}
+
 function assistantTokens(input: number, output: number, reasoning = 0, read = 0, write = 0) {
   return { input, output, reasoning, cache: { read, write } };
 }
@@ -566,6 +571,207 @@ assert(
   noTokenSettled.phases[0].token_seen === true,
   "a settled phase keeps its own verdict"
 );
+
+// -- The live store schemas of opencode and kilo --------------------
+// The fixtures below were copied from the real stores on the machine, because
+// a fixture written from a guess hides a reader bug instead of exposing it.
+//
+// opencode v2.0.18, newest schema: `session_v2` plus `session_message`. The
+// author sits in the `type` column, the model is a nested object with an `id`
+// field, and the text of a turn is a list of parts under `content`.
+{
+  const file = path.join(storeDir(), "opencode-live.db");
+  const store = new DatabaseSync(file);
+  store.exec("CREATE TABLE session_v2 (id text, directory text, parent_id text, time_updated integer)");
+  store.exec(
+    "CREATE TABLE session_message (id text, session_id text, type text, seq integer, " +
+      "time_created integer, time_updated integer, data text)"
+  );
+  store.prepare(
+    "INSERT INTO session_v2 (id, directory, parent_id, time_updated) VALUES (?, ?, ?, ?)"
+  ).run("ses_live", "/tmp/lccst-bench-x", null, 100);
+  const data = JSON.stringify({
+    agent: "build",
+    content: [
+      { type: "reasoning", text: "internal thought" },
+      { type: "text", text: "Run token 9f8e7d6c acknowledged." },
+      { id: "prt_1", name: "read", state: {}, type: "tool" }
+    ],
+    cost: 0,
+    finish: "stop",
+    model: { providerID: "opencode", id: "ling-3.0-flash-fin-free", variant: "default" },
+    snapshot: "abc",
+    time: { start: 90 },
+    tokens: { total: 300, input: 200, output: 100, reasoning: 0, cache: { read: 50, write: 0 } }
+  });
+  store.prepare(
+    "INSERT INTO session_message (id, session_id, type, seq, time_created, time_updated, data) " +
+      "VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).run("msg_live", "ses_live", "assistant", 0, 95, 99, data);
+  store.close();
+
+  const usage = readTurnUsage({
+    directory: "/tmp/lccst-bench-x",
+    candidates: [file],
+    window: { fromTime: 90, toTime: 100 }
+  });
+  assert(usage !== null, "the live opencode schema is read");
+  assert(usage?.promptTokens === 200, "the live opencode schema counts fresh prompt tokens");
+  assert(usage?.cacheReadTokens === 50, "the live opencode schema counts cache reads");
+  assert(
+    usage?.models[0] === "opencode/ling-3.0-flash-fin-free",
+    "the live opencode schema names the model from the nested object"
+  );
+  assert(usage?.text.includes("9f8e7d6c"), "the live opencode schema yields the run token");
+  assert(
+    !usage?.text.includes("internal thought"),
+    "a reasoning part is not the text of a turn"
+  );
+  assert(
+    statesToken(usage ?? { text: "" }, "9f8e7d6c"),
+    "the live opencode schema verifies the run token"
+  );
+}
+
+// kilo 7.7.9, legacy schema: `session` plus `message`. The author sits inside
+// `data`, the model is a flat `modelID` and `providerID` pair with no `model`
+// object at all, and the message row holds no text of any kind.
+{
+  const file = path.join(storeDir(), "kilo-live.db");
+  const store = new DatabaseSync(file);
+  store.exec("CREATE TABLE session (id text, directory text, parent_id text, time_updated integer)");
+  store.exec("CREATE TABLE message (id text, session_id text, time_created integer, time_updated integer, data text)");
+  store.prepare(
+    "INSERT INTO session (id, directory, parent_id, time_updated) VALUES (?, ?, ?, ?)"
+  ).run("ses_k", "/tmp/lccst-bench-y", null, 100);
+  const data = JSON.stringify({
+    agent: "build",
+    cost: 0,
+    finish: "stop",
+    mode: "build",
+    modelID: "cohere/north-mini-code:free",
+    parentID: "ses_k",
+    path: { cwd: "/tmp/lccst-bench-y" },
+    providerID: "kilo",
+    role: "assistant",
+    time: { start: 90 },
+    tokens: { total: 300, input: 200, output: 100, reasoning: 0, cache: { read: 50, write: 0 } }
+  });
+  store.prepare(
+    "INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, ?)"
+  ).run("msg_k", "ses_k", 95, 99, data);
+  store.close();
+
+  const usage = readTurnUsage({
+    directory: "/tmp/lccst-bench-y",
+    candidates: [file],
+    window: { fromTime: 90, toTime: 100 }
+  });
+  assert(usage !== null, "the live kilo schema is read");
+  assert(usage?.promptTokens === 200, "the live kilo schema counts fresh prompt tokens");
+  assert(
+    usage?.models[0] === "kilo/cohere/north-mini-code:free",
+    "the live kilo schema names the model from the flat fields"
+  );
+  assert(
+    usage?.models[0] !== undefined,
+    "a flat modelID no longer loses the model"
+  );
+  assert(usage?.text === "", "the live kilo schema holds no text in the message row");
+}
+
+// A host that keeps the text of a turn in a table of its own.
+{
+  const file = path.join(storeDir(), "parts.db");
+  const store = new DatabaseSync(file);
+  store.exec("CREATE TABLE session (id text, directory text, parent_id text, time_updated integer)");
+  store.exec("CREATE TABLE message (id text, session_id text, time_created integer, data text)");
+  store.exec("CREATE TABLE part (id text, message_id text, session_id text, time_created integer, data text)");
+  store.prepare(
+    "INSERT INTO session (id, directory, parent_id, time_updated) VALUES (?, ?, ?, ?)"
+  ).run("ses_p", "/tmp/lccst-bench-z", null, 100);
+  store.prepare("INSERT INTO message (id, session_id, time_created, data) VALUES (?, ?, ?, ?)").run(
+    "msg_p",
+    "ses_p",
+    95,
+    JSON.stringify({
+      role: "assistant",
+      modelID: "stepfun/step-3.7-flash:free",
+      providerID: "kilo",
+      tokens: { input: 10, output: 5, cache: { read: 2, write: 0 } }
+    })
+  );
+  store.prepare("INSERT INTO part (id, message_id, session_id, time_created, data) VALUES (?, ?, ?, ?, ?)").run(
+    "prt_1",
+    "msg_p",
+    "ses_p",
+    95,
+    JSON.stringify({ type: "text", text: "My run token is 1a2b3c4d." })
+  );
+  store.prepare("INSERT INTO part (id, message_id, session_id, time_created, data) VALUES (?, ?, ?, ?, ?)").run(
+    "prt_2",
+    "msg_p",
+    "ses_p",
+    96,
+    JSON.stringify({ type: "tool", state: {} })
+  );
+  store.close();
+
+  const usage = readTurnUsage({
+    directory: "/tmp/lccst-bench-z",
+    candidates: [file],
+    window: { fromTime: 90, toTime: 100 }
+  });
+  assert(usage?.text.includes("1a2b3c4d"), "a part table yields the run token");
+  assert(statesToken(usage ?? { text: "" }, "1a2b3c4d"), "a part table verifies the run token");
+  assert(
+    usage?.models[0] === "kilo/stepfun/step-3.7-flash:free",
+    "a part table still names the model"
+  );
+}
+
+// -- Reader unit behaviour for the new shapes ----------------------
+assert(
+  readModel("assistant", { modelID: "step:free", providerID: "kilo" }) === "kilo/step:free",
+  "a flat modelID names the model"
+);
+assert(
+  readModel("assistant", { model: { providerID: "kilo", modelID: "step:free" } }) === "kilo/step:free",
+  "a nested modelID names the model"
+);
+assert(
+  readModel("assistant", { model: { providerID: "opencode", id: "x-free" } }) === "opencode/x-free",
+  "a nested id names the model"
+);
+assert(
+  readModel("assistant", { model: "opencode/x" }) === "opencode/x",
+  "a plain string names the model"
+);
+assert(
+  readModel("assistant", { modelID: "step:free" }) === "step:free",
+  "a flat modelID without a provider names the model"
+);
+assert(readModel("assistant", {}) === null, "a turn with no model names none");
+assert(readModel("user", { modelID: "x" }) === null, "a user turn names no model");
+
+assert(
+  readText("assistant", { content: [{ type: "text", text: "hello" }] }) === "hello",
+  "a content list yields the text"
+);
+assert(
+  readText("assistant", { parts: [{ type: "text", text: "hello" }] }) === "hello",
+  "a parts list yields the text"
+);
+assert(
+  readText("assistant", { content: [{ type: "text", text: "a" }, { type: "text", text: "b" }] }) === "a\nb",
+  "several text parts are joined"
+);
+assert(
+  readText("assistant", { content: [{ type: "text", text: "a" }], parts: [{ type: "text", text: "a" }] }) === "a",
+  "the same text in two lists is not repeated"
+);
+assert(readText("user", { content: [{ type: "text", text: "x" }] }) === "", "a user turn has no text");
+assert(readText("assistant", {}) === "", "a turn with no list has no text");
 
 // -- Telemetry file -----------------------------------------------
 withTempDir((dir) => {

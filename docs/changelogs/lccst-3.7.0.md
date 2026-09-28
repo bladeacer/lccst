@@ -175,6 +175,18 @@ existed. It now writes a placeholder and removes the ranking file, so
 table. The table has six columns now, so the generator reads the last column.
 Reports in the old format keep the same values.
 
+### The End-to-End Test Checks the Reader Against a Real Harness
+
+`make test_e2e` checked only the token counts. It never checked that the reader
+found the model of a turn, and it never checked that the reader found the text of
+a turn, so a reader that returned neither shape passed the test.
+
+The test now seeds the instructions and a run token the way a benchmark run
+seeds them, and it asserts that the reader returns the model and the text of the
+model turns of a real run. The token check is advisory, because a free model
+often ignores the instruction to state the token, and a test of the reader must
+not fail on the compliance of a model.
+
 ## New Features
 
 ### An Interactive Picker for the Harness and the Model
@@ -264,6 +276,109 @@ The reader of the pseudo terminal stopped at the first quiet moment. A build
 step prints nothing for seconds, so the test closed the terminal while the run
 still worked, and four checks read a transcript that ended early. The reader now
 waits for the text that it expects, and it reads to the end of the run.
+
+### The Report Names the Harness Version
+
+A report named the provider, the harness, the model, and the skill version. It
+named no harness version, so two runs that differed only in their harness build
+looked like the same measurement. A harness version changes the prompt, the tool
+list, and the token accounting, so the report could not be reproduced.
+
+The scanner now asks the harness for its version and records the version with
+the path of the command, because two installs of one harness can differ. The
+version handles a banner, so a harness that prints one still reports a version.
+The run prints the version at the start as well.
+
+The README table gained a `Harness Version` column, the cross-model comparison
+gained a harness row and a version row, and the ranking file gained a version
+column.
+
+### A Report Without a Harness Version Stays Out of the Table
+
+`BenchmarkReport.is_reproducible` now rejects a report that names no harness
+version, or that states the harness is not on the path or reports no version. A
+report that names no version cannot be reproduced, so it must not rank a model.
+The rejection log names the reason first.
+
+### The Table Parser Reads Columns by Name
+
+`_parse_robustness_section` read the robustness table by a fixed column index.
+The scanner added a `Files` column, so the index of the score moved, and the
+parser read the test standing as the score and the line count as the token
+count. Every report would have carried a wrong score and a wrong test status.
+
+The parser now reads the column names of the header row. It accepts the older
+header names, so a report from before the `Files` column still parses. A table
+that holds none of the required columns yields no project, and no run is ranked
+from it.
+
+### The Instructions File Is Not Sent Twice
+
+A probe of `opencode` v2.0.18 and `kilo` v7.7.9 against a local capture server
+counted how many times the content of `AGENTS.md` reached the system prompt.
+Both harnesses sent it once. The `instructions` key of the generated
+configuration is redundant rather than harmful: `opencode` ignores the key
+entirely, and `kilo` reads it but does not duplicate a file it already loads as
+the project rule. The earlier suspicion of a doubled prompt was wrong, and the
+key stays as a fallback for a harness that reads neither location.
+
+### The Run Refuses a Workspace Inside the Repository
+
+A harness reads the instructions of every directory above its workspace, so a
+workspace inside the repository would send the repository `AGENTS.md` to the
+model under test. The two documents have different purposes, and the repository
+file would have changed every measurement.
+
+A probe confirmed that a clean room nested inside a project that holds an
+`AGENTS.md` receives only its own prompt, because the harness stops at the
+workspace. The new `assert_separate_instructions` check removes the doubt
+anyway: the run refuses a `BENCH_TMP` that resolves inside the repository, and
+`BENCH_WORKSPACE` is now an absolute path so the check holds for a relative
+value.
+
+### A Probe Confirmed the Isolation of the Run
+
+A probe against a local capture server, with a fake home directory, confirmed
+that `OPENCODE_CONFIG_DIR` stops the global `AGENTS.md`, the global agents, and
+the global skills of a user from reaching the prompt. The probe also confirmed
+that a probe run inside the LCCST repository does not receive the repository
+`AGENTS.md` in the clean room, and that a global agent prompt is applied when the
+configuration directory is not redirected. The isolation the changelog claimed
+for `v3.7.0` holds.
+
+### The Reader Names No Store Shape
+
+The reader looked for the model in a nested `model` object and for the text in
+a `parts` list. Neither shape exists in the stores that the harnesses on this
+machine write. A probe of both live stores showed the real shapes:
+
+- opencode v2.0.18 keeps `session_v2` and `session_message`. The model is a
+  nested `model` object with an `id` field, and the text of a turn is a
+  `content` list of parts.
+- kilo v7.7.9 keeps `session` and `message`. The model is a flat `modelID` and
+  `providerID` pair with no `model` object at all, and the message row holds no
+  text. The text sits in a `part` table that joins on the message identifier.
+
+A probe of the reader against both live stores returned no model and no text, so
+every report would have claimed an unverified model and an unverified prompt.
+
+The reader now reads a `content` list, a `parts` list, and a `part` table, and it
+reads a nested `model.id`, a nested `model.modelID`, a flat `modelID`, and a
+plain string. The unit tests now build their fixtures from the columns and the
+payloads of the two live stores, because a fixture written from a guess hides a
+reader bug instead of exposing it.
+
+### The Server Found No Workspace
+
+A harness does not start an MCP server in the directory of the workspace. The
+server used `process.cwd()` to look for the directory and the manifest of a
+phase, so it refused every phase of every run, and the report held no phase at
+all. The end-to-end test caught this on both harnesses.
+
+The server now reads the workspace from the directory of the file that
+`LCCST_TELEMETRY_FILE` names, and the run also passes the workspace as the
+`cwd` of the server. The server no longer falls back to the file of the source
+tree, because a run that lost the variable would then write into the repository.
 
 ### A Unit Test for the Scanner and the Table Gate
 
@@ -391,6 +506,16 @@ The `log_turn_telemetry` tool no longer accepts `prompt_tokens` and
 two values keeps working, because the server drops them. The counts appear in
 the report after the settle step.
 
+The telemetry server reads the workspace of a run from the directory of the
+file that `LCCST_TELEMETRY_FILE` names. A server started by a harness runs in
+another directory, so the earlier use of the working directory refused every
+phase. The run also passes the workspace as the `cwd` of the server, and the
+server no longer falls back to the telemetry file of the source tree.
+
+The report header gains the field `Harness Version`, and the README table gains
+a `Harness Version` column. A report that names no harness version no longer
+enters the table, so a report from before this change cannot rank a model.
+
 The phase record of the telemetry file gains the field `token_seen`, which holds
 `true` when a turn of the phase stated the run token. A report that predates the
 field never verifies a prompt, so it stays out of the table.
@@ -434,6 +559,10 @@ store, and `LCCST_TELEMETRY_FILE`, which names the telemetry file.
 The run removes the workspace at the end, so a script that expects the output
 files under `playground/<agent-model>/` must read the new `--workspace` option
 of `run_benchmark.py` instead.
+
+The variable `BENCH_WORKSPACE` now holds an absolute path, so a relative
+`BENCH_TMP` resolves the same way as an absolute one. A caller that parses the
+value must expect an absolute path.
 
 The dead files `playground/benchmarks/runner.py` and
 `playground/benchmarks/track_runtime.py` are removed. They proxied the harness

@@ -170,9 +170,9 @@ def check_seeded_workspace(report_dir: Path) -> None:
     files that the repository holds, which are the source of every seeded file,
     and it checks the report for the state of the run.
     """
-    for name in ("AGENTS.md", "agent-prompt.md", "guide.md", "traps.md", "SKILL.md"):
-        check((ROOT / "playground" / name).is_file() or (ROOT / name).is_file(),
-              f"the run seeds {name}")
+    for name in ("agent-prompt.md", "guide.md", "traps.md"):
+        check((ROOT / "playground" / name).is_file(), f"the run seeds {name}")
+    check((ROOT / "SKILL.md").is_file(), "the run seeds SKILL.md")
 
     prompt = ROOT / "playground" / "agent-prompt.md"
     if prompt.is_file():
@@ -183,6 +183,28 @@ def check_seeded_workspace(report_dir: Path) -> None:
         check("do not load or apply `SKILL.md` or `traps.md`" in text,
               "the prompt keeps the plain variant away from the traps")
 
+    # The instructions of a run and the instructions of this repository are two
+    # different documents. The Makefile must seed the playground prompt, and it
+    # must refuse a workspace inside the repository, because a harness reads the
+    # instructions of every parent directory.
+    makefile = (ROOT / "Makefile").read_text()
+    check("cp playground/agent-prompt.md \"$(BENCH_WORKSPACE)/AGENTS.md\"" in makefile,
+          "the run copies the playground prompt, not the repository AGENTS.md")
+    check("assert_separate_instructions" in makefile,
+          "the run refuses a workspace inside the repository")
+    check("cp AGENTS.md" not in makefile,
+          "the run never copies the repository AGENTS.md")
+
+    repo_agents = ROOT / "AGENTS.md"
+    playground_prompt = ROOT / "playground" / "agent-prompt.md"
+    if repo_agents.is_file() and playground_prompt.is_file():
+        check(repo_agents.read_text() != playground_prompt.read_text(),
+              "the repository AGENTS.md and the playground prompt differ")
+        check("LCCST Playground Agent Instructions" in playground_prompt.read_text(),
+              "the playground prompt states its own purpose")
+        check("# AGENTS.md" in repo_agents.read_text(),
+              "the repository AGENTS.md states its own purpose")
+
     reports = sorted(report_dir.glob("*.md"))
     if reports:
         report = reports[0].read_text()
@@ -190,6 +212,13 @@ def check_seeded_workspace(report_dir: Path) -> None:
               "a run that stated no token is marked unverified")
         check("**Requested Model ID:** opencode/stub-model-free" in report,
               "the report names the model identifier that the run pinned")
+        if repo_agents.is_file():
+            for line in repo_agents.read_text().splitlines():
+                marker = line.strip()
+                if marker.startswith("## Deliverable Tiers"):
+                    check(marker not in report,
+                          "the repository instructions stay out of the report")
+                    break
 
 
 def run_pipe_case() -> None:

@@ -63,6 +63,8 @@ interface HostSchema {
   messages: string;
   /** Set to `type` when the message table holds the author in its own column. */
   roleColumn: "type" | "data";
+  /** Table that holds the text of a turn, or `null` when the store embeds it. */
+  parts: string | null;
 }
 
 /** Token object of one model turn, with every field as a number. */
@@ -231,21 +233,28 @@ export function statesToken(usage: TurnUsage, token: string): boolean {
 /**
  * Read the model of one turn from the raw message data.
  *
- * A host stores the model as an object that names the provider and the model,
- * or as a plain string. The function returns `null` for a message of another
- * author, because only a model turn names a model.
+ * A host stores the model in one of three shapes. A host may nest the model in
+ * a `model` object with an `id` field, a host may keep the model as a plain
+ * string, and a host may hold the identifiers in flat `modelID` and
+ * `providerID` fields with no `model` object at all. The function accepts all
+ * three, because a missing model fails the report.
+ *
+ * The function returns `null` for a message of another author, because only a
+ * model turn names a model.
  */
 export function readModel(role: string, data: Record<string, unknown> | null): string | null {
   if (role !== "assistant") {
     return null;
   }
+
   const raw = data?.model;
   if (typeof raw === "string") {
     return raw;
   }
+
   const model = asRecord(raw);
-  const id = model?.id;
-  const provider = model?.providerID;
+  const id = model?.id ?? model?.modelID ?? data?.modelID;
+  const provider = model?.providerID ?? data?.providerID;
   if (typeof id !== "string" || id.length === 0) {
     return null;
   }
@@ -255,27 +264,40 @@ export function readModel(role: string, data: Record<string, unknown> | null): s
 /**
  * Read the text that the model wrote in one turn.
  *
- * A host stores the text of a turn in a list of parts, and each text part
- * holds a `text` field. The function joins the parts of a model turn, and it
- * returns an empty string for a turn of another author or a turn with no text.
+ * No host stores the text under one key. A host that keeps the newest schema
+ * holds a `content` list, a host that keeps an older schema holds a `parts`
+ * list, and a host may hold neither and keep the text in a table of its own.
+ * The function reads every list the message row offers, and it returns an
+ * empty string for a turn of another author or a turn with no text.
  */
 export function readText(role: string, data: Record<string, unknown> | null): string {
   if (role !== "assistant") {
     return "";
   }
-  const parts = data?.parts;
-  if (!Array.isArray(parts)) {
-    return "";
-  }
   const lines: string[] = [];
-  for (const part of parts) {
-    const record = asRecord(part);
-    const text = record?.text;
-    if (record?.type === "text" && typeof text === "string") {
-      lines.push(text);
+  for (const key of ["content", "parts"]) {
+    for (const text of readTextParts(data?.[key])) {
+      if (!lines.includes(text)) {
+        lines.push(text);
+      }
     }
   }
   return lines.join("\n");
+}
+
+/** Join the text parts of one list, skipping every part of another type. */
+function readTextParts(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const lines: string[] = [];
+  for (const part of value) {
+    const record = asRecord(part);
+    if (record?.type === "text" && typeof record.text === "string" && record.text.length > 0) {
+      lines.push(record.text);
+    }
+  }
+  return lines;
 }
 
 /**
@@ -311,7 +333,12 @@ function openStore(databasePath: string): DatabaseSync | null {
   }
 }
 
-/** Match the store tables. The newest schema wins. */
+/**
+ * Match the store tables. The newest schema wins.
+ *
+ * A host may keep the text of a turn in a table of its own instead of inside the
+ * message row, so the function also names that table when it finds one.
+ */
 function detectSchema(store: DatabaseSync): HostSchema | null {
   const names = new Set<string>();
   const tables = store.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all();
@@ -319,11 +346,23 @@ function detectSchema(store: DatabaseSync): HostSchema | null {
     names.add(String(table.name));
   }
 
+  // A host that splits the text of a turn keeps a table of parts that join on
+  // the message identifier.
+  const parts = names.has("part") ? "part" : null;
+
   if (names.has("session_v2") && names.has("session_message")) {
-    return { sessions: "session_v2", messages: "session_message", roleColumn: "type" };
+    return {
+      sessions: "session_v2",
+      messages: "session_message",
+      roleColumn: "type",
+      parts
+    };
   }
   if (names.has("session") && names.has("message")) {
-    return { sessions: "session", messages: "message", roleColumn: "data" };
+    return { sessions: "session", messages: "message", roleColumn: "data", parts };
+  }
+  if (names.has("session_message")) {
+    return { sessions: "session", messages: "session_message", roleColumn: "type", parts };
   }
   return null;
 }
@@ -383,17 +422,55 @@ function readMessages(
     for (const row of statement.all(sessionId)) {
       const data = asRecord(parseJson(row.data));
       const role = typed ? String(row.type) : String(data?.role ?? "");
+      const embedded = readText(role, data);
       messages.push({
         id: String(row.id),
         role,
         timeCreated: readNumber(row.time_created),
         tokens: data?.tokens ?? null,
         model: readModel(role, data),
-        text: readText(role, data)
+        text: embedded || readPartTable(store, schema, role, String(row.id))
       });
     }
   }
   return messages;
+}
+
+/**
+ * Read the text of one turn from a table of parts.
+ *
+ * A host may keep no text inside the message row and store every turn of text
+ * in a table that joins on the message identifier. The function returns an
+ * empty string when the store holds no such table, or when the turn has no
+ * text, so a caller never has to know which shape a host uses.
+ */
+function readPartTable(
+  store: DatabaseSync,
+  schema: HostSchema,
+  role: string,
+  messageId: string
+): string {
+  if (!schema.parts || role !== "assistant" || messageId.length === 0) {
+    return "";
+  }
+  try {
+    const rows = store
+      .prepare(`SELECT data FROM ${schema.parts} WHERE message_id = ? ORDER BY time_created`)
+      .all(messageId);
+    const lines: string[] = [];
+    for (const row of rows) {
+      for (const text of readTextParts(asRecord(parseJson(row.data))?.parts)) {
+        lines.push(text);
+      }
+      const direct = asRecord(parseJson(row.data));
+      if (direct?.type === "text" && typeof direct.text === "string" && direct.text.length > 0) {
+        lines.push(direct.text);
+      }
+    }
+    return lines.join("\n");
+  } catch {
+    return "";
+  }
 }
 
 /** Read the token object of one model turn. Returns `null` when it has none. */

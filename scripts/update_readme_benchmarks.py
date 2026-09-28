@@ -74,17 +74,33 @@ class BenchmarkReport:
     token_state: str = NO_TOKENS
     prompt_state: str = PROMPT_UNKNOWN
     model_state: str = "unknown"
+    harness_version: str = "not stated"
+
+    @property
+    def is_reproducible(self) -> bool:
+        """True when the report names the version of the harness that ran it.
+
+        A harness version changes the prompt, the tool list, and the token
+        accounting, so a run that names no version cannot be reproduced.
+        """
+        version = self.harness_version.strip().lower()
+        if version in ("", "not stated", "unknown"):
+            return False
+        return "not reported" not in version and "not on the path" not in version
 
     @property
     def is_usable(self) -> bool:
         """True when every check of the report passes.
 
-        A report enters the README only when the run covers the three
-        subprojects, every skill-guided subproject scores 100 percent and passes
-        its tests, every phase holds a settled count, the host store confirms
-        the model of the run, and the model stated the run token of the
-        instructions. A report that fails any check must not rank a model.
+        A report enters the README only when it names the version of the
+        harness, the run covers the three subprojects, every skill-guided
+        subproject scores 100 percent and passes its tests, every phase holds a
+        settled count, the host store confirms the model of the run, and the
+        model stated the run token of the instructions. A report that fails any
+        check must not rank a model.
         """
+        if not self.is_reproducible:
+            return False
         if self.token_state != MEASURED:
             return False
         if self.prompt_state != PROMPT_VERIFIED:
@@ -252,13 +268,24 @@ def _parse_robustness_section(
     if len(lines) < 3:
         return []
 
+    # The parser reads the column names, because the scanner adds columns to
+    # this table. A fixed index would read the wrong cell as soon as the table
+    # grows a column.
+    header = [c.strip().lower() for c in lines[0].split("|")[1:-1]]
+    index = {name: position for position, name in enumerate(header)}
+    tokens_at = _column(index, ("tokens", "token", "fct"))
+    status_at = _column(index, ("unit test standing", "test standing", "test status"))
+    score_at = _column(index, ("robustness score", "score"))
+    if tokens_at is None or status_at is None or score_at is None:
+        return []
+
     data_lines = lines[2:]
     projects: list[ProjectResult] = []
     i = 0
 
     while i < len(data_lines):
         cells = [c.strip() for c in data_lines[i].split("|")[1:-1]]
-        if len(cells) < 6:
+        if len(cells) <= max(tokens_at, status_at, score_at):
             i += 1
             continue
 
@@ -268,22 +295,22 @@ def _parse_robustness_section(
             continue
 
         proj_name = proj_m.group(1)
-        ps_m = SCORE_RE.search(cells[5])
+        ps_m = SCORE_RE.search(cells[score_at])
         plain_score = int(ps_m.group(1)) if ps_m else 0
-        fct_p = _parse_int(cells[3])
+        fct_p = _parse_int(cells[tokens_at])
 
         if i + 1 >= len(data_lines):
             break
 
         g_cells = [c.strip() for c in data_lines[i + 1].split("|")[1:-1]]
-        if len(g_cells) < 6:
+        if len(g_cells) <= max(tokens_at, status_at, score_at):
             i += 1
             continue
 
-        gs_m = SCORE_RE.search(g_cells[5])
+        gs_m = SCORE_RE.search(g_cells[score_at])
         guided_score = int(gs_m.group(1)) if gs_m else 0
-        fct_g = _parse_int(g_cells[3])
-        test_passed = "PASSED" in g_cells[4].upper()
+        fct_g = _parse_int(g_cells[tokens_at])
+        test_passed = "PASSED" in g_cells[status_at].upper()
 
         projects.append(
             ProjectResult(
@@ -295,13 +322,21 @@ def _parse_robustness_section(
                 fct_guided=fct_g,
                 art_plain=0,
                 art_guided=0,
-                plain_test_status=read_test_status(cells[4]),
-                guided_test_status=read_test_status(g_cells[4]),
+                plain_test_status=read_test_status(cells[status_at]),
+                guided_test_status=read_test_status(g_cells[status_at]),
             )
         )
         i += 2
 
     return projects
+
+
+def _column(index: dict[str, int], names: tuple[str, ...]) -> int | None:
+    """Return the position of the first header name that the table holds."""
+    for name in names:
+        if name in index:
+            return index[name]
+    return None
 
 
 def _fill_art_values(
@@ -371,6 +406,7 @@ def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
     prov_m = re.search(r"\*\*Provider:\*\*\s*(\S+)", text)
     harn_m = re.search(r"\*\*Harness:\*\*\s*(\S+)", text)
     model_m = re.search(r"\*\*Model:\*\*\s*(\S+)", text)
+    harness_version_m = re.search(r"\*\*Harness Version:\*\*\s*(.+)", text)
 
     if prov_m and harn_m and model_m:
         provider = prov_m.group(1)
@@ -401,6 +437,9 @@ def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
         skill_version=skill_version,
         context_tools=context_tools,
         projects=projects,
+        harness_version=(
+            harness_version_m.group(1).strip() if harness_version_m else "not stated"
+        ),
         **read_note_states(text),
     )
 
@@ -465,6 +504,8 @@ def reject_reason(r: BenchmarkReport) -> str:
     The function names one reason, because a report that fails several checks
     needs one clear line in the log of `make bench-update`.
     """
+    if not r.is_reproducible:
+        return "the report names no harness version, so the run cannot be reproduced"
     if r.token_state != MEASURED:
         if r.token_state == UNSETTLED:
             return "a phase holds no settled token count"
@@ -594,14 +635,15 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
         parts.append("")
 
         header = (
-            "| Provider | Harness | Model | Skill Layer "
+            "| Provider | Harness | Harness Version | Model | Skill Layer "
             "| Context Tools (MCP) | Subproject "
             "| Plain Score | Skill-Guided | Test Status "
             "| FCT (Plain) | FCT (Guided) "
             "| ART (Plain) | ART (Guided) |"
         )
         sep = (
-            "| :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
+            "| :--- | :--- | :--- | :--- | :--- | :--- | :--- "
+            "| :---: | :---: | :---: | :---: | :---: | :---: | :---: |"
         )
         parts.append(header)
         parts.append(sep)
@@ -611,6 +653,7 @@ def generate_table(reports: list[BenchmarkReport]) -> str:
             row = (
                 f"| `{report.provider}` "
                 f"| **{report.agent_name}** "
+                f"| `{_short_version(report.harness_version)}` "
                 f"| `{report.model_name}` "
                 f"| `v{report.skill_version}` "
                 f"| `{report.context_tools}` "
@@ -687,6 +730,8 @@ def generate_comparison_table(reports: list[BenchmarkReport]) -> str:
     parts.append("| --- |" + " --- |" * len(reports))
 
     rows_data = [
+        ("Harness", lambda r: r.agent_name),
+        ("Harness version", lambda r: _short_version(r.harness_version)),
         ("Plain score", lambda r: f"{r.avg_plain_score:.0f}/100"),
         ("Guided score", lambda r: f"{r.avg_guided_score:.0f}/100"),
         ("Plain FCT", lambda r: fmt_int(r.total_fct_plain)),
@@ -703,6 +748,20 @@ def generate_comparison_table(reports: list[BenchmarkReport]) -> str:
         parts.append(f"| {cells} |")
 
     return "\n".join(parts)
+
+
+def _short_version(version: str) -> str:
+    """Reduce a version line to the version itself.
+
+    The scanner states the version and the path of the command, such as
+    `opencode v2.0.18 (/usr/bin/opencode)`. A table cell holds the version only,
+    because the path is the same for every run on one machine.
+    """
+    text = version.strip()
+    match = re.search(r"v?(\d+(?:\.\d+)+[\w.\-+]*)", text)
+    if match:
+        return f"v{match.group(1)}"
+    return text or "not stated"
 
 
 def _fmt_backtick_tag(r: BenchmarkReport) -> str:
@@ -937,7 +996,7 @@ def generate_full_ranking_table(reports: list[BenchmarkReport]) -> str:
     ranked = sorted(reports, key=_composite_score, reverse=True)
 
     header = (
-        "| Rank | Agent-Model | Skill Version "
+        "| Rank | Agent-Model | Skill Version | Harness Version "
         "| Avg Guided | Avg Plain "
         "| Pass Rate "
         "| FCT Plain | FCT Guided | FCT Overhead "
@@ -945,7 +1004,7 @@ def generate_full_ranking_table(reports: list[BenchmarkReport]) -> str:
         "| Composite | Verdict |"
     )
     sep = (
-        "| ---: | :--- | :---: "
+        "| ---: | :--- | :---: | :---: "
         "| :---: | :---: "
         "| :---: "
         "| :---: | :---: | :---: "
@@ -967,7 +1026,7 @@ def generate_full_ranking_table(reports: list[BenchmarkReport]) -> str:
         pass_rate = f"{r.passed_count}/{len(r.projects)}"
 
         rows.append(
-            f"| {i} | {tag} | v{r.skill_version} "
+            f"| {i} | {tag} | v{r.skill_version} | {_short_version(r.harness_version)} "
             f"| {r.avg_guided_score:.0f}/100 | {r.avg_plain_score:.0f}/100 "
             f"| {pass_rate} "
             f"| {fmt_int(r.total_fct_plain)} | {fmt_int(r.total_fct_guided)} | {fct_oh} "
@@ -1050,10 +1109,11 @@ def update_readme(table_content: str, count: int = 0) -> None:
 
 
 NO_FINDINGS = (
-    "_No findings yet. A run enters this table only when every subproject "
-    "passes, every phase holds a settled token count, the host store confirms "
-    "the model, and the model states the run token of the instructions. Run "
-    "`make benchmark-free`, then `make bench-report`._"
+    "_No findings yet. A run enters this table only when it names the version "
+    "of the harness, every subproject passes, every phase holds a settled token "
+    "count, the host store confirms the model, and the model states the run "
+    "token of the instructions. Run `make benchmark-free`, then "
+    "`make bench-report`._"
 )
 
 

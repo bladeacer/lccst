@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import { checkPhase, phaseOutcomeText, readTelemetry, recordPhase, resolveTelemetryFile, writeTelemetry } from "./telemetry.js";
+import { checkPhase, phaseOutcomeText, readTelemetry, recordPhase, resolveTelemetryFile, resolveWorkspace, writeTelemetry } from "./telemetry.js";
 import { readHostSessionId } from "./usage.js";
 const server = new McpServer({
     name: "lccst-telemetry",
@@ -19,7 +19,7 @@ server.tool("log_turn_telemetry", "Record the end of one benchmark phase. Call t
     variant: z.enum(["plain", "skill-guided"])
 }, async (args, extra) => {
     const phase = `${args.subproject} (${args.variant})`;
-    const check = checkPhase(process.cwd(), args.subproject, args.variant);
+    const check = checkPhase(resolveWorkspace(), args.subproject, args.variant);
     if (!check.ready) {
         process.stderr.write(`[Telemetry] Refused an early phase call for ${phase}.\n`);
         return {

@@ -14,6 +14,13 @@ that directory, so no other project file can reach it. The directory holds
 `prompt-token.txt`, and the configuration file of the harness. The telemetry
 server is named by a path that is relative to the clean room.
 
+The `AGENTS.md` of this file is a copy of `agent-prompt.md`. It is not the
+`AGENTS.md` of the LCCST repository. The repository file states the rules for
+maintaining LCCST, and it never reaches a run. The clean room is outside the
+repository, and the run refuses a `BENCH_TMP` that places the workspace inside
+the repository, because a harness reads the instructions of every parent
+directory.
+
 - Do not alter, upgrade, or modify global packages at run time.
 - Do not read, write, or delete any path outside the current workspace.
 - Do not use a global test runner when a project runner exists.
@@ -75,6 +82,20 @@ directory that the test command of the subproject names.
 
 The scanner counts source files wherever they sit in the variant directory. It
 does not favour one directory over another.
+
+## The telemetry server and the working directory
+
+A harness does not start an MCP server in the directory of the workspace. The
+server therefore cannot use its own working directory to find the subprojects
+of a run.
+
+The run names the workspace twice. The variable `LCCST_TELEMETRY_FILE` holds
+the path of the telemetry file, which sits in the workspace, and the server
+reads the workspace from the directory of that file. The run also passes the
+workspace as the `cwd` of the server, so a server that reads its own working
+directory finds the same place.
+
+A model may only create files inside the workspace of the run.
 
 ## Token accounting
 

@@ -199,11 +199,16 @@ Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
 > `guide.md`. The `skill-guided` variant reads those files plus `SKILL.md` and
 > `traps.md`.
 
-> **A run enters the table only when every check passes.** The table needs a
-> measured count for every phase, a model that the host store confirms, a stated
-> run token, and a passing skill-guided variant at 100 percent for all three
-> subprojects. A run that fails a check stays on disk, and the table leaves it
-> out. The report states the reason.
+> **A run enters the table only when every check passes.** The table needs the
+> version of the harness, a measured count for every phase, a model that the
+> host store confirms, a stated run token, and a passing skill-guided variant at
+> 100 percent for all three subprojects. A run that fails a check stays on disk,
+> and the table leaves it out. The report states the reason.
+
+> **Every report names the harness version.** A harness version changes the
+> prompt, the tool list, and the token accounting, so a report that names no
+> version cannot be reproduced. The scanner asks the harness for its version and
+> records the version with the path of the command.
 
 > **How runtime tokens are measured.** A model cannot read its own token usage,
 > so the `lccst-telemetry` MCP server measures it. The model marks the end of
@@ -227,7 +232,7 @@ Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
 
 <!-- BENCHMARK_RESULTS_START -->
 
-_No findings yet. A run enters this table only when every subproject passes, every phase holds a settled token count, the host store confirms the model, and the model states the run token of the instructions. Run `make benchmark-free`, then `make bench-report`._
+_No findings yet. A run enters this table only when it names the version of the harness, every subproject passes, every phase holds a settled token count, the host store confirms the model, and the model states the run token of the instructions. Run `make benchmark-free`, then `make bench-report`._
 
 <!-- BENCHMARK_RESULTS_END -->
 

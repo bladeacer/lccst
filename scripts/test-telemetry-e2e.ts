@@ -3,6 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import { fileURLToPath } from "url";
+import { readTurnUsage } from "../playground/benchmarks/mcp-telemetry/src/usage.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -42,9 +43,15 @@ const HARNESSES: Harness[] = [
   }
 ];
 
+// The run token proves that the model received the project instructions, so the
+// test asks the model to state it. The settle step then looks for the token in
+// the text of the model turns, which is the only path the reader has.
+const RUN_TOKEN = "e2e0token";
+
 const PROMPT =
-  "Call the lccst-telemetry_log_turn_telemetry tool exactly once with " +
-  "subproject react-timer and variant plain. Then reply with the single word done.";
+  `Read AGENTS.md and follow it exactly. State the run token ${RUN_TOKEN} in your ` +
+  "first reply. Then call the lccst-telemetry_log_turn_telemetry tool exactly once " +
+  "with subproject react-timer and variant plain. Then reply with the single word done.";
 
 const RUN_TIMEOUT_MS = 300000;
 
@@ -81,6 +88,13 @@ function writeConfig(workspace: string, harness: Harness): void {
       "lccst-telemetry": {
         type: "local",
         command: ["node", relativeServer],
+        // A harness does not start a server in the workspace, so the run names
+        // the workspace twice: as the working directory, and through the
+        // directory of the telemetry file.
+        cwd: workspace,
+        environment: {
+          LCCST_TELEMETRY_FILE: path.join(workspace, "runtime-telemetry.json")
+        },
         enabled: true
       }
     }
@@ -123,6 +137,20 @@ function runCase(harness: Harness): void {
   // or replace a server.
   spawnSync("git", ["init", "--quiet"], { cwd: workspace, stdio: "ignore" });
   writeConfig(workspace, harness);
+  // The instructions and the run token, seeded the way a benchmark run seeds
+  // them.
+  fs.writeFileSync(
+    path.join(workspace, "AGENTS.md"),
+    `# Test Instructions\n\nState the run token ${RUN_TOKEN} in your first reply.\n${RUN_TOKEN}\n`
+  );
+  fs.writeFileSync(path.join(workspace, "prompt-token.txt"), `${RUN_TOKEN}\n`);
+  // The server refuses a phase that holds no directory and no manifest, so the
+  // test seeds the variant directory before it asks the model to record it.
+  fs.mkdirSync(path.join(workspace, "react-timer", "plain"), { recursive: true });
+  fs.writeFileSync(
+    path.join(workspace, "react-timer", "plain", "package.json"),
+    `${JSON.stringify({ name: "react-timer", private: true }, null, 2)}\n`
+  );
 
   const env: NodeJS.ProcessEnv = {
     ...process.env,
@@ -153,8 +181,8 @@ function runCase(harness: Harness): void {
     return;
   }
 
-  const phases = (beforeSettle.phases ?? []) as Array<Record<string, unknown>>;
-  assert(phases.length === 1, `${harness.name} recorded one phase`);
+  const recorded = (beforeSettle.phases ?? []) as Array<Record<string, unknown>>;
+  assert(recorded.length === 1, `${harness.name} recorded one phase`);
 
   settleTelemetry(workspace);
   const settled = readTelemetry(workspace);
@@ -179,6 +207,51 @@ function runCase(harness: Harness): void {
     step !== undefined && step.prompt_tokens === prompt && step.completion_tokens === completion,
     `${harness.name} attributed the counts to the phase`
   );
+
+  // The reader must find the model of the turn, or the report cannot confirm
+  // which model ran.
+  const phases = (settled?.phases ?? []) as Array<Record<string, unknown>>;
+  const turnModel = phases[0]?.model;
+  assert(
+    typeof turnModel === "string" && turnModel.includes("/"),
+    `${harness.name} recorded the model of the turn (${String(turnModel)})`
+  );
+
+  // The reader must return the text of the model turns. The model may or may not
+  // obey the instruction to state the run token, and a free model often does
+  // not, so the test checks the reader rather than the compliance of the model.
+  // The test passes the session of the phase, because that is the session the
+  // settle step reads, and the newest session of the workspace can be a
+  // subagent turn that holds no text.
+  const sessionId = phases[0]?.session_id;
+  const usage = readTurnUsage({
+    directory: workspace,
+    sessionId: typeof sessionId === "string" ? sessionId : undefined,
+    window: { fromTime: 0, toTime: Date.now() }
+  });
+  assert(
+    usage !== null && usage.text.trim().length > 0,
+    `${harness.name} reader returns the text of the model turns ` +
+      `(${usage?.text.trim().length ?? 0} chars)`
+  );
+  assert(
+    usage !== null && usage.models.length > 0,
+    `${harness.name} reader returns the model of the model turns`
+  );
+
+  // The token check is advisory. The prompt asks for the token twice, and a model
+  // that ignores the prompt must not fail a test of the reader.
+  const tokenSeen = phases.some((phase) => phase.token_seen === true);
+  if (tokenSeen) {
+    passed++;
+    console.log(`  PASS: ${harness.name} found the run token in the model turns`);
+  } else {
+    skipped++;
+    console.log(
+      `  SKIP: ${harness.name} run token check (the model stated no token, ` +
+        "so the prompt check did not run)"
+    );
+  }
 }
 
 console.log("LCCST: Telemetry end-to-end tests on real harnesses\n");

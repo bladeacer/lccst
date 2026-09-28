@@ -79,6 +79,7 @@ playground/benchmarks/<agent-tag>/benchmark-report-v<skill-version>.md
 A report enters the README table only when every check passes. The checks are
 in the notes under the report header.
 
+- The report names the version of the harness and the path of the command.
 - Every phase holds a settled token count.
 - The host store confirms the model of the run.
 - The model stated the run token of the instructions.
@@ -86,3 +87,22 @@ in the notes under the report header.
 
 A run that fails a check stays on disk for inspection, and the table leaves it
 out.
+
+## The report header
+
+The header states what a reader needs to reproduce a run.
+
+| Field | Source |
+| --- | --- |
+| Provider | The provider of the run |
+| Harness | The harness that ran the phases |
+| Harness Version | `harness --version` and the path of the command |
+| Model | The model name of the run |
+| Requested Model ID | The full identifier that the run pinned |
+| Agent Tag | The directory name of the report |
+| Active Ecosystem MCPs | The servers the host recorded |
+| Skill Protocol Engine | The version of `SKILL.md` |
+| Python, pnpm, Go | The versions on the machine |
+
+The report then states a note for every check, and a toolchain drift note when
+the machine does not match `guide.md`.

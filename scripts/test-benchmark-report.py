@@ -11,6 +11,7 @@ Run the file with:
 """
 
 import importlib.util
+import os
 import sys
 import tempfile
 import unittest
@@ -232,6 +233,82 @@ class TestStatusTest(unittest.TestCase):
         self.assertLess(scanner.compute_robustness_score(variant, "python-http-server"), 100)
 
 
+class HarnessVersionTest(unittest.TestCase):
+    """The report must name the harness version, for reproducibility."""
+
+    def test_a_missing_harness_is_stated(self):
+        version = scanner.detect_harness_version("lccst-no-such-harness-xyz")
+        self.assertIn("is not on the path", version)
+
+    def test_a_real_harness_is_reported_with_its_path(self):
+        version = scanner.detect_harness_version("sh")
+        self.assertIn("(", version)
+        self.assertIn("sh", version)
+
+    def test_a_harness_that_reports_no_version_says_so(self):
+        with tempfile.TemporaryDirectory() as dir:
+            stub = Path(dir) / "lccst-stub-harness"
+            stub.write_text("#!/bin/sh\nexit 0\n")
+            stub.chmod(0o755)
+            original = os.environ["PATH"]
+            os.environ["PATH"] = f"{dir}{os.pathsep}{original}"
+            try:
+                version = scanner.detect_harness_version("lccst-stub-harness")
+            finally:
+                os.environ["PATH"] = original
+        self.assertIn("version not reported", version)
+
+    def test_the_version_is_parsed_from_a_banner(self):
+        """A harness may print a banner before the version."""
+        with tempfile.TemporaryDirectory() as dir:
+            stub = Path(dir) / "lccst-banner-harness"
+            stub.write_text("#!/bin/sh\necho '~~~ banner ~~~\n'\necho 'kilo 7.7.9'\n")
+            stub.chmod(0o755)
+            original = os.environ["PATH"]
+            os.environ["PATH"] = f"{dir}{os.pathsep}{original}"
+            try:
+                version = scanner.detect_harness_version("lccst-banner-harness")
+            finally:
+                os.environ["PATH"] = original
+        self.assertIn("7.7.9", version)
+        self.assertNotIn("~~~ banner ~~~", version)
+
+    def test_the_report_names_the_harness_version(self):
+        text = self.build_report(harness_version="opencode v2.0.18 (/usr/bin/opencode)")
+        self.assertIn("**Harness Version:** opencode v2.0.18 (/usr/bin/opencode)", text)
+        self.assertNotIn("**Harness version unreported.**", text)
+
+    def test_an_unreported_version_is_flagged(self):
+        text = self.build_report(harness_version="lccst-x is not on the path")
+        self.assertIn("**Harness version unreported.**", text)
+
+    def test_a_missing_version_line_says_not_stated(self):
+        text = self.build_report(harness_version=None)
+        self.assertIn("**Harness Version:** not stated", text)
+
+    def build_report(self, harness_version):
+        """Build one report with the given harness version."""
+        with tempfile.TemporaryDirectory() as dir:
+            workspace = Path(dir)
+            for project in scanner.PROJECT_ORDER:
+                for variant in scanner.VARIANTS:
+                    target = workspace / project / variant
+                    target.mkdir(parents=True)
+                    (target / "main.py").write_text("def f() -> int:\n    return 1\n")
+            (workspace / "prompt-token.txt").write_text("abc12345\n")
+            original = scanner.WORKSPACE
+            scanner.WORKSPACE = workspace
+            try:
+                results = scanner.collect_results(install=False)
+                return scanner.generate_markdown(
+                    results, "opencode", "opencode", "ling-free", "opencode/ling-free",
+                    "opencode-opencode-ling-free", "v3.7.0", scanner.empty_telemetry(),
+                    True, harness_version,
+                )
+            finally:
+                scanner.WORKSPACE = original
+
+
 class ToolchainTest(unittest.TestCase):
     """The report must state a toolchain drift."""
 
@@ -353,6 +430,65 @@ class NoteParserTest(unittest.TestCase):
         self.assertEqual(table.read_test_status("`Skipped`"), "unknown")
 
 
+ROBUSTNESS_TABLE = """## Robustness Metrics
+
+| Project Submodule Target | Strategy Variant | Files | Lines | Tokens | Unit Test Standing | Robustness Score |
+|---|---|:-:|:-:|:-:|:-:|:-:|
+| **python-http-server** | Plain Strategy | 3 | 60 | 400 | `PASSED` | **31%** |
+| **python-http-server** | Skill-Guided | 4 | 197 | 1407 | `PASSED` | **100%** |
+| **react-timer** | Plain Strategy | 2 | 11 | 65 | `FAILED (code 1)` | **22%** |
+| **react-timer** | Skill-Guided | 5 | 172 | 1157 | `ERROR: timed out` | **74%** |
+"""
+
+
+class RobustnessTableTest(unittest.TestCase):
+    """The parser must read the columns by name, not by a fixed position."""
+
+    def parse(self, text):
+        return table._parse_robustness_section(text)
+
+    def test_columns_are_read_by_name(self):
+        projects = self.parse(ROBUSTNESS_TABLE)
+        self.assertEqual(len(projects), 2)
+        python, react = projects
+        self.assertEqual(python.name, "python-http-server")
+        self.assertEqual(python.fct_plain, 400)
+        self.assertEqual(python.fct_guided, 1407)
+        self.assertEqual(python.plain_score, 31)
+        self.assertEqual(python.guided_score, 100)
+        self.assertEqual(react.fct_plain, 65)
+        self.assertEqual(react.fct_guided, 1157)
+
+    def test_the_status_is_read_from_the_status_column(self):
+        python, react = self.parse(ROBUSTNESS_TABLE)
+        self.assertEqual(python.guided_test_status, "passed")
+        self.assertEqual(react.plain_test_status, "failed")
+        self.assertEqual(react.guided_test_status, "error")
+
+    def test_a_grown_table_does_not_shift_the_reading(self):
+        """The scanner added a Files column, so a fixed index read the wrong cell."""
+        grown = ROBUSTNESS_TABLE.replace(
+            "| Project Submodule Target | Strategy Variant | Files | Lines |",
+            "| Project Submodule Target | Strategy Variant | Files | Lines | Extra |",
+        ).replace(
+            "|---|---|:-:|:-:|:-:|:-:|:-:|",
+            "|---|---|:-:|:-:|:-:|:-:|:-:|:-:|",
+        ).replace("| 3 | 60 | 400 |", "| 3 | 60 | x | 400 |").replace(
+            "| 4 | 197 | 1407 |", "| 4 | 197 | x | 1407 |"
+        ).replace("| 2 | 11 | 65 |", "| 2 | 11 | x | 65 |").replace(
+            "| 5 | 172 | 1157 |", "| 5 | 172 | x | 1157 |"
+        )
+        python, react = self.parse(grown)
+        self.assertEqual(python.fct_guided, 1407)
+        self.assertEqual(react.fct_guided, 1157)
+        self.assertEqual(python.guided_score, 100)
+        self.assertEqual(react.plain_test_status, "failed")
+
+    def test_a_table_without_the_needed_columns_yields_nothing(self):
+        broken = ROBUSTNESS_TABLE.replace("Robustness Score", "Note")
+        self.assertEqual(self.parse(broken), [])
+
+
 def make_report(**overrides):
     """Build one report for the gate tests."""
     projects = [
@@ -369,6 +505,7 @@ def make_report(**overrides):
         "token_state": table.MEASURED,
         "prompt_state": table.PROMPT_VERIFIED,
         "model_state": table.MODEL_VERIFIED,
+        "harness_version": "opencode v2.0.18 (/usr/bin/opencode)",
     }
     values.update(overrides)
     return table.BenchmarkReport(**values)
@@ -406,6 +543,30 @@ class GateTest(unittest.TestCase):
         report = make_report()
         report.projects = report.projects[:2]
         self.assertFalse(report.is_usable)
+
+    def test_a_report_without_a_harness_version_is_rejected(self):
+        """A run that names no harness version cannot be reproduced."""
+        for value in ("not stated", "", "unknown",
+                      "lccst-x is not on the path",
+                      "harness at /tmp/x, version not reported"):
+            report = make_report(harness_version=value)
+            self.assertFalse(report.is_reproducible, f"rejected: {value!r}")
+            self.assertFalse(report.is_usable, f"rejected: {value!r}")
+
+    def test_a_named_harness_version_is_reproducible(self):
+        self.assertTrue(make_report().is_reproducible)
+
+    def test_the_reject_reason_names_the_missing_version(self):
+        report = make_report(harness_version="not stated")
+        self.assertIn("harness version", table.reject_reason(report))
+
+    def test_the_short_version_keeps_only_the_version(self):
+        self.assertEqual(
+            table._short_version("opencode v2.0.18 (/usr/bin/opencode)"), "v2.0.18"
+        )
+        self.assertEqual(table._short_version("7.7.9"), "v7.7.9")
+        self.assertEqual(table._short_version("not stated"), "not stated")
+        self.assertEqual(table._short_version(""), "not stated")
 
     def test_pick_top_n_drops_an_unusable_report(self):
         unmeasured = make_report(token_state=table.NO_TOKENS)
@@ -474,7 +635,7 @@ class ReportTextTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def build(self, record):
+    def build(self, record, harness_version="opencode v2.0.18 (/usr/bin/opencode)"):
         original = scanner.WORKSPACE
         scanner.WORKSPACE = self.workspace
         try:
@@ -482,6 +643,7 @@ class ReportTextTest(unittest.TestCase):
             text = scanner.generate_markdown(
                 results, "opencode", "opencode", "ling-free", "opencode/ling-free",
                 "opencode-opencode-ling-free", "v3.7.0", record, True,
+                harness_version,
             )
         finally:
             scanner.WORKSPACE = original
@@ -555,6 +717,18 @@ class ReportTextTest(unittest.TestCase):
         self.assertEqual(report.prompt_state, table.PROMPT_VERIFIED)
         self.assertEqual(report.model_state, table.MODEL_VERIFIED)
         self.assertEqual(len(report.projects), 3)
+        self.assertEqual(
+            report.harness_version, "opencode v2.0.18 (/usr/bin/opencode)"
+        )
+        self.assertTrue(report.is_reproducible)
+        self.assertEqual(table._short_version(report.harness_version), "v2.0.18")
+
+    def test_a_report_with_no_version_line_is_not_reproducible(self):
+        text = self.build(scanner.empty_telemetry(), harness_version=None)
+        report = table.parse_report(text, "opencode-opencode-ling-free")
+        assert report is not None
+        self.assertEqual(report.harness_version, "not stated")
+        self.assertFalse(report.is_reproducible)
 
     def test_an_empty_workspace_never_passes(self):
         """A report of an empty workspace must not enter the table."""
