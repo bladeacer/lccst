@@ -167,15 +167,43 @@ make bench-list         # Show the models that the picker offers
 
 The picker lists the free models of every harness that the path holds, and it
 accepts a filter. The run then happens in a clean room outside the repository.
-The target seeds `SKILL.md`, `README.md`, `guide.md`, and `agent-prompt.md`
-into the clean room, injects `agent-prompt.md` as the project instructions, and
-starts the harness in the foreground so you can steer it. The target settles
-the token counts, writes the report, removes the clean room, and refreshes the
-table below. Set `BENCH_PICK=0` to skip the picker and pass `HARNESS`,
-`PROVIDER`, and `MODEL_NAME` yourself.
+The target seeds `SKILL.md`, `README.md`, `guide.md`, `traps.md`, and
+`agent-prompt.md` into the clean room, and it copies `agent-prompt.md` to
+`AGENTS.md`, which the harness reads as the project instructions. The target
+then starts the harness in the foreground so you can steer it. It settles the
+token counts, writes the report, removes the clean room, and refreshes the table
+below. Set `BENCH_PICK=0` to skip the picker and pass `HARNESS`, `PROVIDER`,
+and `MODEL_NAME` yourself.
 
 The picker needs a terminal, because the run that follows costs model tokens.
 Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
+
+> **The run measures the model it names.** The run checks that the harness offers
+> the model before it builds the clean room, and it gives the harness its own
+> configuration directory, so the plugins and skills of a user cannot change the
+> run. The report compares the model identifier that the run pinned with the
+> model that the store of the host recorded. A report that names a different
+> model is marked as wrong.
+
+> **The run measures the prompt it names.** The instructions of a run carry a
+> run token, and the model must state the token in its first reply. The settle
+> step reads the text of the model turns and looks for the token. A run whose
+> model never stated the token is a run that measured a different prompt, so
+> the report marks the prompt as unverified.
+
+> **Both columns are measured the same way.** The scanner applies one file
+> filter and one test command to the `plain` and the `skill-guided` variant, and
+> it scores both with the same rubric. A test failure is a measurement. A test
+> run that cannot start, that times out, or that holds no test is an error, and
+> an error never scores as a pass. The `plain` variant reads `README.md` and
+> `guide.md`. The `skill-guided` variant reads those files plus `SKILL.md` and
+> `traps.md`.
+
+> **A run enters the table only when every check passes.** The table needs a
+> measured count for every phase, a model that the host store confirms, a stated
+> run token, and a passing skill-guided variant at 100 percent for all three
+> subprojects. A run that fails a check stays on disk, and the table leaves it
+> out. The report states the reason.
 
 > **How runtime tokens are measured.** A model cannot read its own token usage,
 > so the `lccst-telemetry` MCP server measures it. The model marks the end of
@@ -183,13 +211,23 @@ Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
 > turn of that phase from the store of the harness that ran it. The reader
 > names no harness, so the same server measures `opencode` and `kilo`.
 >
+> The server checks the workspace before it records a phase. A call that arrives
+> before the phase holds its directory and its manifest records nothing, and a
+> second call for the same phase corrects the end of that phase. A call that
+> came too early therefore costs one more call, and it never costs a phase.
+>
 > Every run before `v3.7.0` used counts that the model under test supplied, so
-> those Agent Runtime Tokens (ART) figures are estimates. The old findings are
+> those Agent Runtime Tokens (ART) figures were estimates. The old findings are
 > removed. The table below fills again after the next benchmark run.
+>
+> The scanner changed after the first `v3.7.0` run, so the file token counts and
+> the robustness scores of a new report are not comparable with the removed
+> reports. A report that predates the change counted the test files of one
+> variant and not the other.
 
 <!-- BENCHMARK_RESULTS_START -->
 
-_No findings yet. Run `make benchmark-free HARNESS=<harness>`, then `make bench-report`._
+_No findings yet. A run enters this table only when every subproject passes, every phase holds a settled token count, the host store confirms the model, and the model states the run token of the instructions. Run `make benchmark-free`, then `make bench-report`._
 
 <!-- BENCHMARK_RESULTS_END -->
 

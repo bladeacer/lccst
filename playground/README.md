@@ -8,8 +8,9 @@ for each of three subprojects.
 - A **benchmark workspace** is a directory named `<provider>-<harness>-<model>`.
 - A **subproject** is `python-http-server`, `react-timer`, or `go-login-crud`.
 - A **plain variant** is the smallest implementation that meets the target
-  specification. It does not apply `SKILL.md`.
-- A **skill-guided variant** applies `SKILL.md` and `guide.md`.
+  specification. It reads `README.md` and `guide.md`. It does not apply
+  `SKILL.md` or `traps.md`.
+- A **skill-guided variant** applies `SKILL.md` and `traps.md` as well.
 - An **agent tag** is the benchmark workspace directory name.
 
 A variant is not a mode. A variant is `plain` or `skill-guided`. A mode is
@@ -45,8 +46,9 @@ pnpm 11.3.0+, pre-cached TypeScript types.
 
 ## Setup
 
-Install the `headroom` MCP server from the
-[headroom repository](https://github.com/chopratejas/headroom).
+The benchmark environment holds `tiktoken`, which the scanner uses to count the
+tokens of a file. The scanner starts it through `uv` when the current
+interpreter holds no encoder.
 
 ```bash
 cd playground/benchmarks
@@ -57,11 +59,30 @@ cd ../..
 ## Running the Benchmark
 
 ```bash
-python3 playground/benchmarks/run_benchmark.py <agent-tag> [--install-deps]
+python3 playground/benchmarks/run_benchmark.py <agent-tag> \
+    [--model-id <provider/model>] [--workspace <dir>] [--install-deps]
 ```
+
+The scanner applies one file filter and one test command to both variants, so
+the plain column and the skill-guided column measure the same thing. Pass
+`--model-id` with the full identifier that the run pinned, so the report can
+compare the model of the host store with the model of the run.
 
 The report is written to:
 
 ```text
 playground/benchmarks/<agent-tag>/benchmark-report-v<skill-version>.md
 ```
+
+## What a report must show
+
+A report enters the README table only when every check passes. The checks are
+in the notes under the report header.
+
+- Every phase holds a settled token count.
+- The host store confirms the model of the run.
+- The model stated the run token of the instructions.
+- All three subprojects hold a passing skill-guided variant at 100 percent.
+
+A run that fails a check stays on disk for inspection, and the table leaves it
+out.

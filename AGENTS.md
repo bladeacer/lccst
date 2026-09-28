@@ -46,10 +46,12 @@ make test_swarm         # Run swarm unit tests.
 make test_telemetry     # Run telemetry MCP unit tests.
 make test_picker        # Run benchmark picker unit tests.
 make test_picker_tty    # Run benchmark picker tests in a pseudo terminal.
+make test_report        # Run benchmark report and README table tests.
 make test_e2e           # Run telemetry end-to-end tests on real harnesses.
 make test_mcp           # Run MCP integration tests.
 make benchmark-free     # Pick a model, then run the full benchmark.
 make bench-list         # List the models that the picker offers.
+make bench-model        # Check that the harness offers the pinned model.
 make benchmark-dryrun  # Test main and telemetry MCP connections.
 make clean              # Remove dist/.
 make help               # List all targets.
@@ -65,14 +67,28 @@ The picker starts a real model, so it refuses to run without a terminal. Set
 needs no terminal.
 
 The run happens in a clean room outside the repository, under
-`$(BENCH_TMP)/lccst-bench-$(AGENT_MODEL)`. The target seeds `SKILL.md`,
-`README.md`, `guide.md`, and `agent-prompt.md` into the clean room, and copies
+`$(BENCH_TMP)/lccst-bench-$(AGENT_MODEL)`. The target checks that the harness
+offers `BENCH_MODEL_ID`, because a harness that cannot resolve the model starts
+a different one. The target seeds `SKILL.md`, `README.md`, `guide.md`,
+`traps.md`, and `agent-prompt.md` into the clean room, and copies
 `agent-prompt.md` to `AGENTS.md` so that the harness injects it. The target
-then starts the harness in the foreground with the `BENCH_TASK` prompt, so the
-user can steer the run. A harness that leaves with a non-zero status does not
-stop the target, because the settle step and the report must still run. The
-target settles the token counts, writes the report, removes the clean room, and
-refreshes the README table.
+writes the run token to `prompt-token.txt` and to the last line of `AGENTS.md`.
+The target then starts the harness in the foreground with the `BENCH_TASK`
+prompt, so the user can steer the run. The run points the configuration
+directory of the harness at the clean room, so the plugins and skills of the
+user cannot change the measurement. A harness that leaves with a non-zero status
+does not stop the target, because the settle step and the report must still run.
+The target settles the token counts, writes the report, removes the clean room,
+and refreshes the README table.
+
+Each run writes its own telemetry file, at `runtime-telemetry.json` inside the
+clean room. The harness passes the path in `LCCST_TELEMETRY_FILE`, so two runs
+cannot write into one file.
+
+The scanner applies one file filter and one test command to both variants, and
+it scores both with the same rubric. A run enters the README table only when
+every phase holds a settled count, the host store confirms the model, the model
+stated the run token, and the skill-guided variant passes all three subprojects.
 
 Use `pnpm` version 9 or later. Pin the Node.js version in `.node-version`.
 

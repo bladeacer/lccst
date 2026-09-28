@@ -8,4 +8,10 @@ python-http-server
 react-timer
 .codegraph
 .venv
-.pytest_cache
+
+# Telemetry artifacts of a benchmark run. The clean room holds the live file,
+# and the build output of the run stays outside the repository. A file that a
+# crashed run left behind is an artifact, not a source file.
+runtime-telemetry.json
+prompt-token.txt
+model-ranking.md

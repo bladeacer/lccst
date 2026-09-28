@@ -87,6 +87,55 @@ response, was 80 to 86 milliseconds at an idle load and 145 to 280
 milliseconds with sixteen busy loops on the machine. The old fixed wait fell
 inside that range, which is why the failure looked random.
 
+### An Early Phase Call No Longer Costs the Phase
+
+The `log_turn_telemetry` tool recorded a phase as soon as the model called it.
+A model that called the tool before it did the work ended the measured span at
+that moment. The prompt told the model that a second call for the same phase was
+forbidden, so the model kept the short span and reported the shortfall instead
+of repairing it.
+
+The server now reads the workspace before it records a phase.
+
+- The server refuses a call that arrives before the phase holds its directory
+  and its manifest. A refused call records nothing, so the phase can still be
+  measured.
+- The server corrects the end of a phase when a second call names the same
+  phase. A phase holds one record, so a call that came too early costs one more
+  call and never costs a phase.
+- The spans of the phases follow each other, so the counts of a turn land in one
+  phase only.
+
+### The Settle Step Copy the Record
+
+`settlePhase` added the counts to the breakdown of the record that it took. A
+second call therefore counted the same phase twice in the record that the
+caller still held. The function copies the record now.
+
+### The Report Names the Model That Ran
+
+A harness that cannot resolve the pinned model starts a different model, and
+the report named the model that the run requested. A run could therefore
+measure one model and publish the name of another one.
+
+The settle step reads the model of every measured turn from the store of the
+host, and the report compares that model with the requested model. The report
+prints `Model verified` when both names agree, `Wrong model` when they differ,
+`Several models ran` when the phases hold more than one model, and `Model
+unverified` when the store named no model.
+
+### The Run Refuses a Model That the Harness Does Not Offer
+
+`make benchmark-free` with `BENCH_PICK=0` pinned the model of the
+`BENCH_MODEL_ID` variable. The default value of that variable named a model
+that no harness offered, so every run without the picker measured the fallback
+model of the harness.
+
+The new target `make bench-model` asks the harness for its models and refuses a
+run that pins a model the harness does not offer. The run depends on the target,
+and the default value of `BENCH_MODEL_ID` now names a model that the default
+harness offers.
+
 ## Consistency
 
 ### The Prompt and Guide Describe the Two Steps
@@ -96,6 +145,23 @@ marks the end of the phase, and that the harness settles the counts
 afterwards. The `Token accounting` section of `playground/guide.md` states the
 two steps, the three places that the reader looks for a store, and the session
 rule.
+
+### The Prompt States That an Early Call Is Repairable
+
+Section 4 of `playground/agent-prompt.md` told the model that a second call for
+the same phase was forbidden, so a model that had called the tool too early
+believed that the measurement was lost. The section now states that the server
+refuses a call that arrives before the work, that a refused call records
+nothing, and that a second call corrects the end of the same phase. The section
+tells the model to call the tool again at the true end of the phase.
+
+### The Run Isolates the Configuration of the Harness
+
+The run read the global configuration of the user, which holds plugins, skills,
+agents, and extra servers. Those items change the prompt and the tool list, so
+they changed the measurement of every phase. The run now points the
+configuration directory of the harness at the clean room, in the way the
+end-to-end test already did.
 
 ### The Report Fails Soft Without Findings
 
@@ -179,7 +245,8 @@ connection. `make test_e2e` runs it, and the unit suite stays offline.
 schemas, the newest schema preference, the session name, the directory
 fallback, a child session, several stores in one data directory, an unknown
 schema, a damaged store, the candidate discovery, the metadata key rule, the
-phase record, the settle fold, and the telemetry file. The test builds its own
+model of a turn, the phase record, the correction of an early call, the phase
+guard, the settle fold, and the telemetry file. The test builds its own
 store files, so it does not read the store of the developer.
 
 `scripts/test-benchmark-picker.ts` covers the identifier split, the free model
@@ -193,8 +260,129 @@ that the run reached the harness with the task prompt, and that the report
 followed. It also checks that a pipe is refused, and that the model list works
 without a terminal.
 
-`make test` runs the three files. The CI workflow runs each file as its own
-step.
+The reader of the pseudo terminal stopped at the first quiet moment. A build
+step prints nothing for seconds, so the test closed the terminal while the run
+still worked, and four checks read a transcript that ended early. The reader now
+waits for the text that it expects, and it reads to the end of the run.
+
+### A Unit Test for the Scanner and the Table Gate
+
+`run_benchmark.py` and `scripts/update_readme_benchmarks.py` held the rules that
+decide whether a run may rank a model, and neither file held a test. The new
+target `make test_report` runs `scripts/test-benchmark-report.py`, which covers
+the model comparison, the shared file filter, the test status rule, the tool
+chain drift note, the selection of one telemetry file, the note parser, and the
+inclusion gate. The suite also checks that a report of an empty workspace never
+passes the gate, and that the output of the scanner satisfies the gate of the
+generator.
+
+`make test` runs the file. The CI workflow runs each file as its own step.
+
+### The Plain Variant Is Scored With the Same Rubric
+
+The scanner gave the plain variant a fabricated failed test result, so the plain
+column could never score above 65 percent and the skill-guided column started at
+50. The delta between the two columns was therefore a property of the rubric
+rather than a property of the code. The agent prompt also told the plain variant
+not to write tests, so the harness could not have measured the plain variant
+honestly.
+
+The scanner now runs the same test command for both variants, and it scores both
+with the same rubric. The agent prompt now asks both variants for source files
+and test files.
+
+### One File Filter Serves Both Variants
+
+The scanner counted `plain/*.html` and `plain/*.js` for one variant and
+`skill-guided/src/*.tsx` and `skill-guided/tests/*.tsx` for the other. The file
+content token delta therefore counted the test files of one variant and not the
+other, which made the headline figure an artefact of the glob patterns.
+
+The scanner now walks each variant directory and applies one filter to both. It
+skips installed and generated directories, and it skips lock files and
+checksums. The file layout rules moved from `playground/guide.md` to
+`playground/traps.md`, because the guide now describes the environment only.
+
+### An Empty Variant Is an Error, Not a Pass
+
+A variant that held no source file still ran its test command. A test command
+that found nothing returned a zero status in one project, so the scanner
+reported `PASSED` for a variant with zero lines and zero tokens.
+
+The scanner now classifies a test run as `passed`, `failed` or `error`. An empty
+variant directory, a timeout, a command that cannot start, a usage exit code,
+and a run that found no test are all errors. An error scores 5 points, a failure
+scores 15, and a pass scores 50. No path reports a pass for a directory that
+holds no source file.
+
+### The Traps File Is Not Part of the Control Arm
+
+`playground/guide.md` held a section of known traps with the concrete fixes for
+the three subprojects, and the agent prompt told both variants to read the
+guide. The plain variant therefore received part of the answer that `SKILL.md`
+is meant to supply, which suppressed the measured delta.
+
+The traps now live in `playground/traps.md`. The guide states the environment
+and names no solution. Only the skill-guided variant reads the traps.
+
+## Consistency
+
+### The Prompt Matches the Variant Definitions
+
+`playground/README.md` stated that the skill-guided variant applies `SKILL.md`
+and `guide.md`, and the agent prompt told both variants to read `guide.md`. The
+prompt and the playground README now state the same rule: both variants read
+`README.md` and `guide.md`, and only the skill-guided variant reads `SKILL.md`
+and `traps.md`.
+
+### The Model Check Compares the Pinned Identifier
+
+The report compared a sanitised directory name with the model that the host
+store recorded. The picker replaces every unsafe character of a model name for
+the path, so `kilo/stepfun/step-3.7-flash:free` reached the report as
+`stepfun-step-3.7-flash-free`. The comparison then failed, and the report marked
+a correct run as a wrong model. Thirty-two of the thirty-nine models that the
+picker offered would have failed the check.
+
+The scanner now receives the pinned identifier through the new `--model-id`
+option of `run_benchmark.py`, and it compares the model part of both names
+without the tag. The report prints the pinned identifier on its own line.
+
+### The Run Token Confirms the Prompt
+
+Nothing checked that the model received the project instructions, so a run that
+measured a different prompt looked like a valid measurement.
+
+The run now writes a token to `prompt-token.txt` and to the last line of
+`AGENTS.md`, and the prompt asks the model to state the token in its first
+reply. The settle step reads the text of the model turns and looks for the
+token, and the report states whether the prompt is verified. A run that states
+no token stays out of the README table.
+
+### Each Run Writes Its Own Telemetry File
+
+The telemetry server fell back to `playground/benchmarks/runtime-telemetry.json`
+because the run never set `LCCST_TELEMETRY_FILE`. Two overlapping runs wrote
+into one file, and the report summed the counts of both. A run that a user
+interrupted left the file in the repository, and a later report merged its
+phases.
+
+The generated harness configuration now passes `LCCST_TELEMETRY_FILE` with a
+path inside the clean room. The scanner reads the first file that exists rather
+than the sum of every file, and `.gitignore` covers the artifacts of a run.
+
+### The Table Rejects a Run That Measured Nothing
+
+`pick_top_n` filtered only on the average skill-guided score, so a report with no
+token count was published like any other. Because the composite score returned
+an overhead of zero for a report with no runtime tokens, such a run collected the
+full efficiency weight and outranked a run that really spent tokens.
+
+The new `BenchmarkReport.is_usable` check requires a measured count for every
+phase, a model that the host store confirms, a stated run token, all three
+subprojects, and a passing skill-guided variant at 100 percent for each. The
+generator prints the reason for every rejection, and the composite score adds no
+efficiency term when a report holds no count.
 
 ## Breaking Changes
 
@@ -203,10 +391,40 @@ The `log_turn_telemetry` tool no longer accepts `prompt_tokens` and
 two values keeps working, because the server drops them. The counts appear in
 the report after the settle step.
 
+The phase record of the telemetry file gains the field `token_seen`, which holds
+`true` when a turn of the phase stated the run token. A report that predates the
+field never verifies a prompt, so it stays out of the table.
+
+The scanner no longer fabricates a failed test result for the plain variant, and
+it no longer skips the plain variant tests. A report published before this
+change compared two different rubrics, so its plain column is not comparable
+with a new report.
+
+The report states the toolchain drift when the machine does not match the
+versions in `playground/guide.md`. A report with a drift note does not compare
+with a report from another machine.
+
+`run_benchmark.py` gains the options `--model-id` and `--approximate-tokens`.
+`make bench-report` passes `--model-id`, so a caller that runs the scanner by
+hand must pass the pinned identifier to get a verified model note. The option
+`--approximate-tokens` skips the start of the benchmark environment, which a
+test needs because it must not install a package.
+
+The `log_turn_telemetry` tool now refuses a call that arrives before the phase
+holds its directory and its manifest, and it corrects the end of a phase when a
+second call names the same phase. A model that calls the tool twice for one
+phase therefore holds one record with the later end, and a model that calls the
+tool too early no longer loses the phase.
+
 The runtime token file gains the fields `total_cache_read_tokens`,
 `model_turns`, and `phases`. Each phase of the `phases` list holds
-`from_time`, `to_time`, `session_id`, `settled`, and its own counts. The step
-objects gain `cache_read_tokens`.
+`from_time`, `to_time`, `session_id`, `settled`, `model`, and its own counts.
+The step objects gain `cache_read_tokens`.
+
+`make benchmark-free` without the picker now refuses a `BENCH_MODEL_ID` that the
+harness does not offer, and the default value names `opencode/space-bunny-free`.
+The run also reads its own configuration directory for the harness, so a global
+plugin, skill, or agent of the user no longer changes a measurement.
 
 The telemetry MCP server needs Node.js 22.5 or later, because the reader uses
 `node:sqlite`. The two new variables are `LCCST_TELEMETRY_DB`, which names the
@@ -216,6 +434,16 @@ store, and `LCCST_TELEMETRY_FILE`, which names the telemetry file.
 The run removes the workspace at the end, so a script that expects the output
 files under `playground/<agent-model>/` must read the new `--workspace` option
 of `run_benchmark.py` instead.
+
+The dead files `playground/benchmarks/runner.py` and
+`playground/benchmarks/track_runtime.py` are removed. They proxied the harness
+over HTTP to read token counts, and the MCP server replaced that approach. No
+target, script, or document referenced either file.
+
+The Makefile target `make test_report` is new, and `make test` runs it. The
+Makefile removes the dead `playground/<agent-model>` paths from
+`make bench-cleanup` and `make clean-telemetry`, because the workspace now sits
+under the temporary directory.
 
 ## Version
 

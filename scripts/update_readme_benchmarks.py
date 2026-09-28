@@ -25,6 +25,20 @@ ART_RE = re.compile(r"\*\*(\d+)\s+tokens?\*\*")
 SCORE_RE = re.compile(r"\*\*(\d+)%\*\*")
 VER_RE = re.compile(r"(\d+(?:\.\d+)*)")
 
+# The three subprojects that every run must cover.
+PROJECTS = ("python-http-server", "react-timer", "go-login-crud")
+
+# States that the notes of a report may hold.
+MEASURED = "measured"
+UNSETTLED = "unsettled"
+NO_TOKENS = "none"
+PROMPT_VERIFIED = "verified"
+PROMPT_UNVERIFIED = "unverified"
+PROMPT_UNKNOWN = "unknown"
+MODEL_VERIFIED = "verified"
+MODEL_WRONG = "wrong"
+MODEL_UNVERIFIED = "unverified"
+
 
 @dataclass
 class ProjectResult:
@@ -38,6 +52,13 @@ class ProjectResult:
     fct_guided: int
     art_plain: int
     art_guided: int
+    plain_test_status: str = "unknown"
+    guided_test_status: str = "unknown"
+
+    @property
+    def test_status(self) -> str:
+        """Return the test status of the skill-guided variant."""
+        return self.guided_test_status
 
 
 @dataclass
@@ -50,6 +71,32 @@ class BenchmarkReport:
     skill_version: str
     context_tools: str
     projects: list[ProjectResult] = field(default_factory=list)
+    token_state: str = NO_TOKENS
+    prompt_state: str = PROMPT_UNKNOWN
+    model_state: str = "unknown"
+
+    @property
+    def is_usable(self) -> bool:
+        """True when every check of the report passes.
+
+        A report enters the README only when the run covers the three
+        subprojects, every skill-guided subproject scores 100 percent and passes
+        its tests, every phase holds a settled count, the host store confirms
+        the model of the run, and the model stated the run token of the
+        instructions. A report that fails any check must not rank a model.
+        """
+        if self.token_state != MEASURED:
+            return False
+        if self.prompt_state != PROMPT_VERIFIED:
+            return False
+        if self.model_state != MODEL_VERIFIED:
+            return False
+        if {project.name for project in self.projects} != set(PROJECTS):
+            return False
+        return all(
+            project.guided_score >= 100 and project.test_status == "passed"
+            for project in self.projects
+        )
 
     @property
     def avg_guided_score(self) -> float:
@@ -112,6 +159,61 @@ def _parse_int(s: str) -> int:
         return 0
 
 
+def read_test_status(cell: str) -> str:
+    """Read the test status of one row of the robustness table.
+
+    The scanner writes `PASSED`, `FAILED (code n)` or `ERROR: reason`. The
+    function returns the lower-case state, so a caller can compare it. A cell
+    that holds no state returns `unknown`, which never passes a check.
+    """
+    text = cell.strip().strip("`").upper()
+    if text.startswith("ERROR"):
+        return "error"
+    if text.startswith("FAILED"):
+        return "failed"
+    if text == "PASSED":
+        return "passed"
+    return "unknown"
+
+
+def read_note_states(text: str) -> dict[str, str]:
+    """Read the verification notes that the report states under its header.
+
+    The scanner writes one note for the model, one for the prompt, and one for
+    the runtime tokens. The function returns the state of each note. A report
+    with no note returns the unknown state for every check, so a report that
+    predates the notes never passes a check.
+    """
+    states = {
+        "token_state": NO_TOKENS,
+        "prompt_state": PROMPT_UNKNOWN,
+        "model_state": MODEL_UNVERIFIED,
+    }
+
+    if re.search(r"\*\*Measured runtime tokens", text):
+        states["token_state"] = MEASURED
+    elif re.search(r"\*\*(Unsettled phases|Partial runtime tokens)", text):
+        states["token_state"] = UNSETTLED
+    else:
+        states["token_state"] = NO_TOKENS
+
+    if re.search(r"\*\*Prompt verified", text):
+        states["prompt_state"] = PROMPT_VERIFIED
+    elif re.search(r"\*\*Prompt unverified", text):
+        states["prompt_state"] = PROMPT_UNVERIFIED
+    else:
+        states["prompt_state"] = PROMPT_UNKNOWN
+
+    if re.search(r"\*\*Model verified", text):
+        states["model_state"] = MODEL_VERIFIED
+    elif re.search(r"\*\*Wrong model", text):
+        states["model_state"] = MODEL_WRONG
+    else:
+        states["model_state"] = MODEL_UNVERIFIED
+
+    return states
+
+
 def _fct_overhead(r: BenchmarkReport) -> float:
     """Return FCT overhead as a decimal (0.5 = 50% overhead)."""
     if r.total_fct_plain == 0:
@@ -120,9 +222,13 @@ def _fct_overhead(r: BenchmarkReport) -> float:
 
 
 def _art_overhead(r: BenchmarkReport) -> float:
-    """Return ART overhead as a decimal (negative = token savings)."""
+    """Return ART overhead as a decimal (negative = token savings).
+
+    The function returns `None` when the report holds no ART count. A missing
+    count is not a zero overhead, so the caller must not score it as one.
+    """
     if r.total_art_plain == 0:
-        return 0.0
+        return None
     return (r.total_art_guided - r.total_art_plain) / r.total_art_plain
 
 
@@ -189,6 +295,8 @@ def _parse_robustness_section(
                 fct_guided=fct_g,
                 art_plain=0,
                 art_guided=0,
+                plain_test_status=read_test_status(cells[4]),
+                guided_test_status=read_test_status(g_cells[4]),
             )
         )
         i += 2
@@ -257,7 +365,7 @@ def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
         text,
     )
     tools_m = re.search(
-        r"\*\*Active Ecosystem MCPs:\*\*\s*`(.+?)`", text
+        r"\*\*Active Ecosystem MCPs:\*\*\s*(.+)", text
     )
 
     prov_m = re.search(r"\*\*Provider:\*\*\s*(\S+)", text)
@@ -278,7 +386,7 @@ def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
         model_name = parts[1] if len(parts) == 2 else ""
 
     skill_version = skill_m.group(1).strip().lstrip("v") if skill_m else ""
-    context_tools = tools_m.group(1) if tools_m else ""
+    context_tools = tools_m.group(1).strip().strip("`") if tools_m else ""
 
     projects = _parse_robustness_section(text)
     if not projects:
@@ -293,6 +401,7 @@ def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
         skill_version=skill_version,
         context_tools=context_tools,
         projects=projects,
+        **read_note_states(text),
     )
 
 
@@ -334,6 +443,9 @@ def _composite_score(r: BenchmarkReport) -> float:
     - Pass rate: 10%
     - FCT efficiency: 20% (lower overhead = higher score)
     - ART efficiency: 20% (lower overhead or savings = higher score)
+
+    A report that holds no ART count earns no ART term. It must not earn a
+    perfect ART score for a measurement that the run never made.
     """
     guided = r.avg_guided_score
     plain = r.avg_plain_score
@@ -341,13 +453,42 @@ def _composite_score(r: BenchmarkReport) -> float:
     fct_oh = _fct_overhead(r)
     art_oh = _art_overhead(r)
 
-    return (
-        guided * 0.4
-        + plain * 0.1
-        + pass_rate * 10
-        - fct_oh * 20
-        - art_oh * 20
-    )
+    score = guided * 0.4 + plain * 0.1 + pass_rate * 10 - fct_oh * 20
+    if art_oh is not None:
+        score -= art_oh * 20
+    return score
+
+
+def reject_reason(r: BenchmarkReport) -> str:
+    """State the first check that a report fails.
+
+    The function names one reason, because a report that fails several checks
+    needs one clear line in the log of `make bench-update`.
+    """
+    if r.token_state != MEASURED:
+        if r.token_state == UNSETTLED:
+            return "a phase holds no settled token count"
+        return "the report holds no measured token count"
+    if r.model_state != MODEL_VERIFIED:
+        if r.model_state == MODEL_WRONG:
+            return "the host store measured another model"
+        return "the host store named no model"
+    if r.prompt_state != PROMPT_VERIFIED:
+        if r.prompt_state == PROMPT_UNVERIFIED:
+            return "the model never stated the run token of the instructions"
+        return "the report states no run token check"
+    names = {project.name for project in r.projects}
+    missing = [name for name in PROJECTS if name not in names]
+    if missing:
+        return "the run skipped " + ", ".join(missing)
+    failing = [
+        f"{project.name} ({project.test_status})"
+        for project in r.projects
+        if project.guided_score < 100 or project.test_status != "passed"
+    ]
+    if failing:
+        return "the skill-guided subprojects did not all pass: " + ", ".join(failing)
+    return "the report passes every check"
 
 
 def pick_top_n(
@@ -356,8 +497,13 @@ def pick_top_n(
     ],
     n: int = 3,
 ) -> list[BenchmarkReport]:
-    """Pick top N agent-models by performance and token efficiency, rejecting
-    any report whose average guided robustness score is below 100%."""
+    """Pick top N agent-models by performance and token efficiency.
+
+    The function keeps the newest report of every run, and it rejects a report
+    that fails any check of `BenchmarkReport.is_usable`. A report that measured
+    no tokens, that measured another model, or whose model never received the
+    project instructions must not rank a model.
+    """
     latest: list[BenchmarkReport] = []
     for versions in reports_map.values():
         if not versions:
@@ -365,7 +511,7 @@ def pick_top_n(
         versions.sort(key=lambda x: x[0], reverse=True)
         latest.append(versions[0][1])
 
-    latest = [r for r in latest if r.avg_guided_score >= 100]
+    latest = [r for r in latest if r.is_usable]
 
     if not latest:
         return []
@@ -904,8 +1050,10 @@ def update_readme(table_content: str, count: int = 0) -> None:
 
 
 NO_FINDINGS = (
-    "_No findings yet. Run `make benchmark-free HARNESS=<harness>`, then "
-    "`make bench-report`._"
+    "_No findings yet. A run enters this table only when every subproject "
+    "passes, every phase holds a settled token count, the host store confirms "
+    "the model, and the model states the run token of the instructions. Run "
+    "`make benchmark-free`, then `make bench-report`._"
 )
 
 
@@ -919,19 +1067,24 @@ def main() -> None:
         return
 
     latest: list[BenchmarkReport] = []
+    rejected: list[BenchmarkReport] = []
     for versions in reports_map.values():
         if not versions:
             continue
         versions.sort(key=lambda x: x[0], reverse=True)
-        r = versions[0][1]
-        if r.avg_guided_score >= 100:
-            latest.append(r)
+        report = versions[0][1]
+        if report.is_usable:
+            latest.append(report)
+        else:
+            rejected.append(report)
 
     top = pick_top_n(reports_map)
     print(
         f"Found {len(reports_map)} agent-model(s), "
         f"selected top {len(top)} by performance."
     )
+    for r in rejected:
+        print(f"  Rejected {_fmt_backtick_tag(r)}: {reject_reason(r)}")
     for r in top:
         print(
             f"  {_fmt_backtick_tag(r)} "

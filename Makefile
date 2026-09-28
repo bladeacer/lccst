@@ -1,12 +1,15 @@
-.PHONY: help default build test tag release clean clean-telemetry bench-update bench-list bench-config benchmark-free bench-report bench-cleanup telemetry-build benchmark-dryrun test_swarm test_telemetry test_e2e test_picker test_picker_tty test_mcp telemetry-settle
+.PHONY: help default build test tag release clean clean-telemetry bench-update bench-list bench-config bench-model benchmark-free benchmark-run benchmark-report bench-cleanup telemetry-build benchmark-dryrun test_swarm test_telemetry test_e2e test_picker test_picker_tty test_mcp test_report telemetry-settle
 
 VERSION      ?= $(shell node -p "require('./package.json').version")
 HARNESS      ?= opencode
 E2E_HARNESS  ?=
 AGENT_NAME   ?= $(HARNESS)
 BENCH_PICK   ?= 1
-PROVIDER     ?= opencode-zen
-MODEL_NAME   ?= deepseek-v4-flash-free
+# The default run must name a model that the harness offers. A harness that
+# cannot resolve the pinned model starts a different model, so the run would
+# measure a model that the report does not name.
+PROVIDER     ?= opencode
+MODEL_NAME   ?= space-bunny-free
 AGENT_MODEL  := $(PROVIDER)-$(HARNESS)-$(MODEL_NAME)
 BENCH_DIR    := playground/benchmarks
 
@@ -14,6 +17,10 @@ BENCH_DIR    := playground/benchmarks
 BENCH_MODEL_ID ?= $(PROVIDER)/$(MODEL_NAME)
 # Configuration file of the running harness.
 BENCH_CONFIG   ?= $(if $(filter opencode,$(HARNESS)),opencode.json,kilo.json)
+# The clean room holds its own configuration directory for the harness. The
+# global configuration of the user holds plugins, skills, agents, and servers
+# that change the prompt and the tool list, so the run must not read it.
+BENCH_HARNESS_CONFIG ?= $(if $(filter opencode,$(HARNESS)),OPENCODE_CONFIG_DIR,$(if $(filter kilo,$(HARNESS)),KILO_CONFIG_DIR,HARNESS_CONFIG_DIR))
 # The clean room sits outside the repository, so a harness can never reach a
 # tracked file of the project and no ancestor instruction file can reach it.
 BENCH_TMP      ?= $(if $(TMPDIR),$(TMPDIR),/tmp)
@@ -48,6 +55,7 @@ help:
 	@echo "  make test_swarm         Run swarm library unit tests"
 	@echo "  make test_telemetry     Run telemetry MCP unit tests"
 	@echo "  make test_picker        Run benchmark picker unit tests"
+	@echo "  make test_report        Run benchmark report and README table tests"
 	@echo "  make test_picker_tty    Run benchmark picker tests in a pseudo terminal"
 	@echo "  make test_e2e           Run telemetry end-to-end tests on real harnesses"
 	@echo "  make test_mcp           Run MCP server integration tests"
@@ -55,6 +63,7 @@ help:
 	@echo "  make release            Alias for: make tag"
 	@echo "  make benchmark-free     Pick a model, then run the full benchmark"
 	@echo "  make bench-list         List the models that the picker offers"
+	@echo "  make bench-model        Check that the harness offers the pinned model"
 	@echo "  make benchmark-dryrun   Build MCPs & verify connectivity (no agent session)"
 	@echo "  make bench-report       Settle telemetry & write the report"
 	@echo "  make bench-update       Regenerate README benchmark tables from latest reports"
@@ -66,6 +75,7 @@ help:
 	@echo "  VERSION=$(VERSION)      HARNESS=$(HARNESS)  PROVIDER=$(PROVIDER)  MODEL_NAME=$(MODEL_NAME)"
 	@echo "  AGENT_MODEL=$(AGENT_MODEL)   (provider-harness-model)"
 	@echo "  BENCH_MODEL_ID=$(BENCH_MODEL_ID)   Model id pinned in the harness config"
+	@echo "  BENCH_PROMPT_TOKEN=$(BENCH_PROMPT_TOKEN)   Token the model must state"
 	@echo "  BENCH_WORKSPACE=$(BENCH_WORKSPACE)"
 	@echo "  BENCH_PICK=$(BENCH_PICK)   Set to 0 to skip the picker and use the variables"
 	@echo "  BENCH_ALLOW_PIPE   Set to 1 to let a script choose a model without a terminal"
@@ -93,6 +103,9 @@ test_telemetry:
 test_picker:
 	pnpm tsx scripts/test-benchmark-picker.ts
 
+test_report:
+	python3 scripts/test-benchmark-report.py
+
 test_picker_tty:
 	python3 scripts/test-picker-interactive.py
 
@@ -113,6 +126,7 @@ release: tag
 
 clean:
 	rm -rf dist
+	rm -f playground/benchmarks/runtime-telemetry.json
 
 TELEMETRY_MCP_DIR := playground/benchmarks/mcp-telemetry
 
@@ -120,6 +134,17 @@ telemetry-build:
 	@echo "[Harness] Building telemetry MCP server..."
 	@cd $(TELEMETRY_MCP_DIR) && pnpm install --ignore-workspace && pnpm run build
 
+# The token that the run puts in the instructions of the workspace. The model
+# must state it, so the report can prove that the model read the instructions.
+# The name of the harness file is fixed, so the token comes from the content.
+BENCH_PROMPT_TOKEN ?= $(shell python3 -c "import hashlib;print(hashlib.sha256(open('playground/agent-prompt.md','rb').read()).hexdigest()[:8])")
+
+# Every run writes its own telemetry file. A shared file would mix the phases of
+# two runs, and a later report would sum the counts of both.
+BENCH_TELEMETRY_FILE := $(BENCH_WORKSPACE)/runtime-telemetry.json
+
+# The harness reads the telemetry file from this variable. The path sits in the
+# clean room, so one run cannot reach the file of another run.
 define GENERATE_HARNESS_CONFIG
 {
   "model": "$(BENCH_MODEL_ID)",
@@ -135,6 +160,9 @@ define GENERATE_HARNESS_CONFIG
     "lccst-telemetry": {
       "type": "local",
       "command": ["node", "$(BENCH_MCP_PATH)"],
+      "environment": {
+        "LCCST_TELEMETRY_FILE": "$(BENCH_TELEMETRY_FILE)"
+      },
       "enabled": true
     }
   }
@@ -149,29 +177,58 @@ benchmark-free: telemetry-build
 		$(MAKE) --no-print-directory benchmark-run; \
 	fi
 
-benchmark-run: clean-telemetry
+# A harness that cannot resolve the pinned model starts a different model. The
+# report would then name a model that never ran, so the check refuses the run
+# before the clean room is built.
+bench-model:
+	@echo "[Harness] Checking that $(HARNESS) offers $(BENCH_MODEL_ID)..."
+	@if ! command -v $(HARNESS) >/dev/null 2>&1; then \
+		echo "[Harness] The command $(HARNESS) is not on the path. Install it, or set HARNESS."; \
+		exit 1; \
+	fi; \
+	MODELS="$$(timeout 120 $(HARNESS) models 2>/dev/null | tr -d '\r')"; \
+	if [ -z "$$MODELS" ]; then \
+		echo "[Harness] The command '$(HARNESS) models' returned no model."; \
+		echo "[Harness] The run needs the list to check the pinned model."; \
+		exit 1; \
+	fi; \
+	if ! printf '%s\n' "$$MODELS" | grep -qxF "$(BENCH_MODEL_ID)"; then \
+		echo "[Harness] The harness $(HARNESS) does not offer the model $(BENCH_MODEL_ID)."; \
+		echo "[Harness] A harness that cannot resolve the model starts a different one, so"; \
+		echo "[Harness] the run would measure a model that the report does not name."; \
+		echo "[Harness] Run 'make bench-list' to see the models, or set BENCH_MODEL_ID."; \
+		exit 1; \
+	fi; \
+	echo "[Harness] Model confirmed: $(BENCH_MODEL_ID)"
+
+benchmark-run: clean-telemetry bench-model
 	@echo "[Harness] Building the clean room for $(AGENT_MODEL)..."
 	@$(call guard_workspace)
 	@rm -rf "$(BENCH_WORKSPACE)"
-	@mkdir -p "$(BENCH_WORKSPACE)"
+	@mkdir -p "$(BENCH_WORKSPACE)/harness-config"
 	@echo "[Harness] Seeding the workspace files..."
 	@cp SKILL.md "$(BENCH_WORKSPACE)/SKILL.md"
 	@cp playground/README.md "$(BENCH_WORKSPACE)/README.md"
 	@cp playground/guide.md "$(BENCH_WORKSPACE)/guide.md"
+	@cp playground/traps.md "$(BENCH_WORKSPACE)/traps.md"
 	@cp playground/agent-prompt.md "$(BENCH_WORKSPACE)/agent-prompt.md"
 	@cp playground/agent-prompt.md "$(BENCH_WORKSPACE)/AGENTS.md"
+	@printf '%s\n' "$(BENCH_PROMPT_TOKEN)" > "$(BENCH_WORKSPACE)/prompt-token.txt"
+	@echo "$(BENCH_PROMPT_TOKEN)" >> "$(BENCH_WORKSPACE)/AGENTS.md"
 	+$(MAKE) --no-print-directory bench-config
 	@echo "[Harness] Workspace: $(BENCH_WORKSPACE)"
 	@echo "[Harness] Harness:  $(HARNESS) with $(BENCH_MODEL_ID)"
+	@echo "[Harness] Run token: $(BENCH_PROMPT_TOKEN) (the model must state it)"
 	@echo "[Harness] Starting the run in the foreground. Answer the harness, or type"
 	@echo "[Harness] a new message to steer it. The run ends when you leave the TUI."
-	@cd "$(BENCH_WORKSPACE)" && $(HARNESS) --prompt "$(BENCH_TASK)"; \
+	@cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(HARNESS) --prompt "$(BENCH_TASK)"; \
 	STATUS=$$?; \
 	if [ $$STATUS -ne 0 ]; then \
 		echo "[Harness] The harness left with status $$STATUS. The report still runs."; \
-	fi
-	+$(MAKE) bench-report
-	+$(MAKE) bench-cleanup
+	fi; \
+	$(MAKE) -C "$(CURDIR)" --no-print-directory bench-report; \
+	$(MAKE) -C "$(CURDIR)" --no-print-directory bench-cleanup; \
+	exit 0
 
 bench-config:
 ifdef CONFIG_FILE
@@ -185,8 +242,8 @@ endif
 
 telemetry-settle:
 	@echo "[Harness] Settling phase token counts from the host store..."
-	@if [ -f "$(BENCH_WORKSPACE)/runtime-telemetry.json" ]; then \
-		FILE="$(BENCH_WORKSPACE)/runtime-telemetry.json"; \
+	@if [ -f "$(BENCH_TELEMETRY_FILE)" ]; then \
+		FILE="$(BENCH_TELEMETRY_FILE)"; \
 	else \
 		FILE=$(BENCH_DIR)/runtime-telemetry.json; \
 	fi; \
@@ -196,6 +253,7 @@ bench-report: telemetry-settle
 	@echo "[Harness] Parsing compiled outputs and runtime telemetry logs..."
 	python3 $(BENCH_DIR)/run_benchmark.py $(AGENT_MODEL) \
 		--provider $(PROVIDER) --harness $(HARNESS) --model $(MODEL_NAME) \
+		--model-id "$(BENCH_MODEL_ID)" \
 		--workspace "$(BENCH_WORKSPACE)" --install-deps
 	@echo "[Harness] Report generated. Use 'make bench-cleanup' to remove the workspace."
 
@@ -203,18 +261,7 @@ bench-cleanup:
 	@echo "[Harness] Removing the transient workspace..."
 	@$(call guard_workspace)
 	@rm -rf "$(BENCH_WORKSPACE)"
-	@rm -f $(BENCH_DIR)/runtime-telemetry.json
-	@rm -f playground/$(AGENT_MODEL)/SKILL.md
-	@rm -f playground/$(AGENT_MODEL)/README.md
-	@rm -f playground/$(AGENT_MODEL)/guide.md
-	@rm -f playground/$(AGENT_MODEL)/agent-prompt.md
-	@rm -f playground/$(AGENT_MODEL)/AGENTS.md
-	@rm -f playground/$(AGENT_MODEL)/opencode.json
-	@rm -f playground/$(AGENT_MODEL)/opencode.jsonc
-	@rm -f playground/$(AGENT_MODEL)/kilo.json
-	@rm -rf playground/$(AGENT_MODEL)/go-login-crud
-	@rm -rf playground/$(AGENT_MODEL)/python-http-server
-	@rm -rf playground/$(AGENT_MODEL)/react-timer
+	@rm -f $(BENCH_TELEMETRY_FILE)
 	@echo "[Harness] Workspace cleaned. Report preserved at $(BENCH_DIR)/$(AGENT_MODEL)/"
 	$(MAKE) bench-update
 
@@ -239,7 +286,4 @@ clean-telemetry:
 	@echo "[Harness] Flushing trace telemetry caches..."
 	@$(call guard_workspace)
 	@rm -rf "$(BENCH_WORKSPACE)"
-	@rm -f $(BENCH_DIR)/runtime-telemetry.json
-	@rm -rf playground/$(AGENT_MODEL)/go-login-crud
-	@rm -rf playground/$(AGENT_MODEL)/python-http-server
-	@rm -rf playground/$(AGENT_MODEL)/react-timer
+	@rm -f "$(BENCH_TELEMETRY_FILE)"

@@ -13,6 +13,10 @@ export interface TurnUsage {
   cacheReadTokens: number;
   /** Identifiers of the model turns in the count. */
   messageIds: string[];
+  /** Models that the host used for the turns, as `provider/model`. */
+  models: string[];
+  /** Text that the model wrote in the turns, joined in turn order. */
+  text: string;
 }
 
 /** Time span of one benchmark phase, in milliseconds of the host clock. */
@@ -45,6 +49,10 @@ export interface StoredMessage {
   timeCreated: number;
   /** Raw token object of the message, or `null` when the host sent none. */
   tokens: unknown;
+  /** Model of the turn as `provider/model`, or `null` when the host sent none. */
+  model: string | null;
+  /** Text that the model wrote in the turn, or an empty string. */
+  text: string;
 }
 
 /** Table names of one host store schema. */
@@ -176,7 +184,9 @@ export function sumTurnUsage(messages: StoredMessage[], window: TurnWindow): Tur
     promptTokens: 0,
     completionTokens: 0,
     cacheReadTokens: 0,
-    messageIds: []
+    messageIds: [],
+    models: [],
+    text: ""
   };
 
   for (const message of messages) {
@@ -193,9 +203,79 @@ export function sumTurnUsage(messages: StoredMessage[], window: TurnWindow): Tur
     usage.completionTokens += tokens.output + tokens.reasoning;
     usage.cacheReadTokens += tokens.cacheRead;
     usage.messageIds.push(message.id);
+    if (message.text) {
+      usage.text += `${message.text}\n`;
+    }
+    if (message.model && !usage.models.includes(message.model)) {
+      usage.models.push(message.model);
+    }
   }
 
   return usage;
+}
+
+/**
+ * Say whether the model wrote the run token of the instructions.
+ *
+ * The instructions of a run carry a token. A model that received them repeats
+ * the token in a reply. The check therefore reads the text of the model turns,
+ * which the host store keeps next to the token counts of the turn.
+ */
+export function statesToken(usage: TurnUsage, token: string): boolean {
+  if (!token) {
+    return false;
+  }
+  return usage.text.includes(token);
+}
+
+/**
+ * Read the model of one turn from the raw message data.
+ *
+ * A host stores the model as an object that names the provider and the model,
+ * or as a plain string. The function returns `null` for a message of another
+ * author, because only a model turn names a model.
+ */
+export function readModel(role: string, data: Record<string, unknown> | null): string | null {
+  if (role !== "assistant") {
+    return null;
+  }
+  const raw = data?.model;
+  if (typeof raw === "string") {
+    return raw;
+  }
+  const model = asRecord(raw);
+  const id = model?.id;
+  const provider = model?.providerID;
+  if (typeof id !== "string" || id.length === 0) {
+    return null;
+  }
+  return typeof provider === "string" && provider.length > 0 ? `${provider}/${id}` : id;
+}
+
+/**
+ * Read the text that the model wrote in one turn.
+ *
+ * A host stores the text of a turn in a list of parts, and each text part
+ * holds a `text` field. The function joins the parts of a model turn, and it
+ * returns an empty string for a turn of another author or a turn with no text.
+ */
+export function readText(role: string, data: Record<string, unknown> | null): string {
+  if (role !== "assistant") {
+    return "";
+  }
+  const parts = data?.parts;
+  if (!Array.isArray(parts)) {
+    return "";
+  }
+  const lines: string[] = [];
+  for (const part of parts) {
+    const record = asRecord(part);
+    const text = record?.text;
+    if (record?.type === "text" && typeof text === "string") {
+      lines.push(text);
+    }
+  }
+  return lines.join("\n");
 }
 
 /**
@@ -307,7 +387,9 @@ function readMessages(
         id: String(row.id),
         role,
         timeCreated: readNumber(row.time_created),
-        tokens: data?.tokens ?? null
+        tokens: data?.tokens ?? null,
+        model: readModel(role, data),
+        text: readText(role, data)
       });
     }
   }

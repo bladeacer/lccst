@@ -62,15 +62,39 @@ def make_stubs(directory: Path) -> Path:
     return directory
 
 
-def read_available(fd: int, seconds: float) -> str:
-    """Read the terminal until it goes quiet for a moment."""
+def read_until(fd: int, pattern: str, seconds: float) -> str:
+    """Read the terminal until the pattern arrives or the deadline passes.
+
+    A silent terminal must not end the read. A build step prints nothing for
+    seconds, so a read that stops at the first quiet moment closes the terminal
+    while the run still works.
+    """
+    matcher = re.compile(pattern)
     chunks: list[str] = []
     deadline = time.monotonic() + seconds
     while time.monotonic() < deadline:
         ready, _, _ = select.select([fd], [], [], 0.5)
         if not ready:
-            if chunks:
-                break
+            continue
+        try:
+            data = os.read(fd, 65536)
+        except OSError:
+            break
+        if not data:
+            break
+        chunks.append(data.decode("utf-8", errors="replace"))
+        if matcher.search(chunks[-1]):
+            break
+    return "".join(chunks)
+
+
+def read_to_end(fd: int, seconds: float) -> str:
+    """Read the terminal until the harness closes it."""
+    chunks: list[str] = []
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline:
+        ready, _, _ = select.select([fd], [], [], 0.5)
+        if not ready:
             continue
         try:
             data = os.read(fd, 65536)
@@ -104,14 +128,12 @@ def run_interactive_case() -> None:
 
     transcript = ""
     try:
-        transcript += read_available(fd, 90)
+        transcript += read_until(fd, r"Filter", 120)
         # Type a filter, then pick the only row that the filter leaves.
         os.write(fd, b"opencode\r")
-        transcript += read_available(fd, 20)
+        transcript += read_until(fd, re.escape(OPENCODE_MODEL), 30)
         os.write(fd, b"1\r")
-        transcript += read_available(fd, 120)
-        os.write(fd, b"q\r")
-        transcript += read_available(fd, 30)
+        transcript += read_to_end(fd, TIMEOUT_S)
     finally:
         try:
             os.close(fd)
@@ -129,11 +151,45 @@ def run_interactive_case() -> None:
     expect(transcript, r"STUB cwd=", "the harness starts in the clean room")
     expect(transcript, r"--prompt", "the harness receives the task prompt")
     expect(transcript, r"Report generated", "the report step still runs")
+    expect(transcript, r"Run token: ", "the run prints the token that the model must state")
 
-    reports = sorted(p.name for p in (ROOT / "playground" / "benchmarks" / RUN_TAG).glob("*.md"))
+    report_dir = ROOT / "playground" / "benchmarks" / RUN_TAG
+    reports = sorted(p.name for p in report_dir.glob("*.md"))
     check(bool(reports), "a report is written after the interactive run")
+    if reports:
+        check_seeded_workspace(report_dir)
     clean_run()
     shutil.rmtree(stub_dir, ignore_errors=True)
+
+
+def check_seeded_workspace(report_dir: Path) -> None:
+    """Check the seeded files of a run that the clean room already removed.
+
+    The run removes the clean room before it writes the report, so the test
+    cannot read the workspace afterwards. The function therefore checks the
+    files that the repository holds, which are the source of every seeded file,
+    and it checks the report for the state of the run.
+    """
+    for name in ("AGENTS.md", "agent-prompt.md", "guide.md", "traps.md", "SKILL.md"):
+        check((ROOT / "playground" / name).is_file() or (ROOT / name).is_file(),
+              f"the run seeds {name}")
+
+    prompt = ROOT / "playground" / "agent-prompt.md"
+    if prompt.is_file():
+        text = prompt.read_text()
+        check("State the run token" in text,
+              "the prompt tells the model to state the run token")
+        check("traps.md" in text, "the prompt names the traps file")
+        check("do not load or apply `SKILL.md` or `traps.md`" in text,
+              "the prompt keeps the plain variant away from the traps")
+
+    reports = sorted(report_dir.glob("*.md"))
+    if reports:
+        report = reports[0].read_text()
+        check("**Prompt unverified.**" in report,
+              "a run that stated no token is marked unverified")
+        check("**Requested Model ID:** opencode/stub-model-free" in report,
+              "the report names the model identifier that the run pinned")
 
 
 def run_pipe_case() -> None:
