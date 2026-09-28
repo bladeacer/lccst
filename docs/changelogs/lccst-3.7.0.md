@@ -155,13 +155,32 @@ refuses a call that arrives before the work, that a refused call records
 nothing, and that a second call corrects the end of the same phase. The section
 tells the model to call the tool again at the true end of the phase.
 
-### The Run Isolates the Configuration of the Harness
+### The Run Does Not Attach to the Background Service of the User
 
-The run read the global configuration of the user, which holds plugins, skills,
-agents, and extra servers. Those items change the prompt and the tool list, so
+The run read the global configuration directory of the user, which holds
+plugins, skills, and agents. Those items change the prompt and the tool list, so
 they changed the measurement of every phase. The run now points the
-configuration directory of the harness at the clean room, in the way the
-end-to-end test already did.
+configuration directory of the harness at the clean room.
+
+The configuration directory was not the whole problem. The global configuration
+*document* of the user holds MCP servers and plugins, and no variable redirects
+it: `OPENCODE_CONFIG_DIR` moves the directory, and `XDG_CONFIG_HOME` and `HOME`
+do not move the document. A probe with a fake home confirmed that the document
+was still read, and a probe of every shape of the `mcp` key confirmed that a
+project configuration cannot switch off a server that the global document
+defines.
+
+The document is read when a background service starts, and the terminal harness
+attaches to that service. A run that attached therefore inherited every server
+and plugin of the user: a probe run created a `.headroom` directory inside the
+clean room and reported a failed plugin. A run that starts a private server
+reads only the configuration of the clean room, and the same probe created no
+directory and reported no plugin.
+
+The run now starts a private server for `opencode`. The claim that the run
+isolates the configuration of the harness is now true for the servers and the
+plugins of the user, and the end-to-end test asserts that a run leaves no
+`.headroom` directory in the workspace.
 
 ### The Report Fails Soft Without Findings
 

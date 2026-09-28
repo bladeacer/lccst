@@ -75,11 +75,13 @@ a different one. The target seeds `SKILL.md`, `README.md`, `guide.md`,
 writes the run token to `prompt-token.txt` and to the last line of `AGENTS.md`.
 The target then starts the harness in the foreground with the `BENCH_TASK`
 prompt, so the user can steer the run. The run points the configuration
-directory of the harness at the clean room, so the plugins and skills of the
-user cannot change the measurement. A harness that leaves with a non-zero status
-does not stop the target, because the settle step and the report must still run.
-The target settles the token counts, writes the report, removes the clean room,
-and refreshes the README table.
+directory of the harness at the clean room, and it starts a private server, so
+the plugins, skills, agents, and servers of the user cannot change the
+measurement. A background service of the user read the global configuration
+document when it started, so a run must not attach to that service. A harness
+that leaves with a non-zero status does not stop the target, because the settle
+step and the report must still run. The target settles the token counts, writes
+the report, removes the clean room, and refreshes the README table.
 
 Each run writes its own telemetry file, at `runtime-telemetry.json` inside the
 clean room. The harness passes the path in `LCCST_TELEMETRY_FILE`, so two runs

@@ -18,9 +18,15 @@ BENCH_MODEL_ID ?= $(PROVIDER)/$(MODEL_NAME)
 # Configuration file of the running harness.
 BENCH_CONFIG   ?= $(if $(filter opencode,$(HARNESS)),opencode.json,kilo.json)
 # The clean room holds its own configuration directory for the harness. The
-# global configuration of the user holds plugins, skills, agents, and servers
+# global configuration directory of the user holds plugins, skills, and agents
 # that change the prompt and the tool list, so the run must not read it.
 BENCH_HARNESS_CONFIG ?= $(if $(filter opencode,$(HARNESS)),OPENCODE_CONFIG_DIR,$(if $(filter kilo,$(HARNESS)),KILO_CONFIG_DIR,HARNESS_CONFIG_DIR))
+# The global configuration document of the user holds MCP servers and plugins.
+# A run must not read that document, and no variable redirects it, so the run
+# must not attach to the background service of the user, because that service
+# read the document when it started. The flag makes the harness start a private
+# server that reads only the configuration of the clean room.
+BENCH_HARNESS_PRIVATE ?= $(if $(filter opencode,$(HARNESS)),--standalone,)
 # The clean room sits outside the repository, so a harness can never reach a
 # tracked file of the project and no ancestor instruction file can reach it.
 # The path is resolved to an absolute form, because the separation check
@@ -248,7 +254,7 @@ benchmark-run: clean-telemetry bench-model
 	@echo "[Harness] Run token: $(BENCH_PROMPT_TOKEN) (the model must state it)"
 	@echo "[Harness] Starting the run in the foreground. Answer the harness, or type"
 	@echo "[Harness] a new message to steer it. The run ends when you leave the TUI."
-	@cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(HARNESS) --prompt "$(BENCH_TASK)"; \
+	@cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(HARNESS) $(BENCH_HARNESS_PRIVATE) --prompt "$(BENCH_TASK)"; \
 	STATUS=$$?; \
 	if [ $$STATUS -ne 0 ]; then \
 		echo "[Harness] The harness left with status $$STATUS. The report still runs."; \

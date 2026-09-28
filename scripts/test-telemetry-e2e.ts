@@ -85,6 +85,11 @@ function writeConfig(workspace: string, harness: Harness): void {
     // workspace of this test holds no work, so the feature stays off.
     snapshot: false,
     mcp: {
+      // The test must not inherit a server or a plugin of the user, because a
+      // run that inherits one measures a different prompt and a different tool
+      // list. The generated benchmark configuration names the same two servers.
+      lccst: { enabled: false },
+      headroom: { enabled: false },
       "lccst-telemetry": {
         type: "local",
         command: ["node", relativeServer],
@@ -206,6 +211,14 @@ function runCase(harness: Harness): void {
   assert(
     step !== undefined && step.prompt_tokens === prompt && step.completion_tokens === completion,
     `${harness.name} attributed the counts to the phase`
+  );
+
+  // The run must not read the global configuration of the user. A server or a
+  // plugin of the user changes the tool list and the prompt, so a run that
+  // reads one measures a different run.
+  assert(
+    !fs.existsSync(path.join(workspace, ".headroom")),
+    `${harness.name} left no .headroom directory in the workspace`
   );
 
   // The reader must find the model of the turn, or the report cannot confirm

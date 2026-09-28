@@ -194,6 +194,13 @@ def check_seeded_workspace(report_dir: Path) -> None:
           "the run refuses a workspace inside the repository")
     check("cp AGENTS.md" not in makefile,
           "the run never copies the repository AGENTS.md")
+    # A background service of the user read the global configuration document
+    # when it started, so a run that attaches to it inherits every server and
+    # plugin of the user. The run must start a private server instead.
+    check("BENCH_HARNESS_PRIVATE" in makefile,
+          "the run starts a private server instead of the background service")
+    check('$(HARNESS) $(BENCH_HARNESS_PRIVATE) --prompt' in makefile,
+          "the run passes the private server flag to the harness")
 
     repo_agents = ROOT / "AGENTS.md"
     playground_prompt = ROOT / "playground" / "agent-prompt.md"

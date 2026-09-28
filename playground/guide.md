@@ -129,6 +129,16 @@ session comes from the tool call metadata when the harness sends one, and from
 the newest session of the workspace directory otherwise. The sessions of a
 subagent count towards the same phase.
 
+The reader names no shape of the store. A host may keep the model in a nested
+object or in two flat fields, and it may keep the text of a turn in the message
+row or in a table of its own. The reader accepts every shape that the harnesses
+on this machine write.
+
+A run must not attach to a background service of the user. That service read
+the global configuration document when it started, so a run that attaches
+inherits every server and plugin of the user. The run starts a private server,
+which reads only the configuration of the clean room.
+
 The server needs Node.js 22.5 or later, because it reads the store with
 `node:sqlite`.
 

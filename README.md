@@ -180,10 +180,10 @@ Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
 
 > **The run measures the model it names.** The run checks that the harness offers
 > the model before it builds the clean room, and it gives the harness its own
-> configuration directory, so the plugins and skills of a user cannot change the
-> run. The report compares the model identifier that the run pinned with the
-> model that the store of the host recorded. A report that names a different
-> model is marked as wrong.
+> configuration directory and a private server, so the plugins, skills, agents,
+> and servers of a user cannot change the run. The report compares the model
+> identifier that the run pinned with the model that the store of the host
+> recorded. A report that names a different model is marked as wrong.
 
 > **The run measures the prompt it names.** The instructions of a run carry a
 > run token, and the model must state the token in its first reply. The settle
