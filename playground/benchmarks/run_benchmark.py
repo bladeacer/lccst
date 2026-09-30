@@ -118,18 +118,42 @@ def load_encoder():
     return True
 
 
-def rerun_with_uv() -> None:
-    """Re-run this script inside the benchmark environment, then stop.
+def rerun_with_uv() -> bool:
+    """Re-run this script inside the benchmark environment.
 
-    The benchmark environment declares `tiktoken`. The function starts it only
-    when the current interpreter holds no encoder, and it stops the process
-    because the child process writes the report.
+    The benchmark environment declares `tiktoken`. The function returns `True`
+    when the child process wrote the report, and the caller then ends the
+    process.
+
+    The function returns `False` when the re-run cannot start, because `uv` is
+    not on every machine and because a host with no network cannot build the
+    environment. The report must still be written, so the caller then uses the
+    coarse token estimate and states it in the report.
+
+    The child runs with `--approximate-tokens`, because the child must never
+    start a third process. An environment that builds `tiktoken` and an
+    interpreter that cannot import it would otherwise repeat this step for
+    ever.
     """
+    if shutil.which("uv") is None:
+        print("[Scanner] `uv` is not on the path, so the file token counts use an estimate.")
+        return False
+    arguments = [arg for arg in sys.argv[1:] if arg != "--approximate-tokens"]
+    arguments.append("--approximate-tokens")
     script = Path(__file__).resolve()
-    subprocess.run(
-        ["uv", "run", "python3", str(script), *sys.argv[1:]], check=True, cwd=script.parent
-    )
-    sys.exit(0)
+    try:
+        result = subprocess.run(
+            ["uv", "run", "python3", str(script), *arguments], cwd=script.parent
+        )
+    except OSError as error:
+        print(f"[Scanner] The benchmark environment did not start: {error}")
+        print("[Scanner] The file token counts use an estimate instead.")
+        return False
+    if result.returncode != 0:
+        print(f"[Scanner] The benchmark environment left with status {result.returncode}.")
+        print("[Scanner] The file token counts use an estimate instead.")
+        return False
+    return True
 
 
 def estimate_tokens(text):
@@ -878,8 +902,8 @@ def main():
         print(f"Workspace not found: {WORKSPACE}")
         sys.exit(1)
 
-    if not load_encoder() and not args.approximate_tokens:
-        rerun_with_uv()
+    if not load_encoder() and not args.approximate_tokens and rerun_with_uv():
+        sys.exit(0)
     encoder_loaded = ENCODER is not None
     results = collect_results(args.install_deps)
     for project in PROJECT_ORDER:

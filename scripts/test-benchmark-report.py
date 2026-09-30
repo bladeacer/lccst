@@ -372,6 +372,50 @@ class ToolchainTest(unittest.TestCase):
         self.assertEqual(notes, [])
 
 
+class BenchmarkEnvironmentTest(unittest.TestCase):
+    """A run must write its report even when the benchmark environment fails.
+
+    The environment holds `tiktoken`, and it improves the file token counts
+    only. `uv` is not on every machine, and a host with no network cannot build
+    the environment. A run that stops on either fault loses every measurement of
+    the phase, so the scanner falls back to the coarse estimate instead.
+    """
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.bin_dir = Path(self.temp.name)
+        self.original = os.environ["PATH"]
+        os.environ["PATH"] = str(self.bin_dir)
+
+    def tearDown(self):
+        os.environ["PATH"] = self.original
+        self.temp.cleanup()
+
+    def make_uv(self, script):
+        """Put a stub `uv` on the path that runs the given shell script."""
+        stub = self.bin_dir / "uv"
+        stub.write_text(f"#!/bin/sh\n{script}\n")
+        stub.chmod(0o755)
+
+    def test_a_missing_uv_does_not_stop_the_run(self):
+        self.assertFalse(scanner.rerun_with_uv())
+
+    def test_an_environment_that_fails_does_not_stop_the_run(self):
+        self.make_uv("exit 1")
+        self.assertFalse(scanner.rerun_with_uv())
+
+    def test_a_successful_environment_stops_the_run(self):
+        self.make_uv("exit 0")
+        self.assertTrue(scanner.rerun_with_uv())
+
+    def test_the_child_never_starts_a_third_process(self):
+        """A child that cannot import `tiktoken` must not repeat the step."""
+        record = self.bin_dir / "args.txt"
+        self.make_uv(f'echo "$@" > "{record}"')
+        self.assertTrue(scanner.rerun_with_uv())
+        self.assertIn("--approximate-tokens", record.read_text().split())
+
+
 class TelemetryFileTest(unittest.TestCase):
     """The report must read one file, not the sum of every file."""
 

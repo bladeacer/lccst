@@ -175,6 +175,34 @@ the run names it there. The OpenCode terminal interface has no model flag, so
 the run keeps the configuration of the clean room as its only source for that
 harness.
 
+### A Run Writes Its Report Without the Benchmark Environment
+
+The scanner read the file token counts with `tiktoken`. When the current
+interpreter held no encoder, the scanner started the benchmark environment with
+`uv` and waited for it. The call named `check=True`, so a machine with no `uv`,
+or a machine with no network, ended the scanner with a `FileNotFoundError` or a
+`CalledProcessError` before it wrote the report. The run then held no report,
+no token counts, and no scores, so the whole phase was lost.
+
+The environment improves the file token counts only. The scanner now starts it
+only when `uv` is on the path, and it falls back to the coarse estimate when the
+start fails. The report is always written, and it states that the file token
+counts are an estimate.
+
+The child process now runs with `--approximate-tokens`. An environment that
+builds `tiktoken` and an interpreter that cannot import it repeated the start
+step for ever. The child now never starts a third process.
+
+### A Workspace Inside the Repository Is Refused Before the Removal
+
+The targets `clean-telemetry` and `bench-cleanup` removed the workspace with
+`rm -rf`. The check that refuses a workspace inside the repository ran later,
+inside the recipe of `benchmark-run`. A `BENCH_TMP` that pointed into the
+repository therefore removed tracked files before the refusal.
+
+Every target that removes the workspace now runs the check first. The path comes
+from make variables, so the check must guard the removal and not follow it.
+
 ## Consistency
 
 ### The Continuous Integration Job Does Not Run a Benchmark
@@ -185,9 +213,10 @@ started a private server, and wrote a report. The report step needs `uv`, which
 the GitHub runner image does not ship, so the step always failed.
 
 A benchmark measures a model, so it does not belong in the job. The job now
-runs the unit tests, the telemetry unit tests, the picker unit tests, and the
-integration tests. The pseudo terminal test stays in `make test_picker_tty`,
-where `uv` is present.
+runs the unit tests, the telemetry unit tests, the picker unit tests, the
+benchmark report unit tests, and the integration tests. The report unit tests
+use stub harnesses, so they need no model and no `uv`. The pseudo terminal test
+stays in `make test_picker_tty`, where `uv` is present.
 
 ### The Prompt and Guide Describe the Two Steps
 

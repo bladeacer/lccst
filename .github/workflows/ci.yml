@@ -42,5 +42,14 @@ jobs:
       - name: Run benchmark picker unit tests
         run: pnpm run test:picker
 
+      - name: Run benchmark report unit tests
+        run: pnpm run test:report
+
+      # `test:picker-tty` and `test:e2e` must not run in CI. Both start real
+      # harnesses, which need `uv`, a network, and a private model endpoint. The
+      # picker test also drives `make benchmark-free` through a pseudo terminal,
+      # so it writes into `playground/benchmarks`. Run them on a workstation with
+      # `make test` and `make test_e2e` instead.
+
       - name: Run integration tests
         run: pnpm run test:mcp

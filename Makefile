@@ -69,6 +69,9 @@ endef
 # repository would send the repository `AGENTS.md` to the model under test. The
 # two documents have different purposes: the repository file states the rules for
 # maintaining LCCST, and the playground prompt assigns the benchmark phases.
+# Every target that removes the workspace calls this check before the removal,
+# because `BENCH_WORKSPACE` comes from make variables and a bad value would
+# otherwise delete tracked files before the refusal.
 define assert_separate_instructions
 	case "$(BENCH_WORKSPACE)" in \
 		"$(CURDIR)"*) \
@@ -247,10 +250,10 @@ bench-model:
 benchmark-run: clean-telemetry bench-model
 	@echo "[Harness] Building the clean room for $(AGENT_MODEL)..."
 	@$(call guard_workspace)
+	@$(call assert_separate_instructions)
 	@rm -rf "$(BENCH_WORKSPACE)"
 	@mkdir -p "$(BENCH_WORKSPACE)/harness-config" "$(BENCH_WORKSPACE)/harness-state"
 	@echo "[Harness] Seeding the workspace files..."
-	@$(call assert_separate_instructions)
 	@cp SKILL.md "$(BENCH_WORKSPACE)/SKILL.md"
 	@cp playground/README.md "$(BENCH_WORKSPACE)/README.md"
 	@cp playground/guide.md "$(BENCH_WORKSPACE)/guide.md"
@@ -305,6 +308,7 @@ bench-report: telemetry-settle
 bench-cleanup:
 	@echo "[Harness] Removing the transient workspace..."
 	@$(call guard_workspace)
+	@$(call assert_separate_instructions)
 	@rm -rf "$(BENCH_WORKSPACE)"
 	@rm -f $(BENCH_TELEMETRY_FILE)
 	@echo "[Harness] Workspace cleaned. Report preserved at $(BENCH_DIR)/$(AGENT_MODEL)/"
@@ -330,5 +334,6 @@ bench-list:
 clean-telemetry:
 	@echo "[Harness] Flushing trace telemetry caches..."
 	@$(call guard_workspace)
+	@$(call assert_separate_instructions)
 	@rm -rf "$(BENCH_WORKSPACE)"
 	@rm -f "$(BENCH_TELEMETRY_FILE)"
