@@ -3,6 +3,7 @@ import fs from "fs";
 import os from "os";
 import path from "path";
 import {
+  isSqliteFile,
   readHostSessionId,
   readModel,
   readText,
@@ -331,9 +332,14 @@ withTempDir((dir) => {
   const named = path.join(dir, "named.db");
   const underHost = path.join(dataHome, "somehost", "store.db");
   const ignored = path.join(dataHome, "somehost", "notes.txt");
+  // A file that ends in .db and that is not a SQLite database. A manual page
+  // index of the host `man` is one such file on a workstation.
+  const foreign = path.join(dataHome, "man", "index.db");
   fs.mkdirSync(path.dirname(underHost), { recursive: true });
+  fs.mkdirSync(path.dirname(foreign), { recursive: true });
   createStore(underHost, "v2").close();
   fs.writeFileSync(ignored, "");
+  fs.writeFileSync(foreign, Buffer.from([0xcf, 0xfa, 0x8f, 0x57, 0x13, 0x00]));
   createStore(named, "v1").close();
 
   const fromEnv = resolveStoreCandidates(
@@ -346,6 +352,10 @@ withTempDir((dir) => {
 
   const fromDataHome = resolveStoreCandidates({ XDG_DATA_HOME: dataHome }, dir);
   assert(fromDataHome.includes(underHost), "a store under the data home is a candidate");
+  assert(
+    !fromDataHome.includes(foreign),
+    "a found file that is not a SQLite database is not a candidate"
+  );
 
   const fromDefault = resolveStoreCandidates({}, dir);
   assert(
@@ -356,6 +366,39 @@ withTempDir((dir) => {
     resolveStoreCandidates({ XDG_DATA_HOME: path.join(dir, "absent") }, dir).length === 0,
     "a missing data home yields no candidate"
   );
+
+  // A store that the environment names is kept even when it is damaged, so the
+  // reader reports the problem instead of hiding it.
+  const brokenNamed = path.join(dir, "broken.db");
+  fs.writeFileSync(brokenNamed, "not a database at all");
+  assert(
+    resolveStoreCandidates({ LCCST_TELEMETRY_DB: brokenNamed }, dir)[0] === brokenNamed,
+    "a named store is kept whatever its content is"
+  );
+  assert(
+    !resolveStoreCandidates({ XDG_DATA_HOME: path.join(dir, "none") }, dir).includes(brokenNamed),
+    "a file outside the data home is not a found candidate"
+  );
+});
+
+// -- SQLite header -------------------------------------------------
+withTempDir((dir) => {
+  const good = path.join(dir, "good.db");
+  const empty = path.join(dir, "empty.db");
+  const short = path.join(dir, "short.db");
+  const foreign = path.join(dir, "index.db");
+  const missing = path.join(dir, "absent.db");
+  createStore(good, "v2").close();
+  fs.writeFileSync(empty, "");
+  fs.writeFileSync(short, "SQLite");
+  fs.writeFileSync(foreign, Buffer.from([0xcf, 0xfa, 0x8f, 0x57, 0x13, 0x00]));
+
+  assert(isSqliteFile(good), "a store file starts with the SQLite header");
+  assert(!isSqliteFile(foreign), "a foreign index file has no SQLite header");
+  assert(!isSqliteFile(empty), "an empty file has no SQLite header");
+  assert(!isSqliteFile(short), "a file shorter than the header is not a store");
+  assert(!isSqliteFile(missing), "a missing file is not a store");
+  assert(!isSqliteFile(dir), "a directory is not a store");
 });
 
 // -- Host session metadata ----------------------------------------

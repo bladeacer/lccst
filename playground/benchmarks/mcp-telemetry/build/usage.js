@@ -4,8 +4,40 @@ import os from "os";
 import path from "path";
 /** Variable that names the store file of the running host. */
 const STORE_VARIABLE = "LCCST_TELEMETRY_DB";
+/** Bytes that start the header of every SQLite database. */
+const SQLITE_MAGIC = Buffer.from("SQLite format 3\0", "latin1");
 /** Key pattern of a host that names its session in the tool call metadata. */
 const SESSION_KEY_PATTERN = /session.*id|^sid$/i;
+/**
+ * Say whether a file starts with the header of a SQLite database.
+ *
+ * The data directory of the user holds many files that end in `.db` and that
+ * are not SQLite databases. A manual page index of `man` is one such file. The
+ * reader must not offer such a file to SQLite, because a read-only open of the
+ * file succeeds and the first query then fails.
+ */
+export function isSqliteFile(filePath) {
+    let handle = null;
+    try {
+        handle = fs.openSync(filePath, "r");
+        const header = Buffer.alloc(SQLITE_MAGIC.length);
+        const read = fs.readSync(handle, header, 0, header.length, 0);
+        return read === header.length && header.equals(SQLITE_MAGIC);
+    }
+    catch {
+        return false;
+    }
+    finally {
+        if (handle !== null) {
+            try {
+                fs.closeSync(handle);
+            }
+            catch {
+                // A handle that the platform already released needs no closing.
+            }
+        }
+    }
+}
 /**
  * List the store files that the reader tries, in order.
  *
@@ -13,6 +45,10 @@ const SESSION_KEY_PATTERN = /session.*id|^sid$/i;
  * environment names, and the files that sit one directory deep under the data
  * directory of the user. A host that keeps its sessions in a store of this
  * layout therefore works without a code change.
+ *
+ * The environment names a store on purpose, so the function keeps it whatever
+ * its content is. A file found by the search is a guess, so the function keeps
+ * only the files that start with the header of a SQLite database.
  */
 export function resolveStoreCandidates(env = process.env, home = os.homedir()) {
     const dataHome = env.XDG_DATA_HOME ?? path.join(home, ".local", "share");
@@ -45,7 +81,10 @@ export function resolveStoreCandidates(env = process.env, home = os.homedir()) {
             files = [];
         }
         for (const file of files) {
-            candidates.push(path.join(dataHome, host, file));
+            const candidate = path.join(dataHome, host, file);
+            if (isSqliteFile(candidate)) {
+                candidates.push(candidate);
+            }
         }
     }
     const seen = new Set();

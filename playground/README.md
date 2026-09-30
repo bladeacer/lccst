@@ -74,6 +74,42 @@ The report is written to:
 playground/benchmarks/<agent-tag>/benchmark-report-v<skill-version>.md
 ```
 
+## Choosing a model
+
+`make benchmark-free` asks for a harness and a model in a fuzzy search. Type part
+of a model name and press Enter on the row that the search leaves. Every row
+names the harness and the model, so a search matches a harness name too.
+`fzf` provides the search. Without `fzf`, the picker asks for a filter and a
+number instead. `make bench-list` prints the same list and needs no terminal.
+
+The picker offers a model when the model can do the work and costs nothing.
+
+- A model can do the work when the registry states that it calls tools, that it
+  reads text, and that it writes text. A model that generates images, audio, or
+  video, and a moderation model, are therefore left out.
+- A model is a router when its identifier ends in `openrouter/auto`,
+  `openrouter/free`, or `kilo-auto/`. A router chooses another model for each
+  request, so a report would name a model that never ran.
+- A family that its author rejects for agentic work is left out. The LFM family
+  of Liquid AI is the only such family today.
+- A model is free when its identifier ends in `-free`, `:free`, or `/free`, or
+  when the registry states no charge for it.
+
+The registry at `https://models.dev/api.json` states a price for up to eight
+kinds of token, and it can hold a price for a long context, so the picker reads
+every number that the registry states. A price that the registry does not state
+is not a price of zero, so such a model is left out. The registry decides by
+provider, because one model name can be free at one provider and paid at
+another. The picker reads the registry only when it offers the models, and it
+waits at most ten seconds. Without the registry, the picker falls back to the
+model name and to the lists above.
+
+Set `BENCH_ALL_MODELS=1` to offer every model that can do the work. Set
+`BENCH_PICK=0` and pass `HARNESS`, `PROVIDER`, `MODEL_NAME`, and
+`BENCH_MODEL_ID` to choose a model without the picker. The picker keeps every
+list in `scripts/benchmark-picker.ts`, so a new family or a new router is one
+line in that file.
+
 ## What a report must show
 
 A report enters the README table only when every check passes. The checks are

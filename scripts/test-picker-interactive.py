@@ -19,10 +19,13 @@ import re
 import select
 import shutil
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
+import termios
 import time
+import fcntl
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -111,6 +114,16 @@ def expect(text: str, pattern: str, name: str) -> None:
     check(re.search(pattern, text) is not None, name)
 
 
+def set_window_size(fd: int) -> None:
+    """Give the terminal a real size.
+
+    A pseudo terminal starts with no size at all. A fuzzy search draws into the
+    screen, and it draws nothing when the screen has no rows, so the test would
+    see an empty list and no prompt.
+    """
+    fcntl.ioctl(fd, termios.TIOCSWINSZ, struct.pack("HHHH", 40, 120, 0, 0))
+
+
 def clean_run() -> None:
     shutil.rmtree(ROOT / "playground" / "benchmarks" / RUN_TAG, ignore_errors=True)
     shutil.rmtree(f"/tmp/lccst-bench-{RUN_TAG}", ignore_errors=True)
@@ -122,18 +135,32 @@ def run_interactive_case() -> None:
     env = dict(os.environ)
     env["PATH"] = f"{stub_dir}{os.pathsep}{env['PATH']}"
 
+    # The picker offers a fuzzy search when the command is on the path, and it
+    # falls back to a numbered menu when the command is absent. The test drives
+    # whichever path the machine offers, so both paths stay covered.
+    fuzzy = shutil.which("fzf") is not None
+
     pid, fd = pty.fork()
     if pid == 0:
         os.chdir(ROOT)
         os.execvpe("make", ["make", "benchmark-free"], env)
+    set_window_size(fd)
 
     transcript = ""
     try:
-        transcript += read_until(fd, r"Filter", 120)
-        # Type a filter, then pick the only row that the filter leaves.
-        os.write(fd, b"opencode\r")
-        transcript += read_until(fd, re.escape(OPENCODE_MODEL), 30)
-        os.write(fd, b"1\r")
+        if fuzzy:
+            transcript += read_until(fd, r"model>", 120)
+            # Type part of a model name, then accept the row that the search
+            # leaves. The search needs a moment to apply the text, and the text
+            # already appears in the list, so the test cannot wait for it.
+            os.write(fd, b"opencode")
+            time.sleep(2)
+            os.write(fd, b"\r")
+        else:
+            transcript += read_until(fd, r"Filter", 120)
+            os.write(fd, b"opencode\r")
+            transcript += read_until(fd, re.escape(OPENCODE_MODEL), 30)
+            os.write(fd, b"1\r")
         transcript += read_to_end(fd, TIMEOUT_S)
     finally:
         try:
@@ -145,17 +172,19 @@ def run_interactive_case() -> None:
         except ChildProcessError:
             pass
 
-    expect(transcript, r"LCCST benchmark picker", "the picker greets the user")
-    expect(transcript, re.escape(OPENCODE_MODEL), "the stub model appears in the menu")
-    expect(transcript, re.escape(KILO_MODEL), "the menu holds both stub harnesses")
-    expect(transcript, r"Run name: " + re.escape(RUN_TAG), "the picker shows the run name")
-    expect(transcript, r"STUB cwd=", "the harness starts in the clean room")
-    expect(transcript, r"--prompt", "the harness receives the task prompt")
-    expect(transcript,
+    plain = re.sub(r"\x1b\[[0-9;?]*[a-zA-Z]", "", transcript)
+    expect(plain, r"LCCST benchmark picker", "the picker greets the user")
+    expect(plain, re.escape(OPENCODE_MODEL), "the stub model appears in the menu")
+    expect(plain, re.escape(KILO_MODEL), "the menu holds both stub harnesses")
+    expect(plain, r"agentic models", "the picker states that it dropped the other models")
+    expect(plain, r"Run name: " + re.escape(RUN_TAG), "the picker shows the run name")
+    expect(plain, r"STUB cwd=", "the harness starts in the clean room")
+    expect(plain, r"--prompt", "the harness receives the task prompt")
+    expect(plain,
            r"STUB state=/tmp/lccst-bench-" + re.escape(RUN_TAG) + r"/harness-state",
            "the run points the state directory of the harness at the clean room")
-    expect(transcript, r"Report generated", "the report step still runs")
-    expect(transcript, r"Run token: ", "the run prints the token that the model must state")
+    expect(plain, r"Report generated", "the report step still runs")
+    expect(plain, r"Run token: ", "the run prints the token that the model must state")
 
     report_dir = ROOT / "playground" / "benchmarks" / RUN_TAG
     reports = sorted(p.name for p in report_dir.glob("*.md"))

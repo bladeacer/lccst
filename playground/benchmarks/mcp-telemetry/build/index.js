@@ -5,7 +5,7 @@ import { checkPhase, phaseOutcomeText, readTelemetry, recordPhase, resolveTeleme
 import { readHostSessionId } from "./usage.js";
 const server = new McpServer({
     name: "lccst-telemetry",
-    version: "3.7.0"
+    version: "3.8.0"
 });
 server.tool("log_turn_telemetry", "Record the end of one benchmark phase. Call the tool once, at the end of the " +
     "real work of the phase. The server checks the workspace, and it refuses a " +

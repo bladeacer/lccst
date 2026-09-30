@@ -62,6 +62,16 @@ model, then calls the target again with `BENCH_PICK=0` and the chosen values.
 Set `BENCH_PICK=0` to skip the picker and pass `HARNESS`, `PROVIDER`,
 `MODEL_NAME`, and `BENCH_MODEL_ID` on the command line.
 
+The picker offers a model only when the model reads text, writes text, calls
+tools, and costs nothing. It reads the price and the abilities of every model
+from `https://models.dev/api.json`. It drops a router, because a router leaves
+the report naming a model that never ran. It drops a family that its author
+rejects for agentic work. Keep the router list and the family list in
+`scripts/benchmark-picker.ts`.
+
+The picker asks for the model in a fuzzy search when `fzf` is on the path. It
+falls back to a numbered menu without `fzf`.
+
 The picker starts a real model, so it refuses to run without a terminal. Set
 `BENCH_ALLOW_PIPE=1` only when a script must choose a model. `make bench-list`
 needs no terminal.

@@ -165,8 +165,13 @@ make benchmark-free     # Ask for a harness and a model, then run the benchmark
 make bench-list         # Show the models that the picker offers
 ```
 
-The picker lists the free models of every harness that the path holds, and it
-accepts a filter. The run then happens in a clean room outside the repository.
+The picker lists the models of every harness that the path holds, and it asks
+for one in a fuzzy search. Type part of a model name and press Enter. Without
+`fzf`, the picker asks for a filter and a number instead. A model is offered
+only when the registry states that it calls tools, reads text, and writes text,
+and when the registry states no charge for it, or when its name carries a free
+marker. Routers, image models, and families that an author rejects for agentic
+work are left out. The run then happens in a clean room outside the repository.
 The target seeds `SKILL.md`, `README.md`, `guide.md`, `traps.md`, and
 `agent-prompt.md` into the clean room, and it copies `agent-prompt.md` to
 `AGENTS.md`, which the harness reads as the project instructions. The target

@@ -102,7 +102,7 @@ help:
 	@echo "  make tag                Create and push git tag v$(VERSION)"
 	@echo "  make release            Alias for: make tag"
 	@echo "  make benchmark-free     Pick a model, then run the full benchmark"
-	@echo "  make bench-list         List the models that the picker offers"
+	@echo "  make bench-list         List the agentic models that the picker offers"
 	@echo "  make bench-model        Check that the harness offers the pinned model"
 	@echo "  make benchmark-dryrun   Build MCPs & verify connectivity (no agent session)"
 	@echo "  make bench-report       Settle telemetry & write the report"

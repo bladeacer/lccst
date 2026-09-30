@@ -1,6 +1,7 @@
 # LCCST Changelogs
 
 <!-- CHANGELOG_LIST -->
+- [3.8.0](lccst-3.8.0.md)
 - [3.7.0](lccst-3.7.0.md)
 - [3.6.1](lccst-3.6.1.md)
 - [3.6.0](lccst-3.6.0.md)
