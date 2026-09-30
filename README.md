@@ -240,6 +240,22 @@ Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
 
 <!-- BENCHMARK_RESULTS_START -->
 
+#### opencode/opencode/space-bunny-free: skill version v3.8.0
+
+| Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `opencode` | **opencode** | `v2.0.20` | `space-bunny-free` | `v3.8.0` | `lccst-telemetry` | **python-http-server** | 83/100 | **100/100** | PASSED | 2,345 | 8,116 | 179,173 | 502,581 |
+| `opencode` | **opencode** | `v2.0.20` | `space-bunny-free` | `v3.8.0` | `lccst-telemetry` | **react-timer** | 47/100 | **100/100** | PASSED | 2,544 | 4,166 | 899,775 | 565,717 |
+| `opencode` | **opencode** | `v2.0.20` | `space-bunny-free` | `v3.8.0` | `lccst-telemetry` | **go-login-crud** | 100/100 | **100/100** | PASSED | 4,457 | 13,452 | 1,729,503 | 2,541,943 |
+| **Summary** | | | | | **Workspace Totals / Avg** | **77/100** | **100/100** | **3/3 Passed** | **9,346** | **25,734** | **2,808,451** | **3,610,241** |
+
+> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
+> tokens.
+> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
+> tokens.
+> Skill-guided implementation used **+175%** more FCT and **+29%** more ART
+> compared to plain implementation across the workspace suite.
+
 #### kilo/kilo/stealth-space-bunny-alpha: skill version v3.8.0
 
 | Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
@@ -259,44 +275,50 @@ Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
 
 ### Benchmark Summary
 
-| Metric | `kilo-kilo-stealth-space-bunny-alpha` |
-| --- | --- |
-| Harness | kilo |
-| Harness version | v7.7.9 |
-| Plain score | 77/100 |
-| Guided score | 100/100 |
-| Plain FCT | 10,190 |
-| Guided FCT | 28,790 |
-| FCT overhead | +183% |
-| Plain ART | 1,748,852 |
-| Guided ART | 4,983,879 |
-| ART overhead | +185% |
-| Tests passed | 3/3 |
+| Metric | `opencode-opencode-space-bunny-free` | `kilo-kilo-stealth-space-bunny-alpha` |
+| --- | --- | --- |
+| Harness | opencode | kilo |
+| Harness version | v2.0.20 | v7.7.9 |
+| Plain score | 77/100 | 77/100 |
+| Guided score | 100/100 | 100/100 |
+| Plain FCT | 9,346 | 10,190 |
+| Guided FCT | 25,734 | 28,790 |
+| FCT overhead | +175% | +183% |
+| Plain ART | 2,808,451 | 1,748,852 |
+| Guided ART | 3,610,241 | 4,983,879 |
+| ART overhead | +29% | +185% |
+| Tests passed | 3/3 | 3/3 |
 
 #### Token Efficiency
 
-Only `kilo-kilo-stealth-space-bunny-alpha` achieved a perfect guided score of
-100/100. However, its resource efficiency varied across subprojects:
+All evaluated models (`opencode-opencode-space-bunny-free` and
+`kilo-kilo-stealth-space-bunny-alpha`) achieved a perfect guided score of
+100/100 under the protocol. However, their resource efficiency varied
+significantly:
 
-* **`kilo-kilo-stealth-space-bunny-alpha`** entered with the strongest plain
-  baseline (77/100) and reached perfection with +183% FCT and +185% ART overhead
+* **`opencode-opencode-space-bunny-free`** entered with the strongest plain
+  baseline (77/100) and reached perfection with +175% FCT and +29% ART overhead
   -- representing a genuine quality investment rather than recovery from
   failure.
+
+* **`kilo-kilo-stealth-space-bunny-alpha`** also delivered a perfect guided
+  score, with +183% FCT and +185% ART overhead.
 
 Across all runners, `go-login-crud` remained the most resource-intensive
 subproject.
 
 #### Least Token Usage
 
-`kilo-kilo-stealth-space-bunny-alpha` consumed the fewest tokens overall
-(6,771,711): 10,190 plain FCT, 28,790 guided FCT, 1,748,852 plain ART, and
-4,983,879 guided ART.
+`opencode-opencode-space-bunny-free` consumed the fewest tokens overall
+(6,453,772): 9,346 plain FCT, 25,734 guided FCT, 2,808,451 plain ART, and
+3,610,241 guided ART.
 
 #### Overall Top Models
 
 | Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
 | ---: | :--- | :---: | :---: | :---: | :---: | :--- |
-| 1 | `kilo-kilo-stealth-space-bunny-alpha` | 77/100 | 100/100 | +183% | +185% | Best overall |
+| 1 | `opencode-opencode-space-bunny-free` | 77/100 | 100/100 | +175% | +29% | Best overall |
+| 2 | `kilo-kilo-stealth-space-bunny-alpha` | 77/100 | 100/100 | +183% | +185% | Strong contender |
 
 See [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark runs.
 
