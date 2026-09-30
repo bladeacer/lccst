@@ -240,7 +240,68 @@ Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
 
 <!-- BENCHMARK_RESULTS_START -->
 
-_No findings yet. A run enters this table only when it names the version of the harness, every subproject passes, every phase holds a settled token count, the host store confirms the model, and the model states the run token of the instructions. Run `make benchmark-free`, then `make bench-report`._
+#### kilo/kilo/stealth-space-bunny-alpha: skill version v3.8.0
+
+| Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `kilo` | **kilo** | `v7.7.9` | `stealth-space-bunny-alpha` | `v3.8.0` | `lccst-telemetry` | **python-http-server** | 83/100 | **100/100** | PASSED | 2,397 | 8,309 | 230,291 | 781,186 |
+| `kilo` | **kilo** | `v7.7.9` | `stealth-space-bunny-alpha` | `v3.8.0` | `lccst-telemetry` | **react-timer** | 47/100 | **100/100** | PASSED | 1,533 | 3,725 | 444,659 | 1,145,016 |
+| `kilo` | **kilo** | `v7.7.9` | `stealth-space-bunny-alpha` | `v3.8.0` | `lccst-telemetry` | **go-login-crud** | 100/100 | **100/100** | PASSED | 6,260 | 16,756 | 1,073,902 | 3,057,677 |
+| **Summary** | | | | | **Workspace Totals / Avg** | **77/100** | **100/100** | **3/3 Passed** | **10,190** | **28,790** | **1,748,852** | **4,983,879** |
+
+> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
+> tokens.
+> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
+> tokens.
+> Skill-guided implementation used **+183%** more FCT and **+185%** more ART
+> compared to plain implementation across the workspace suite.
+
+
+### Benchmark Summary
+
+| Metric | `kilo-kilo-stealth-space-bunny-alpha` |
+| --- | --- |
+| Harness | kilo |
+| Harness version | v7.7.9 |
+| Plain score | 77/100 |
+| Guided score | 100/100 |
+| Plain FCT | 10,190 |
+| Guided FCT | 28,790 |
+| FCT overhead | +183% |
+| Plain ART | 1,748,852 |
+| Guided ART | 4,983,879 |
+| ART overhead | +185% |
+| Tests passed | 3/3 |
+
+#### Token Efficiency
+
+Only `kilo-kilo-stealth-space-bunny-alpha` achieved a perfect guided score of
+100/100. However, its resource efficiency varied across subprojects:
+
+* **`kilo-kilo-stealth-space-bunny-alpha`** entered with the strongest plain
+  baseline (77/100) and reached perfection with +183% FCT and +185% ART overhead
+  -- representing a genuine quality investment rather than recovery from
+  failure.
+
+Across all runners, `go-login-crud` remained the most resource-intensive
+subproject.
+
+#### Least Token Usage
+
+`kilo-kilo-stealth-space-bunny-alpha` consumed the fewest tokens overall
+(6,771,711): 10,190 plain FCT, 28,790 guided FCT, 1,748,852 plain ART, and
+4,983,879 guided ART.
+
+#### Overall Top Models
+
+| Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
+| ---: | :--- | :---: | :---: | :---: | :---: | :--- |
+| 1 | `kilo-kilo-stealth-space-bunny-alpha` | 77/100 | 100/100 | +183% | +185% | Best overall |
+
+See [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark runs.
+
+> Only benchmark runs which perform well enough are included
+
 
 <!-- BENCHMARK_RESULTS_END -->
 
