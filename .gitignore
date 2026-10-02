@@ -14,4 +14,3 @@ react-timer
 # crashed run left behind is an artifact, not a source file.
 runtime-telemetry.json
 prompt-token.txt
-model-ranking.md

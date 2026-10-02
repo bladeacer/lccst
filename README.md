@@ -289,45 +289,46 @@ variant and not the other.
 > Skill-guided implementation used **+175%** more FCT and **+29%** more ART
 > compared to plain implementation across the workspace suite.
 
-#### kilo/kilo/stealth-space-bunny-alpha: skill version v3.8.0
+#### opencode/opencode/mimo-v2.6-flash-free: skill version v3.8.0
 
 | Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `kilo` | **kilo** | `v7.7.9` | `stealth-space-bunny-alpha` | `v3.8.0` | `lccst-telemetry` | **python-http-server** | 83/100 | **100/100** | PASSED | 2,397 | 8,309 | 230,291 | 781,186 |
-| `kilo` | **kilo** | `v7.7.9` | `stealth-space-bunny-alpha` | `v3.8.0` | `lccst-telemetry` | **react-timer** | 47/100 | **100/100** | PASSED | 1,533 | 3,725 | 444,659 | 1,145,016 |
-| `kilo` | **kilo** | `v7.7.9` | `stealth-space-bunny-alpha` | `v3.8.0` | `lccst-telemetry` | **go-login-crud** | 100/100 | **100/100** | PASSED | 6,260 | 16,756 | 1,073,902 | 3,057,677 |
-| **Summary** | | | | | **Workspace Totals / Avg** | **77/100** | **100/100** | **3/3 Passed** | **10,190** | **28,790** | **1,748,852** | **4,983,879** |
+| `opencode` | **opencode** | `v2.0.21` | `mimo-v2.6-flash-free` | `v3.8.0` | `lccst-telemetry` | **python-http-server** | 83/100 | **100/100** | PASSED | 3,169 | 5,747 | 238,990 | 494,655 |
+| `opencode` | **opencode** | `v2.0.21` | `mimo-v2.6-flash-free` | `v3.8.0` | `lccst-telemetry` | **react-timer** | 47/100 | **100/100** | PASSED | 1,312 | 1,634 | 965,331 | 1,881,528 |
+| `opencode` | **opencode** | `v2.0.21` | `mimo-v2.6-flash-free` | `v3.8.0` | `lccst-telemetry` | **go-login-crud** | 100/100 | **100/100** | PASSED | 2,287 | 8,612 | 693,416 | 1,090,228 |
+| **Summary** | | | | | **Workspace Totals / Avg** | **77/100** | **100/100** | **3/3 Passed** | **6,768** | **15,993** | **1,897,737** | **3,466,411** |
 
-> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
+> **Highest ART subproject:** `react-timer` consumed the most guided runtime
 > tokens.
 > **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
 > tokens.
-> Skill-guided implementation used **+183%** more FCT and **+185%** more ART
+> Skill-guided implementation used **+136%** more FCT and **+83%** more ART
 > compared to plain implementation across the workspace suite.
 
 
 ### Benchmark Summary
 
-| Metric | `opencode-opencode-fledge-alpha-free` | `opencode-opencode-space-bunny-free` | `kilo-kilo-stealth-space-bunny-alpha` |
+| Metric | `opencode-opencode-fledge-alpha-free` | `opencode-opencode-space-bunny-free` | `opencode-opencode-mimo-v2.6-flash-free` |
 | --- | --- | --- | --- |
-| Harness | opencode | opencode | kilo |
-| Harness version | v2.0.21 | v2.0.20 | v7.7.9 |
+| Harness | opencode | opencode | opencode |
+| Harness version | v2.0.21 | v2.0.20 | v2.0.21 |
 | Plain score | 89/100 | 77/100 | 77/100 |
 | Guided score | 100/100 | 100/100 | 100/100 |
-| Plain FCT | 3,959 | 9,346 | 10,190 |
-| Guided FCT | 5,041 | 25,734 | 28,790 |
-| FCT overhead | +27% | +175% | +183% |
-| Plain ART | 1,232,844 | 2,808,451 | 1,748,852 |
-| Guided ART | 918,368 | 3,610,241 | 4,983,879 |
-| ART overhead | -26% | +29% | +185% |
+| Plain FCT | 3,959 | 9,346 | 6,768 |
+| Guided FCT | 5,041 | 25,734 | 15,993 |
+| FCT overhead | +27% | +175% | +136% |
+| Plain ART | 1,232,844 | 2,808,451 | 1,897,737 |
+| Guided ART | 918,368 | 3,610,241 | 3,466,411 |
+| ART overhead | -26% | +29% | +83% |
 | Tests passed | 3/3 | 3/3 | 3/3 |
 
 #### Token Efficiency
 
 All evaluated models (`opencode-opencode-fledge-alpha-free`,
-`opencode-opencode-space-bunny-free`, and `kilo-kilo-stealth-space-bunny-alpha`)
-achieved a perfect guided score of 100/100 under the protocol. However, their
-resource efficiency varied significantly:
+`opencode-opencode-space-bunny-free`, and
+`opencode-opencode-mimo-v2.6-flash-free`) achieved a perfect guided score of
+100/100 under the protocol. However, their resource efficiency varied
+significantly:
 
 * **`opencode-opencode-fledge-alpha-free`** entered with the strongest plain
   baseline (89/100) and reached perfection with +27% FCT and -26% ART overhead
@@ -337,10 +338,10 @@ resource efficiency varied significantly:
 * **`opencode-opencode-space-bunny-free`** also delivered a perfect guided
   score, with +175% FCT and +29% ART overhead.
 
-* **`kilo-kilo-stealth-space-bunny-alpha`** also delivered a perfect guided
-  score, with +183% FCT and +185% ART overhead.
+* **`opencode-opencode-mimo-v2.6-flash-free`** also delivered a perfect guided
+  score, with +136% FCT and +83% ART overhead.
 
-Across all runners, `go-login-crud` remained the most resource-intensive
+Across all runners, `react-timer` remained the most resource-intensive
 subproject.
 
 #### Least Token Usage
@@ -355,7 +356,7 @@ guided ART.
 | ---: | :--- | :---: | :---: | :---: | :---: | :--- |
 | 1 | `opencode-opencode-fledge-alpha-free` | 89/100 | 100/100 | +27% | -26% | Best overall |
 | 2 | `opencode-opencode-space-bunny-free` | 77/100 | 100/100 | +175% | +29% | Strong contender |
-| 3 | `kilo-kilo-stealth-space-bunny-alpha` | 77/100 | 100/100 | +183% | +185% | Strong contender |
+| 3 | `opencode-opencode-mimo-v2.6-flash-free` | 77/100 | 100/100 | +136% | +83% | Strong contender |
 
 See [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark runs.
 
@@ -363,4 +364,5 @@ See [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark
 
 
 <!-- BENCHMARK_RESULTS_END -->
+
 
