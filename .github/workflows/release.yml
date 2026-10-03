@@ -38,7 +38,6 @@ jobs:
           gh release create "$tag" \
             --title="$tag" \
             --generate-notes \
-            --draft \
             SKILL.md \
             dist/index.js \
             dist/index.d.ts \
