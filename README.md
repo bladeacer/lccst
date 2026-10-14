@@ -257,6 +257,22 @@ variant and not the other.
 
 <!-- BENCHMARK_RESULTS_START -->
 
+#### opencode/opencode/cat-jam-free: skill version v3.8.0
+
+| Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `opencode` | **opencode** | `v2.0.28` | `cat-jam-free` | `v3.8.0` | `lccst-telemetry` | **python-http-server** | 65/100 | **100/100** | PASSED | 2,309 | 2,870 | 0 | 578,686 |
+| `opencode` | **opencode** | `v2.0.28` | `cat-jam-free` | `v3.8.0` | `lccst-telemetry` | **react-timer** | 47/100 | **100/100** | PASSED | 541 | 607 | 463,242 | 77,946 |
+| `opencode` | **opencode** | `v2.0.28` | `cat-jam-free` | `v3.8.0` | `lccst-telemetry` | **go-login-crud** | 100/100 | **100/100** | PASSED | 2,847 | 3,115 | 1,260,172 | 104,627 |
+| **Summary** | | | | | **Workspace Totals / Avg** | **71/100** | **100/100** | **3/3 Passed** | **5,697** | **6,592** | **1,723,414** | **761,259** |
+
+> **Highest ART subproject:** `python-http-server` consumed the most guided
+> runtime tokens.
+> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
+> tokens.
+> Skill-guided implementation used **+16%** more FCT and **-56%** more ART
+> compared to plain implementation across the workspace suite.
+
 #### opencode/opencode/fledge-alpha-free: skill version v3.8.0
 
 | Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
@@ -289,45 +305,29 @@ variant and not the other.
 > Skill-guided implementation used **+34%** more FCT and **+35%** more ART
 > compared to plain implementation across the workspace suite.
 
-#### kilo/kilo/inclusionai-ling-3.1-flash: skill version v3.8.0
-
-| Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| `kilo` | **kilo** | `v7.7.9` | `inclusionai-ling-3.1-flash` | `v3.8.0` | `lccst-telemetry` | **python-http-server** | 83/100 | **100/100** | PASSED | 2,024 | 4,831 | 295,750 | 423,466 |
-| `kilo` | **kilo** | `v7.7.9` | `inclusionai-ling-3.1-flash` | `v3.8.0` | `lccst-telemetry` | **react-timer** | 47/100 | **100/100** | PASSED | 1,264 | 1,539 | 1,248,119 | 1,042,763 |
-| `kilo` | **kilo** | `v7.7.9` | `inclusionai-ling-3.1-flash` | `v3.8.0` | `lccst-telemetry` | **go-login-crud** | 100/100 | **100/100** | PASSED | 3,590 | 6,479 | 297,864 | 1,000,555 |
-| **Summary** | | | | | **Workspace Totals / Avg** | **77/100** | **100/100** | **3/3 Passed** | **6,878** | **12,849** | **1,841,733** | **2,466,784** |
-
-> **Highest ART subproject:** `react-timer` consumed the most guided runtime
-> tokens.
-> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
-> tokens.
-> Skill-guided implementation used **+87%** more FCT and **+34%** more ART
-> compared to plain implementation across the workspace suite.
-
 
 ### Benchmark Summary
 
-| Metric | `opencode-opencode-fledge-alpha-free` | `opencode-opencode-muse-spark-1.3-contributor-free` | `kilo-kilo-inclusionai-ling-3.1-flash` |
+| Metric | `opencode-opencode-cat-jam-free` | `opencode-opencode-fledge-alpha-free` | `opencode-opencode-muse-spark-1.3-contributor-free` |
 | --- | --- | --- | --- |
-| Harness | opencode | opencode | kilo |
-| Harness version | v2.0.21 | v2.0.22 | v7.7.9 |
-| Plain score | 89/100 | 94/100 | 77/100 |
+| Harness | opencode | opencode | opencode |
+| Harness version | v2.0.28 | v2.0.21 | v2.0.22 |
+| Plain score | 71/100 | 89/100 | 94/100 |
 | Guided score | 100/100 | 100/100 | 100/100 |
-| Plain FCT | 3,959 | 6,070 | 6,878 |
-| Guided FCT | 5,041 | 8,123 | 12,849 |
-| FCT overhead | +27% | +34% | +87% |
-| Plain ART | 1,232,844 | 1,035,995 | 1,841,733 |
-| Guided ART | 918,368 | 1,393,521 | 2,466,784 |
-| ART overhead | -26% | +35% | +34% |
+| Plain FCT | 5,697 | 3,959 | 6,070 |
+| Guided FCT | 6,592 | 5,041 | 8,123 |
+| FCT overhead | +16% | +27% | +34% |
+| Plain ART | 1,723,414 | 1,232,844 | 1,035,995 |
+| Guided ART | 761,259 | 918,368 | 1,393,521 |
+| ART overhead | -56% | -26% | +35% |
 | Tests passed | 3/3 | 3/3 | 3/3 |
 
 #### Token Efficiency
 
-All evaluated models (`opencode-opencode-fledge-alpha-free`,
-`opencode-opencode-muse-spark-1.3-contributor-free`, and
-`kilo-kilo-inclusionai-ling-3.1-flash`) achieved a perfect guided score of
-100/100 under the protocol. However, their resource efficiency varied
+All evaluated models (`opencode-opencode-cat-jam-free`,
+`opencode-opencode-fledge-alpha-free`, and
+`opencode-opencode-muse-spark-1.3-contributor-free`) achieved a perfect guided
+score of 100/100 under the protocol. However, their resource efficiency varied
 significantly:
 
 * **`opencode-opencode-muse-spark-1.3-contributor-free`** entered with the
@@ -335,14 +335,14 @@ significantly:
   +35% ART overhead -- representing a genuine quality investment rather than
   recovery from failure.
 
-* **`opencode-opencode-fledge-alpha-free`** was the most token-efficient at +27%
-  FCT with -26% ART overhead, though its lower plain baseline (89/100) means the
+* **`opencode-opencode-cat-jam-free`** was the most token-efficient at +16% FCT
+  with -56% ART overhead, though its lower plain baseline (71/100) means the
   overhead figure partly reflects additional rounds of correction.
 
-* **`kilo-kilo-inclusionai-ling-3.1-flash`** also delivered a perfect guided
-  score, with +87% FCT and +34% ART overhead.
+* **`opencode-opencode-fledge-alpha-free`** also delivered a perfect guided
+  score, with +27% FCT and -26% ART overhead.
 
-Across all runners, `react-timer` remained the most resource-intensive
+Across all runners, `python-http-server` remained the most resource-intensive
 subproject.
 
 #### Least Token Usage
@@ -355,9 +355,9 @@ guided ART.
 
 | Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
 | ---: | :--- | :---: | :---: | :---: | :---: | :--- |
-| 1 | `opencode-opencode-fledge-alpha-free` | 89/100 | 100/100 | +27% | -26% | Best overall |
-| 2 | `opencode-opencode-muse-spark-1.3-contributor-free` | 94/100 | 100/100 | +34% | +35% | Strong contender |
-| 3 | `kilo-kilo-inclusionai-ling-3.1-flash` | 77/100 | 100/100 | +87% | +34% | Strong contender |
+| 1 | `opencode-opencode-cat-jam-free` | 71/100 | 100/100 | +16% | -56% | Best overall |
+| 2 | `opencode-opencode-fledge-alpha-free` | 89/100 | 100/100 | +27% | -26% | Strong contender |
+| 3 | `opencode-opencode-muse-spark-1.3-contributor-free` | 94/100 | 100/100 | +34% | +35% | Strong contender |
 
 See [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark runs.
 
