@@ -1,7 +1,8 @@
-import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand, auditCompliance, clusterHunks, diffStatFiles, runCommand, detectTool, logEvent, resolveTarget } from "../src/index.js";
+import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand, auditCompliance, clusterHunks, clusterPaths, diffStatFiles, gitChanges, runCommand, runVerifySteps, detectTool, logEvent, resolveTarget, MAX_COMMAND_OUTPUT_CHARS, EVENT_FILE_MAX_BYTES } from "../src/index.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
+import { execFileSync } from "child_process";
 
 let passed = 0;
 let failed = 0;
@@ -286,6 +287,121 @@ withTempDir((dir) => {
 withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, "file.txt"), "");
   assert(resolveTarget("file.txt", dir) === null, "a file path is not a project root");
+});
+
+// -- Path clustering ------------------------------------------------
+{
+  const clusters = clusterPaths(["src/a.ts", "src/b.ts", "README.md", "docs/x.md"]);
+  const scopes = clusters.map(c => c.scope).sort();
+  assert(clusters.length === 3, "clusterPaths groups by top directory");
+  assert(scopes.join(",") === "docs,root,src", "clusterPaths scopes");
+  assert(clusterPaths([]).length === 0, "clusterPaths empty -> no clusters");
+  const src = clusters.find(c => c.scope === "src");
+  assert(src?.files.length === 2, "clusterPaths collects sibling files");
+  assert(src?.suggestion.startsWith("feat(src)"), "clusterPaths suggests a message");
+}
+
+// -- Git change discovery --------------------------------------------
+withTempDir((dir) => {
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  fs.writeFileSync(path.join(dir, "a.txt"), "one\n");
+  execFileSync("git", ["add", "a.txt"], { cwd: dir });
+  fs.writeFileSync(path.join(dir, "b.txt"), "two\n");
+  const changes = gitChanges(dir);
+  assert(changes.ok === true, "gitChanges answers inside a repository");
+  assert(changes.staged.length === 1, "gitChanges sees the staged file");
+  assert(changes.staged[0].includes("a.txt"), "gitChanges names the staged file");
+  assert(changes.untracked.length === 1, "gitChanges sees the untracked file");
+  assert(changes.untracked[0] === "b.txt", "gitChanges names the untracked path");
+});
+
+withTempDir((dir) => {
+  const changes = gitChanges(dir);
+  assert(changes.ok === false, "gitChanges fails outside a repository");
+  assert(changes.untracked.length === 0, "failed gitChanges holds no paths");
+});
+
+// -- Command output cap ----------------------------------------------
+{
+  const big = runCommand(["node", "-e", `process.stdout.write("x".repeat(${MAX_COMMAND_OUTPUT_CHARS + 5000}))`], process.cwd());
+  assert(big.code === 0, "capped run exits zero");
+  assert(big.output.length === MAX_COMMAND_OUTPUT_CHARS, "output is cut at the cap");
+  assert(big.truncated === true, "truncated flag is set");
+
+  const small = runCommand(["node", "-e", "process.stdout.write(\"ok\")"], process.cwd());
+  assert(small.output === "ok", "small output is intact");
+  assert(small.truncated === false, "truncated flag is false below the cap");
+}
+
+// -- Verify gate ------------------------------------------------------
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Makefile"), "format:\n\texit 1\n\nlint:\n\texit 0\n\ntest:\n\texit 0\n\nbuild:\n\texit 0\n");
+  const report = runVerifySteps(dir, false);
+  assert(report.failures === 1, "verify counts one failure");
+  assert((report.results.format as { exitCode: number }).exitCode !== 0, "verify runs the failing format step");
+  assert(report.results.lint === "skipped_after_failure", "lint is reported after a failure");
+  assert(report.results.test === "skipped_after_failure", "test is reported after a failure");
+  assert(report.results.build === "skipped_after_failure", "build is reported after a failure");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Makefile"), "format:\n\texit 0\n\nlint:\n\texit 0\n\ntest:\n\texit 0\n\nbuild:\n\texit 0\n");
+  const report = runVerifySteps(dir, false);
+  assert(report.failures === 0, "verify passes when every step passes");
+  assert(typeof (report.results.build as { exitCode: number }).exitCode === "number", "verify runs the last step on a pass");
+  const dry = runVerifySteps(dir, true);
+  assert(dry.results.format === "dry_run", "verify dry run reports dry_run");
+});
+
+// -- Tooling Ladder fallback ------------------------------------------
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "pyproject.toml"), "");
+  fs.writeFileSync(path.join(dir, "package.json"), JSON.stringify({ scripts: { build: "tsc" } }));
+  const cmd = resolveCommand(dir, "build");
+  assert(cmd?.join(" ") === "pnpm run build", "package script fills a missing manifest command");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "CMakeLists.txt"), "");
+  fs.mkdirSync(path.join(dir, "scripts"));
+  fs.writeFileSync(path.join(dir, "scripts", "lint.sh"), "#!/bin/sh\nexit 0\n");
+  const cmd = resolveCommand(dir, "lint");
+  assert(cmd?.join(" ") === "bash scripts/lint.sh", "scripts helper fills a missing manifest command");
+});
+
+// -- Compliance evidence ----------------------------------------------
+withTempDir((dir) => {
+  fs.mkdirSync(path.join(dir, "src"));
+  fs.writeFileSync(path.join(dir, "src", "app.ts"), "/** doc */\nexport const x = 1;\n");
+  fs.writeFileSync(path.join(dir, "app.test.ts"), "test();\n");
+  const report = auditCompliance(dir);
+  assert(report.mustHave.unitTests === true, "compliance finds a unit test");
+  assert(report.mustHave.unitTestFiles.count === 1, "compliance counts the unit test");
+  assert(report.mustHave.unitTestFiles.paths[0] === "app.test.ts", "compliance names the unit test path");
+  assert(report.mustHave.docstringFiles.count === 1, "compliance counts the docstring file");
+  assert(report.mustHave.docstringFiles.paths[0] === path.join("src", "app.ts"), "compliance names the docstring path");
+});
+
+// -- Structured state warnings ----------------------------------------
+withTempDir((dir) => {
+  const state = new SwarmState(dir);
+  fs.writeFileSync(path.join(dir, ".lccst", "state.json"), "{not json");
+  const s = state.read();
+  assert(s.phase === "init", "corrupt state returns the default");
+  assert(state.warnings.length === 1, "corrupt state records a structured warning");
+});
+
+// -- Event file rotation ----------------------------------------------
+withTempDir((dir) => {
+  const filler = "y".repeat(1000);
+  for (let i = 0; i < 400; i++) logEvent(dir, { event: "filler", data: filler });
+  const file = path.join(dir, ".lccst", "events.jsonl");
+  assert(fs.statSync(file).size <= EVENT_FILE_MAX_BYTES, "events file stays under the cap");
+  const lines = fs.readFileSync(file, "utf-8").trim().split("\n");
+  assert(lines.length > 0, "rotation keeps the newest entries");
+  let lastValid = false;
+  try { JSON.parse(lines[lines.length - 1]); lastValid = true; } catch { lastValid = false; }
+  assert(lastValid, "kept entries stay valid JSON");
 });
 
 // -- Summary --------------------------------------------------------

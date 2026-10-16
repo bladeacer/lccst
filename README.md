@@ -21,7 +21,7 @@ The MCP server at `src/index.ts` (built to `dist/index.js`) exposes eleven tools
 
 - **`init`** -- Map project conventions and verify environment
 - **`audit`** -- Scan workspace diffs and generate commit plan
-- **`swarm`** -- Execute the full discovery-cluster-test-commit loop
+- **`swarm`** -- Discover and cluster workspace changes into a commit plan (the caller stages and commits)
 - **`tooling`** -- Inventory Makefile targets, `scripts/` helpers, and package scripts
 - **`lint`** -- Run lint (Makefile target first, manifest fallback)
 - **`format`** -- Run format
@@ -36,7 +36,10 @@ runs standalone; the server is an optional programmatic front end.
 
 Every path-taking tool accepts a `path` argument (default `.`). Absolute paths
 preserved; `~` expands to `$HOME`; set `LCCST_WORKSPACE` to override the
-workspace root. See `src/index.ts` for implementation details.
+workspace root. The state-changing tools (`init`, `audit`, `swarm`, `lint`,
+`format`, `test`, `build`, `verify`) also accept a `mode` argument (`strict`
+or `lean`, default `strict`); the server records the mode and echoes it, and
+the caller enforces it. See `src/index.ts` for implementation details.
 
 ```bash
 # Init detects the manifest and runs the native test command:

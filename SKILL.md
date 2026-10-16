@@ -3,7 +3,7 @@ name: lccst
 license: MIT
 metadata:
   author: bladeacer
-  version: "3.8.1"
+  version: "3.9.0"
 description: "Deterministic workspace gatekeeper. Decomposes workspace
   changes into isolated, test-verified, atomic Git commits."
 arguments:
@@ -97,7 +97,9 @@ manual step. Do not wait for a tool that the host does not provide.
   plan with conventional commit messages.
 - `/swarm`: Enter Active Execution. For each cluster, group changes by
   domain, stage only the current cluster, run the declared test command,
-  and make one atomic commit. Use interactive `git add -p` in Bare Skill
+  and make one atomic commit. The host tool returns the cluster plan; the
+  caller stages each cluster and commits it. Use interactive `git add -p`
+  in Bare Skill
   Mode. Pass `--dry-run` or `--abort` in Bare Skill Mode; pass
   `dryRun: true` or `abort: true` for the host tool.
 - `/tooling`: List Makefile targets, `scripts/` helpers, and package scripts.
@@ -106,7 +108,8 @@ manual step. Do not wait for a tool that the host does not provide.
   Makefile target first, then the manifest fallback. Report a missing command
   as skipped.
 - `/verify`: Run `format`, `lint`, `test`, and `build`. Skip a step when no
-  command exists. End with a pass or fail summary. Pass `--dry-run` in Bare
+  command exists. Report a step after a failure as `skipped_after_failure`.
+  End with a pass or fail summary. Pass `--dry-run` in Bare
   Skill Mode or `dryRun: true` for the host tool.
 - `/compliance`: Audit deliverable tiers. Report must-have items first.
 - `/version`: Report the current LCCST version.
@@ -136,6 +139,8 @@ infer a different command from a request that names no command.
 ### Mode rules
 
 Apply `mode` only to defensive controls. Do not use it to change a variant.
+The host server records the mode on the state-changing tools and echoes it
+in the reply. The server does not enforce the mode; the caller enforces it.
 
 - **Pure logic or UI, `strict`**: Boundary validation and typed errors. Add
   another control when a stated risk requires it.

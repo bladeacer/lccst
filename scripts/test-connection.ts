@@ -36,8 +36,11 @@ for (const file of testFiles) {
   console.log(`Running: ${file}`);
 
   try {
-    const { payload, expectedResponse } = await import(`file://${filePath}`);
-    const success = await executeMcpStreamFrame(payload, expectedResponse);
+    const { payload, sequence, expectedResponse } = await import(`file://${filePath}`);
+    // A test may export a `sequence` of frames, such as `initialize` before a
+    // tool call. A test that exports one `payload` keeps the old behaviour.
+    const frames: object[] = Array.isArray(sequence) ? sequence : [payload];
+    const success = await executeMcpStreamFrame(frames, expectedResponse);
     
     if (success) {
       console.log(`Pass: ${file}`);
@@ -59,12 +62,18 @@ if (pipelinePassed) {
   process.exit(1);
 }
 
-function executeMcpStreamFrame(payload: object, assertFn: (res: any) => boolean): Promise<boolean> {
+function executeMcpStreamFrame(payloads: object[], assertFn: (res: any) => boolean): Promise<boolean> {
   return new Promise((resolve) => {
     const processInstance = spawn("node", [serverPath]);
     let stdoutBuffer = "";
     let stderrBuffer = "";
     let settled = false;
+
+    // The last payload that carries an id names the response frame that the
+    // test asserts. A sequence can hold an id-less notification.
+    const expectedId = [...payloads]
+      .reverse()
+      .find((p: any) => p && typeof p === "object" && "id" in p)?.id;
 
     // Resolve the frame as soon as the server answers. The timer only covers a
     // server that stays silent, so a slow start no longer fails the test.
@@ -83,17 +92,23 @@ function executeMcpStreamFrame(payload: object, assertFn: (res: any) => boolean)
         return settle(false);
       }
 
-      // A chunk can hold half a line, so the runner waits for the line break.
-      const lineEnd = stdoutBuffer.indexOf("\n");
-      if (lineEnd < 0) return;
-
-      const frame = stdoutBuffer.slice(0, lineEnd);
-      try {
-        const parsedJson = JSON.parse(frame);
-        settle(assertFn(parsedJson));
-      } catch (err) {
-        console.error("Stream payload syntax could not be resolved to valid JSON:", stdoutBuffer);
-        settle(false);
+      // A chunk can hold half a line, so the runner reads every complete line.
+      let lineEnd = stdoutBuffer.indexOf("\n");
+      while (lineEnd >= 0 && !settled) {
+        const frame = stdoutBuffer.slice(0, lineEnd);
+        stdoutBuffer = stdoutBuffer.slice(lineEnd + 1);
+        if (frame.trim().length > 0) {
+          try {
+            const parsedJson = JSON.parse(frame);
+            // An intermediate frame, such as the `initialize` response of a
+            // sequence, is read but not asserted.
+            if (parsedJson.id === expectedId) settle(assertFn(parsedJson));
+          } catch (err) {
+            console.error("Stream payload syntax could not be resolved to valid JSON:", frame);
+            settle(false);
+          }
+        }
+        lineEnd = stdoutBuffer.indexOf("\n");
       }
     };
 
@@ -106,8 +121,8 @@ function executeMcpStreamFrame(payload: object, assertFn: (res: any) => boolean)
       stderrBuffer += data.toString();
     });
 
-    // Write input JSON-RPC payload line to standard input
-    processInstance.stdin.write(JSON.stringify(payload) + "\n");
+    // Write the input JSON-RPC payload lines to standard input.
+    processInstance.stdin.write(payloads.map(p => JSON.stringify(p)).join("\n") + "\n");
 
     setTimeout(() => {
       if (settled) return;
