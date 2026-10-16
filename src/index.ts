@@ -199,8 +199,18 @@ export function discoverTooling(root: string): ToolingReport {
 export type ProjectStep = "test" | "lint" | "format" | "build";
 
 export function resolveCommand(root: string, kind: ProjectStep): string[] | null {
+  // Task runners first: check for Makefile, mise, just, Taskfile before manifests
   const makeTargets = listMakeTargets(root);
   if (makeTargets.includes(kind)) return ["make", kind];
+  if (fs.existsSync(path.join(root, "mise.toml"))) {
+    return ["mise", "run", kind];
+  }
+  if (fs.existsSync(path.join(root, "justfile"))) {
+    return ["just", kind];
+  }
+  if (fs.existsSync(path.join(root, "Taskfile.yml"))) {
+    return ["task", kind];
+  }
   const project = detectProject(root);
   const map: Record<ProjectStep, string[] | undefined> = {
     test: project.testCommand,
@@ -220,7 +230,15 @@ export function resolveCommand(root: string, kind: ProjectStep): string[] | null
     return base === kind || base === `${kind}s`;
   });
   if (helper) {
-    if (helper.endsWith(".sh")) return ["bash", helper];
+    if (helper.endsWith(".sh")) {
+      if (process.platform === "win32" &&
+          !process.env.MSYSTEM &&
+          !process.env.WSL_DISTRO_NAME &&
+          !process.env.OSTYPE?.includes("msys")) {
+        return ["pwsh", "-Command", `& \"${helper}\"`];
+      }
+      return ["bash", helper];
+    }
     if (helper.endsWith(".py")) return ["python3", helper];
     if (helper.endsWith(".ts")) return ["npx", "tsx", helper];
     return ["node", helper];
@@ -602,7 +620,7 @@ export function clusterHunks(lines: string[]): Cluster[] {
 // --- MCP Server -----------------------------------------------------
 const server = new McpServer({
   name: "lccst-locust",
-  version: "3.9.0",
+  version: "4.0.0",
 });
 
 // Prompt: load SKILL.md into context

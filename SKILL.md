@@ -3,7 +3,7 @@ name: lccst
 license: MIT
 metadata:
   author: bladeacer
-  version: "3.9.0"
+  version: "4.0.0"
 description: "Deterministic workspace gatekeeper. Decomposes workspace
   changes into isolated, test-verified, atomic Git commits."
 arguments:
@@ -58,8 +58,6 @@ test verification.
 - A **subproject** is a child project with its own manifest and test command.
 - The **target path** is the path supplied to a command. The default is the
   workspace root.
-- The **target specification** defines the required behaviour and file layout
-  for a project.
 - A **cluster** is a group of changed hunks that belong to one domain.
 - The **state file** is `.lccst/state.json`. It records the active loop state.
 - A **mode** is the `strict` or `lean` defence level. A mode is not a variant.
@@ -99,8 +97,7 @@ manual step. Do not wait for a tool that the host does not provide.
   domain, stage only the current cluster, run the declared test command,
   and make one atomic commit. The host tool returns the cluster plan; the
   caller stages each cluster and commits it. Use interactive `git add -p`
-  in Bare Skill
-  Mode. Pass `--dry-run` or `--abort` in Bare Skill Mode; pass
+  in Bare Skill Mode. Pass `--dry-run` or `--abort` in Bare Skill Mode; pass
   `dryRun: true` or `abort: true` for the host tool.
 - `/tooling`: List Makefile targets, `scripts/` helpers, and package scripts.
   Do not run a command listed by `/tooling`.
@@ -180,29 +177,56 @@ Nice-to-have items do not block a commit:
 
 ## 5. Tooling Ladder
 
-Scan the workspace root for manifests. Use the first matching manifest in this
-order:
+Scan the workspace root for manifests and task runners. Use the first matching
+entry in this order:
 
-| Manifest | Test command |
-| --- | --- |
-| `pyproject.toml` | `uv run pytest` |
-| `Cargo.toml` | `cargo test` |
-| `go.mod` | `go test ./...` |
-| `package.json` | `pnpm test` |
-| `Makefile` | `make test` |
-| `CMakeLists.txt` | `ctest` |
+### Task runners
 
-## Version Policy
+Check for these task runners before checking manifests. A task runner can
+declare commands for any language.
+
+| Runner | Detection | Command pattern |
+| --- | --- | --- |
+| `Makefile` | `make -n test` succeeds | `make <command>` |
+| `mise.toml` | file exists | `mise run <command>` |
+| `justfile` | file exists | `just <command>` |
+| `Taskfile.yml` | file exists | `task <command>` |
+
+### Language manifests
+
+If no task runner declares the command, check for these manifests in order:
+
+| Manifest | Test command | Format command | Build command |
+| --- | --- | --- | --- |
+| `pyproject.toml` | `uv run pytest` | `uv run ruff format` | - |
+| `Cargo.toml` | `cargo test` | `cargo fmt` | `cargo build` |
+| `go.mod` | `go test ./...` | `gofmt -l .` | `go build ./...` |
+| `package.json` | `pnpm test` | `pnpm run format` | `pnpm run build` |
+| `Makefile` | `make test` | - | `make build` |
+| `CMakeLists.txt` | `ctest` | - | `cmake --build .` |
+
+### Platform detection
+
+Before running a command, detect the user's platform:
+
+- On Windows without WSL, MSYS, or Git Bash, prefer PowerShell (`pwsh`) or
+  cmd.exe over bash.
+- On Unix-like systems, use the shell that the task runner or manifest
+  declares.
+- When a command fails on one shell, try the platform default before giving
+  up.
+
+### Fallback
+
+When no task runner and no manifest declare a command:
+
+1. Check `package.json` scripts as a last resort for Node projects.
+2. Check `scripts/` helpers: `scripts/<command>.sh`, `scripts/<command>.py`,
+   `scripts/<command>.ts`.
+3. When no command exists, report the step as skipped.
+
+## 6. Version Policy
 
 Major version: breaking changes to the protocol, manifest order, or reply envelope.
 Minor version: new features and additive changes.
 Patch version: bug fixes and corrections.
-
-Use this Tooling Ladder in order:
-
-1. Use Makefile targets, `scripts/` helpers, and package scripts first. Run
-   `make help` or `/tooling` before creating a new command.
-2. Use LSP and Tree-sitter results to inspect imports and side effects.
-3. Use workspace wrappers and commands declared in manifests.
-4. When no project command exists, use a temporary script. Remove the script
-   before `git status`.

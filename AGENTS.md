@@ -198,6 +198,22 @@ committing automatically. The user reviews and confirms the message before the
 commit is created. Describe the intent of the change, not just the files that
 changed.
 
+### Scoping Commit Messages
+
+Keep each commit focused on one logical change. Scope the message to what the
+change does, not the files it touches. A commit that fixes a bug, adds a feature,
+and updates docs should be three commits, not one.
+
+### Editing SKILL.md
+
+When editing `SKILL.md`:
+- Keep the skill focused on behaviour, not implementation details.
+- Prefer concise instructions over prose.
+- Test the skill in Bare Skill Mode before committing.
+- Update `README.md` when the skill gains a new capability.
+- Do not hardcode language-specific commands unless the codebase does.
+- Add a parity test when the skill gains a new feature.
+
 ## Structural Invariants
 
 - Keep one file focused on one domain. `src/index.ts` is the exception because
