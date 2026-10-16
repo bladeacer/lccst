@@ -82,7 +82,7 @@ function targetError(raw?: string): string {
 
 // --- Tooling Ladder: project detection -------------------------------
 export interface ProjectInfo {
-  type: "python" | "node" | "go" | "rust" | "cmake" | "julia" | "unknown";
+  type: "python" | "node" | "go" | "rust" | "cmake" | "julia" | "makefile" | "unknown";
   manifest: string;
   testCommand: string[];
   formatCommand?: string[];
@@ -92,11 +92,11 @@ export interface ProjectInfo {
 
 const MANIFEST_PRIORITY: Array<{ manifest: string; type: ProjectInfo["type"]; test: string[]; format?: string[]; lint?: string[]; build?: string[] }> = [
   { manifest: "pyproject.toml", type: "python", test: ["uv", "run", "pytest"], format: ["uv", "run", "ruff", "format"], lint: ["uv", "run", "ruff", "check"] },
-  { manifest: "package.json", type: "node", test: ["pnpm", "test"], format: ["pnpm", "run", "format"], lint: ["pnpm", "run", "lint"], build: ["pnpm", "run", "build"] },
   { manifest: "Cargo.toml", type: "rust", test: ["cargo", "test"], format: ["cargo", "fmt"], lint: ["cargo", "clippy"], build: ["cargo", "build"] },
   { manifest: "go.mod", type: "go", test: ["go", "test", "./..."], format: ["gofmt", "-l", "."], lint: ["go", "vet", "./..."], build: ["go", "build", "./..."] },
+  { manifest: "package.json", type: "node", test: ["pnpm", "test"], format: ["pnpm", "run", "format"], lint: ["pnpm", "run", "lint"], build: ["pnpm", "run", "build"] },
+  { manifest: "Makefile", type: "makefile", test: ["make", "test"], build: ["make", "build"] },
   { manifest: "CMakeLists.txt", type: "cmake", test: ["ctest"], build: ["cmake", "--build", "."] },
-  { manifest: "Project.toml", type: "julia", test: ["julia", "--project=.", "-e", "using Pkg; Pkg.test()"] },
 ];
 
 export function detectProject(root: string): ProjectInfo {

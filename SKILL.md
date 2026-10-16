@@ -192,6 +192,12 @@ order:
 | `Makefile` | `make test` |
 | `CMakeLists.txt` | `ctest` |
 
+## Version Policy
+
+Major version: breaking changes to the protocol, manifest order, or reply envelope.
+Minor version: new features and additive changes.
+Patch version: bug fixes and corrections.
+
 Use this Tooling Ladder in order:
 
 1. Use Makefile targets, `scripts/` helpers, and package scripts first. Run

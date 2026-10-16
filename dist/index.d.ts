@@ -1,6 +1,6 @@
 export declare function resolveTarget(raw: string | undefined, base?: string): string | null;
 export interface ProjectInfo {
-    type: "python" | "node" | "go" | "rust" | "cmake" | "julia" | "unknown";
+    type: "python" | "node" | "go" | "rust" | "cmake" | "julia" | "makefile" | "unknown";
     manifest: string;
     testCommand: string[];
     formatCommand?: string[];
