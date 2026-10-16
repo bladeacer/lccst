@@ -123,18 +123,39 @@ export interface ToolingReport {
 }
 
 export function listMakeTargets(root: string): string[] {
+  const targets = new Set<string>();
+  const visiting = new Set<string>();
   const makefile = path.join(root, "Makefile");
-  if (!fs.existsSync(makefile)) return [];
-  const lines = fs.readFileSync(makefile, "utf-8").split("\n");
-  const targets: string[] = [];
+  if (fs.existsSync(makefile)) {
+    readMakefile(makefile, targets, visiting);
+  }
+  return [...targets].sort();
+}
+
+function readMakefile(filePath: string, targets: Set<string>, visiting: Set<string>): void {
+  if (visiting.has(filePath)) return;
+  visiting.add(filePath);
+  const lines = fs.readFileSync(filePath, "utf-8").split("\n");
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith(".")) continue;
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    if (trimmed.startsWith(".")) continue;
     if (/[:+?]=/.test(trimmed)) continue;
+    const includeMatch = trimmed.match(/^include\s+(.+)$/);
+    if (includeMatch) {
+      for (const pattern of includeMatch[1].split(/\s+/)) {
+        if (!pattern || pattern.startsWith("#")) continue;
+        const included = path.resolve(path.dirname(filePath), pattern);
+        if (fs.existsSync(included)) {
+          readMakefile(included, targets, visiting);
+        }
+      }
+      continue;
+    }
     const m = trimmed.match(/^([A-Za-z0-9_][A-Za-z0-9_.%/-]*)\s*:/);
-    if (m) targets.push(m[1]);
+    if (m) targets.add(m[1]);
   }
-  return [...new Set(targets)].sort();
+  visiting.delete(filePath);
 }
 
 export function listPackageScripts(root: string): Record<string, string> {

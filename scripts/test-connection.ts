@@ -119,10 +119,19 @@ function executeMcpStreamFrame(payloads: object[], assertFn: (res: any) => boole
 
     processInstance.stderr.on("data", (data) => {
       stderrBuffer += data.toString();
+      // Stderr is debug output, not a failure. Only treat an idle server as a
+      // failure, so a healthy server that emits a log line still passes.
     });
 
     // Write the input JSON-RPC payload lines to standard input.
-    processInstance.stdin.write(payloads.map(p => JSON.stringify(p)).join("\n") + "\n");
+    // Always send initialize first, because a stricter SDK could reject a
+    // tool call that follows no handshake frame.
+    const orderedPayloads = [...payloads].sort((a: any, b: any) => {
+      if (a.method === "initialize" && b.method !== "initialize") return -1;
+      if (a.method !== "initialize" && b.method === "initialize") return 1;
+      return 0;
+    });
+    processInstance.stdin.write(orderedPayloads.map(p => JSON.stringify(p)).join("\n") + "\n");
 
     setTimeout(() => {
       if (settled) return;

@@ -31,6 +31,9 @@ The MCP server at `src/index.ts` (built to `dist/index.js`) exposes eleven tools
 - **`compliance`** -- Audit deliverable tiers
 - **`version`** -- Report the current LCCST version
 
+The server also registers a `swarm` prompt that returns the SKILL.md content
+for the active workspace. This prompt is for Bare Skill Mode.
+
 These tools map 1:1 to the slash commands documented in `SKILL.md`. The skill
 runs standalone; the server is an optional programmatic front end.
 
@@ -140,6 +143,7 @@ Read `AGENTS.md` for build/test commands, deliverable tiers, and structural inva
 |------|---------|---------|
 | pnpm | >= 9 | Package manager |
 | TypeScript | >= 5.4 | Compiling engine source |
+| Node.js | >= 20 | Runtime |
 
 ```bash
 pnpm run build           # Bundle deps + source -> dist/index.js

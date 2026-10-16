@@ -34,7 +34,7 @@ A login system with user create, read, update, and delete operations.
 
 | Tool | Minimum version | Use |
 | --- | --- | --- |
-| Node.js | 18 | LCCST server and React projects |
+| Node.js | 20 | LCCST server and React projects |
 | pnpm | 9 | Node dependencies |
 | TypeScript | 5.4 | LCCST source |
 | Python | 3.10 | Benchmark script |

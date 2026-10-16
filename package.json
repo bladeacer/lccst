@@ -21,6 +21,7 @@
     "bench:list": "tsx scripts/benchmark-picker.ts --list",
     "bump": "tsx scripts/bump-version.ts"
   },
+  "engines": { "node": ">=20", "pnpm": ">=9" },
   "devDependencies": {
     "@types/node": "^20.19.43",
     "esbuild": "^0.28.1",

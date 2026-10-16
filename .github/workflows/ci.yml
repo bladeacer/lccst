@@ -21,7 +21,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: 20
           cache: pnpm
 
       - name: Install dependencies
@@ -53,3 +53,6 @@ jobs:
 
       - name: Run integration tests
         run: pnpm run test:mcp
+
+      - name: Verify dist matches src
+        run: pnpm run build && git diff --exit-code -- dist/

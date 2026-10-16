@@ -5,9 +5,6 @@ import type { TurnUsage } from "./usage.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-/** Telemetry file that the server uses when the workspace holds none. */
-export const PRIMARY_TELEMETRY = path.resolve(__dirname, "../../runtime-telemetry.json");
-
 /** Variable that names the telemetry file of the running workspace. */
 export const TELEMETRY_VARIABLE = "LCCST_TELEMETRY_FILE";
 
@@ -130,21 +127,12 @@ export function emptyTelemetry(): TelemetryData {
  * to the file of this source tree: a run whose server lost the variable would
  * then write into the repository, and the phases of one run would land in the
  * file that another run reads.
- */
 export function resolveTelemetryFile(): string {
   const configured = process.env[TELEMETRY_VARIABLE];
   if (configured) {
     return configured;
   }
-  const workspaceTelemetry = path.resolve(process.cwd(), "runtime-telemetry.json");
-  try {
-    if (fs.statSync(process.cwd()).isDirectory()) {
-      return workspaceTelemetry;
-    }
-  } catch {
-    return workspaceTelemetry;
-  }
-  return PRIMARY_TELEMETRY;
+  return path.resolve(process.cwd(), "runtime-telemetry.json");
 }
 
 /**
