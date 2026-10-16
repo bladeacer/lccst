@@ -191,6 +191,13 @@ playground/           Benchmark harness and agent sandboxes
 docs/changelogs/      Per-version changelogs and the index
 ```
 
+## Committing Changes
+
+When you make changes, suggest a commit message to the user rather than
+committing automatically. The user reviews and confirms the message before the
+commit is created. Describe the intent of the change, not just the files that
+changed.
+
 ## Structural Invariants
 
 - Keep one file focused on one domain. `src/index.ts` is the exception because

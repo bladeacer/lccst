@@ -127,6 +127,7 @@ export function emptyTelemetry(): TelemetryData {
  * to the file of this source tree: a run whose server lost the variable would
  * then write into the repository, and the phases of one run would land in the
  * file that another run reads.
+ */
 export function resolveTelemetryFile(): string {
   const configured = process.env[TELEMETRY_VARIABLE];
   if (configured) {
