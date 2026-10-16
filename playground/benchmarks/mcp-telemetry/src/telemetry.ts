@@ -195,7 +195,7 @@ export function checkPhase(workspace: string, subproject: string, variant: strin
   const manifest = PHASE_MANIFESTS[subproject];
 
   if (!manifest) {
-    return { ready: true, directory, reason: null };
+    return { ready: false, directory, reason: `Unknown subproject ${subproject}.` };
   }
   if (!fs.existsSync(directory) || !fs.statSync(directory).isDirectory()) {
     return {

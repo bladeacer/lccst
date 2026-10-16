@@ -87,12 +87,8 @@ function executeMcpStreamFrame(payloads: object[], assertFn: (res: any) => boole
     const inspectStream = () => {
       if (settled) return;
 
-      if (stderrBuffer.trim().length > 0) {
-        console.error("Runtime stream emitted unexpected stderr data:", stderrBuffer);
-        return settle(false);
-      }
-
-      // A chunk can hold half a line, so the runner reads every complete line.
+      // Stderr is debug output, not a failure. A healthy server may emit log
+      // lines; only a silent server (no valid frame before the timeout) fails.
       let lineEnd = stdoutBuffer.indexOf("\n");
       while (lineEnd >= 0 && !settled) {
         const frame = stdoutBuffer.slice(0, lineEnd);

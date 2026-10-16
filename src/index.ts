@@ -44,12 +44,12 @@ type ToolReply =
   | { content: { type: "text"; text: string }[]; isError: true };
 
 /**
- * Reply with a plain-text error. The SDK skips output validation for a result
- * that sets `isError`, so a tool that declares an output schema can still
- * return a plain-text error reply. A full envelope error is a 4.0.0 change.
+ * Reply through the envelope with `success: false` and a `payload.error`
+ * object. Every reply uses one envelope shape, so a client never parses two
+ * reply forms.
  */
-function errorReply(text: string): ToolReply {
-  return { content: [{ type: "text", text }], isError: true };
+function errorReply(step: string, text: string): ToolReply {
+  return envelope(step, { error: text }, text, false);
 }
 
 // --- Runtime context ------------------------------------------------
@@ -661,7 +661,7 @@ server.registerTool("init", {
 }, async (args) => {
   const target = resolveTarget(args?.path);
   if (!target) {
-    return errorReply(targetError(args?.path));
+    return errorReply("/init", targetError(args?.path));
   }
 
   const mode = args?.mode ?? "strict";
@@ -697,7 +697,7 @@ server.registerTool("audit", {
 }, async (args) => {
   const target = resolveTarget(args?.path);
   if (!target) {
-    return errorReply(targetError(args?.path));
+    return errorReply("/audit", targetError(args?.path));
   }
 
   const mode = args?.mode ?? "strict";
@@ -707,7 +707,7 @@ server.registerTool("audit", {
 
   const changes = gitChanges(target);
   if (!changes.ok) {
-    return errorReply(`${target} is not a git repository, or git is unavailable.`);
+    return errorReply("/audit", `${target} is not a git repository, or git is unavailable.`);
   }
 
   if (changes.staged.length === 0 && changes.unstaged.length === 0 && changes.untracked.length === 0) {
@@ -751,7 +751,7 @@ server.registerTool("swarm", {
 }, async (args) => {
   const target = resolveTarget(args?.path);
   if (!target) {
-    return errorReply(targetError(args?.path));
+    return errorReply("/swarm", targetError(args?.path));
   }
   const dryRun = args?.dryRun === true;
   const abort = args?.abort === true;
@@ -816,7 +816,7 @@ server.registerTool("swarm", {
 function runStepTool(kind: ProjectStep, args?: { path?: string; dryRun?: boolean; mode?: "strict" | "lean" }): ToolReply {
   const target = resolveTarget(args?.path);
   if (!target) {
-    return errorReply(targetError(args?.path));
+    return errorReply(kind, targetError(args?.path));
   }
   const dryRun = args?.dryRun === true;
   const mode = args?.mode ?? "strict";
@@ -850,7 +850,7 @@ server.registerTool("tooling", {
 }, async (args) => {
   const target = resolveTarget(args?.path);
   if (!target) {
-    return errorReply(targetError(args?.path));
+    return errorReply("/tooling", targetError(args?.path));
   }
   const t = discoverTooling(target);
   return envelope("/tooling", {
@@ -961,7 +961,7 @@ server.registerTool("verify", {
 }, async (args) => {
   const target = resolveTarget(args?.path);
   if (!target) {
-    return errorReply(targetError(args?.path));
+    return errorReply("/verify", targetError(args?.path));
   }
   const dryRun = args?.dryRun === true;
   const mode = args?.mode ?? "strict";
@@ -986,7 +986,7 @@ server.registerTool("compliance", {
 }, async (args) => {
   const target = resolveTarget(args?.path);
   if (!target) {
-    return errorReply(targetError(args?.path));
+    return errorReply("/compliance", targetError(args?.path));
   }
   const report = auditCompliance(target);
   logEvent(target, { event: "compliance_audit", report });

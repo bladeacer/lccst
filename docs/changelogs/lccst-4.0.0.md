@@ -22,6 +22,16 @@ The order is: `pyproject.toml`, `Cargo.toml`, `go.mod`, `package.json`,
 only `Project.toml` now reports type `unknown` and no test command. The manifest
 was never documented in `SKILL.md` or `README.md`.
 
+### Error Replies Use One Envelope
+
+A path error or a "not a git repository" reply was plain text with the MCP
+`isError` flag, so a client had to parse two reply shapes. A client that read
+plain text could not read the envelope, and vice versa.
+
+Every tool error now returns the envelope with `success: false` and a
+`payload.error` object. The plain-text `errorReply` is removed. A client that
+read plain-text errors must read `payload.error` instead.
+
 ## Correctness
 
 ### Manifest Order Matches the Specification
@@ -35,6 +45,21 @@ different types in the code and in the specification.
 The code order is now the same as the `SKILL.md` order. The `Makefile` manifest
 is added to the code and gains a test command of `make test` and a build command
 of `make build`.
+
+### Unknown Subproject Is Refused
+
+`checkPhase` recorded `ready: true` for a subproject the server does not know,
+so the telemetry record could hold a phantom phase for a subproject with no
+manifest.
+
+It now returns `ready: false` with a reason for an unknown subproject, so the
+record holds no phase until the subproject is known.
+
+### The Integration Runner Treats Stderr as Debug
+
+The test runner failed on any standard-error byte, so a debug line failed a
+healthy server. Standard error is now debug output and never fails a run. Only a
+server that sends no valid frame before the timeout fails.
 
 ## Consistency
 
