@@ -109,6 +109,14 @@ stated the run token, and the skill-guided variant passes all three subprojects.
 
 Use `pnpm` version 9 or later. Pin the Node.js version in `.node-version`.
 
+## One Commit At A Time
+
+Do the work for one commit only.
+Stop when that work is complete.
+Give the commit message in a fenced block.
+State the version bump level (major, minor, patch) per the version policy in `SKILL.md`.
+Wait for the user before you start the next change.
+
 ## Deliverable Tiers
 
 The `/compliance` tool checks two deliverable tiers.
@@ -198,11 +206,33 @@ committing automatically. The user reviews and confirms the message before the
 commit is created. Describe the intent of the change, not just the files that
 changed.
 
-### Scoping Commit Messages
+### Commit Format
 
-Keep each commit focused on one logical change. Scope the message to what the
-change does, not the files it touches. A commit that fixes a bug, adds a feature,
-and updates docs should be three commits, not one.
+Use Conventional Commits. The format is `<type>(<scope>): <description>`.
+
+* Keep the subject up to 72 characters. Start with a verb.
+* Do not end the subject with a full stop. Use British English.
+* Name the scope of the component that the change serves, such as `audit`,
+  `swarm`, `telemetry`, or `docs`.
+* Do not repeat the type as the scope. Omit a scope that is plainly obvious.
+* Use no scope when the change touches the whole repository.
+* Split a change that touches two components into two commits.
+* Never invent a scope.
+* Explain why the change was needed. Never repeat what the diff shows.
+
+### One Commit At A Time
+
+Do one thing in a commit. Split the rest into another commit.
+Solve the problem in the task. Never solve the next task.
+Keep the diff small. A large diff hides a large defect.
+Commit no secret, no `.env` file, and no build output.
+
+After you finish a change, suggest a commit message.
+Do not run the commit yourself unless the user asks for it.
+Give the message in a fenced block. State why the scope fits the change.
+When the change needs more than one commit, give a shell one-liner that
+chains the commits in order. Give the one-liner in a fenced block. Join
+each commit with `&&`.
 
 ### Editing SKILL.md
 
