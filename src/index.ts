@@ -36,11 +36,16 @@ const WORKSPACE = process.env.LCCST_WORKSPACE || process.cwd(); // client projec
 export function resolveTarget(raw: string | undefined, base?: string): string | null {
   const b = base ?? WORKSPACE;
   let p = (raw ?? "").trim();
-  if (!p || p === ".") return fs.existsSync(b) ? b : null;
+  if (!p || p === ".") return isDirectory(b) ? b : null;
   if (p === "~") p = os.homedir();
   else if (p.startsWith("~/")) p = path.join(os.homedir(), p.slice(2));
   const abs = path.isAbsolute(p) ? path.normalize(p) : path.resolve(b, p);
-  return fs.existsSync(abs) ? abs : null;
+  return isDirectory(abs) ? abs : null;
+}
+
+/** Say whether a path names an existing directory. */
+function isDirectory(target: string): boolean {
+  try { return fs.statSync(target).isDirectory(); } catch { return false; }
 }
 
 function targetError(raw?: string): string {
@@ -50,7 +55,7 @@ function targetError(raw?: string): string {
 
 // --- Tooling Ladder: project detection -------------------------------
 export interface ProjectInfo {
-  type: "python" | "node" | "go" | "rust" | "unknown";
+  type: "python" | "node" | "go" | "rust" | "cmake" | "julia" | "unknown";
   manifest: string;
   testCommand: string[];
   formatCommand?: string[];
@@ -63,8 +68,8 @@ const MANIFEST_PRIORITY: Array<{ manifest: string; type: ProjectInfo["type"]; te
   { manifest: "package.json", type: "node", test: ["pnpm", "test"], format: ["pnpm", "run", "format"], lint: ["pnpm", "run", "lint"], build: ["pnpm", "run", "build"] },
   { manifest: "Cargo.toml", type: "rust", test: ["cargo", "test"], format: ["cargo", "fmt"], lint: ["cargo", "clippy"], build: ["cargo", "build"] },
   { manifest: "go.mod", type: "go", test: ["go", "test", "./..."], format: ["gofmt", "-l", "."], lint: ["go", "vet", "./..."], build: ["go", "build", "./..."] },
-  { manifest: "CMakeLists.txt", type: "unknown", test: ["cmake", "--build", "."], build: ["cmake", "--build", "."] },
-  { manifest: "Project.toml", type: "unknown", test: ["julia", "--project=.", "-e", "using Pkg; Pkg.test()"] },
+  { manifest: "CMakeLists.txt", type: "cmake", test: ["ctest"], build: ["cmake", "--build", "."] },
+  { manifest: "Project.toml", type: "julia", test: ["julia", "--project=.", "-e", "using Pkg; Pkg.test()"] },
 ];
 
 export function detectProject(root: string): ProjectInfo {
@@ -248,8 +253,18 @@ export function runCommand(command: string[], cwd: string): RunResult {
 }
 
 export function detectTool(name: string): boolean {
-  try { execSync(`which ${name} 2>/dev/null`, { stdio: "ignore" }); return true; }
-  catch { return false; }
+  if (!name) return false;
+  const suffixes = process.platform === "win32"
+    ? (process.env.PATHEXT ?? ".EXE;.CMD;.BAT;.COM").split(";")
+    : [""];
+  const dirs = (process.env.PATH ?? "").split(path.delimiter).filter(Boolean);
+  for (const dir of dirs) {
+    for (const suffix of suffixes) {
+      try { fs.accessSync(path.join(dir, name + suffix), fs.constants.X_OK); return true; }
+      catch { /* keep looking */ }
+    }
+  }
+  return false;
 }
 
 export interface EnvReport {
@@ -260,9 +275,12 @@ export interface EnvReport {
 
 export function scanEnvironment(root: string): EnvReport {
   const project = detectProject(root);
-  const requiredTools = project.testCommand.filter(c => !c.startsWith("-") && !c.startsWith(".") && !c.startsWith("./"));
+  // Only the executable token names a tool. The later tokens of a test command
+  // are arguments, such as the `run` and `pytest` of `uv run pytest`, so the
+  // probe must not report them as installed tools.
+  const executable = project.testCommand[0];
   const tools: Record<string, boolean> = {};
-  for (const t of requiredTools) tools[t] = detectTool(t);
+  if (executable) tools[executable] = detectTool(executable);
   tools["git"] = detectTool("git");
   const conventions: string[] = [];
   if (fs.existsSync(path.join(root, ".editorconfig"))) conventions.push("editorconfig");
@@ -330,6 +348,17 @@ export interface Cluster {
   suggestion: string;
 }
 
+/**
+ * Read the file lines of a `git diff --stat` output.
+ *
+ * The output ends with a summary line, such as `3 files changed, 7
+ * insertions(+)`, which names no file. A file line holds a `|` separator, so
+ * the helper keeps those lines only. The count of the result is the file count.
+ */
+export function diffStatFiles(stat: string): string[] {
+  return stat.split("\n").map(line => line.trim()).filter(line => line.includes("|"));
+}
+
 export function clusterHunks(lines: string[]): Cluster[] {
   const files = lines.filter(l => l.includes("|")).map(l => (l.split("|")[0] || "").trim()).filter(Boolean);
   if (files.length === 0) return [{ scope: "root", files: lines, suggestion: "chore: apply workspace changes" }];
@@ -350,7 +379,7 @@ export function clusterHunks(lines: string[]): Cluster[] {
 // --- MCP Server -----------------------------------------------------
 const server = new McpServer({
   name: "lccst-locust",
-  version: "3.8.0",
+  version: "3.8.1",
 });
 
 // Prompt: load SKILL.md into context
@@ -429,11 +458,11 @@ server.registerTool("audit", {
     return envelope("/audit", { phase: "clean", path: target }, "Working tree clean.");
   }
 
-  const stagedLines = staged.split("\n").map(l => l.trim()).filter(Boolean);
-  const unstagedLines = unstaged.split("\n").map(l => l.trim()).filter(Boolean);
-  const stagedClusters = stagedLines.length > 0 ? clusterHunks(stagedLines) : [];
-  const unstagedClusters = unstagedLines.length > 0 ? clusterHunks(unstagedLines) : [];
-  const totalFiles = stagedLines.length + unstagedLines.length;
+  const stagedFiles = diffStatFiles(staged);
+  const unstagedFiles = diffStatFiles(unstaged);
+  const stagedClusters = stagedFiles.length > 0 ? clusterHunks(stagedFiles) : [];
+  const unstagedClusters = unstagedFiles.length > 0 ? clusterHunks(unstagedFiles) : [];
+  const totalFiles = stagedFiles.length + unstagedFiles.length;
 
   if (staged) {
     state.write({ clusters: stagedClusters.map(c => c.suggestion) });
@@ -441,8 +470,8 @@ server.registerTool("audit", {
 
   return envelope("/audit", {
     path: target,
-    staged_files: stagedLines.length,
-    unstaged_files: unstagedLines.length,
+    staged_files: stagedFiles.length,
+    unstaged_files: unstagedFiles.length,
     total_files: totalFiles,
     staged: stagedClusters.map(c => ({ scope: c.scope, files: c.files, suggestion: c.suggestion })),
     unstaged: unstagedClusters.map(c => ({ scope: c.scope, files: c.files, suggestion: c.suggestion })),
@@ -472,18 +501,13 @@ server.registerTool("swarm", {
   }
 
   const state = new SwarmState(target);
-  state.write({ phase: "swarm" });
 
   const project = detectProject(target);
+  const testCmd = resolveCommand(target, "test");
   logEvent(target, { event: "swarm_start", project: project.type, dryRun });
-  if (!project.testCommand.length) {
+  if (!testCmd) {
     return envelope("/swarm", { phase: "error", reason: "no_test_runner" }, "No test runner detected. Cannot execute swarm.", false);
   }
-
-  const tooling = discoverTooling(target);
-  const makeTargets = tooling.makeTargets.length > 0 ? `make: ${tooling.makeTargets.join(", ")}` : "no Makefile";
-  const formatCmd = resolveCommand(target, "format");
-  const testCmd = resolveCommand(target, "test");
 
   if (!dryRun) {
     state.write({ phase: "swarm_discover" });

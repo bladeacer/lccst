@@ -1,6 +1,6 @@
 export declare function resolveTarget(raw: string | undefined, base?: string): string | null;
 export interface ProjectInfo {
-    type: "python" | "node" | "go" | "rust" | "unknown";
+    type: "python" | "node" | "go" | "rust" | "cmake" | "julia" | "unknown";
     manifest: string;
     testCommand: string[];
     formatCommand?: string[];
@@ -64,4 +64,12 @@ export interface Cluster {
     files: string[];
     suggestion: string;
 }
+/**
+ * Read the file lines of a `git diff --stat` output.
+ *
+ * The output ends with a summary line, such as `3 files changed, 7
+ * insertions(+)`, which names no file. A file line holds a `|` separator, so
+ * the helper keeps those lines only. The count of the result is the file count.
+ */
+export declare function diffStatFiles(stat: string): string[];
 export declare function clusterHunks(lines: string[]): Cluster[];

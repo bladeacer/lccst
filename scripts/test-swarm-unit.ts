@@ -1,4 +1,4 @@
-import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand, auditCompliance, clusterHunks, runCommand, detectTool, logEvent, resolveTarget } from "../src/index.js";
+import { detectProject, scanEnvironment, SwarmState, listMakeTargets, listPackageScripts, listShellScripts, discoverTooling, resolveCommand, auditCompliance, clusterHunks, diffStatFiles, runCommand, detectTool, logEvent, resolveTarget } from "../src/index.js";
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -54,6 +54,14 @@ withTempDir((dir) => {
   assert(p.testCommand.join(" ") === "go test ./...", "go test command");
 });
 
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "CMakeLists.txt"), "");
+  const p = detectProject(dir);
+  assert(p.type === "cmake", "CMakeLists.txt -> cmake");
+  assert(p.testCommand.join(" ") === "ctest", "cmake test command is ctest");
+  assert(p.buildCommand?.join(" ") === "cmake --build .", "cmake build command");
+});
+
 // Priority: first matched manifest wins
 withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, "package.json"), "{}");
@@ -77,13 +85,21 @@ withTempDir((dir) => {
   assert(Array.isArray(env.conventions), "conventions is array");
 });
 
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "pyproject.toml"), "");
+  const env = scanEnvironment(dir);
+  assert(env.tools.uv !== undefined, "scan reports the executable uv");
+  assert(env.tools.run === undefined, "scan drops the subcommand run");
+  assert(env.tools.pytest === undefined, "scan drops the argument pytest");
+});
+
 // -- Native tooling discovery ----------------------------------------
 withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, "Makefile"), "all: test\n\n.PHONY: test build\n\ntest:\n\tpnpm test\n\nbuild:\n\tpnpm run build\n");
   const targets = listMakeTargets(dir);
   assert(targets.includes("test"), "makefile test target");
   assert(targets.includes("build"), "makefile build target");
-  assert(!targets.includes("all") === false, "makefile all target present");
+  assert(targets.includes("all"), "makefile all target present");
 });
 
 withTempDir((dir) => {
@@ -188,6 +204,16 @@ withTempDir((dir) => {
   assert(root?.files.includes("README.md"), "no-slash file -> root scope");
 }
 
+// -- Diff stat file lines --------------------------------------------
+{
+  const files = diffStatFiles(
+    "src/app.ts | 4 ++--\n README.md | 1 +\n 2 files changed, 5 insertions(+)",
+  );
+  assert(files.length === 2, "diffStatFiles drops the summary line");
+  assert(files[0] === "src/app.ts | 4 ++--", "diffStatFiles keeps a file line");
+  assert(diffStatFiles("").length === 0, "diffStatFiles empty input -> no files");
+}
+
 // -- Environment conventions -----------------------------------------
 withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, ".editorconfig"), "root = true\n");
@@ -255,6 +281,11 @@ withTempDir((dir) => {
   fs.writeFileSync(path.join(dir, "pyproject.toml"), "");
   assert(resolveTarget("", dir) === dir, "empty string defaults to base");
   assert(resolveTarget("  ", dir) === dir, "whitespace defaults to base");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "file.txt"), "");
+  assert(resolveTarget("file.txt", dir) === null, "a file path is not a project root");
 });
 
 // -- Summary --------------------------------------------------------
