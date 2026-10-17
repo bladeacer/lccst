@@ -473,18 +473,21 @@ def get_agent_reports(
     return reports
 
 
-def _composite_score(r: BenchmarkReport) -> float:
+def _composite_score(r: BenchmarkReport, fct_min: int | None = None, art_min: int | None = None) -> float:
     """Composite score using fixed weights and raw metric values.
 
     Higher is better. Weights:
     - Guided robustness: 40%
     - Plain robustness: 10%
     - Pass rate: 10%
-    - FCT efficiency: 20% (lower overhead = higher score)
-    - ART efficiency: 20% (lower overhead or savings = higher score)
+    - FCT efficiency: 20% (lower overhead and lower absolute guided FCT)
+    - ART efficiency: 20% (lower overhead/savings and lower absolute guided ART)
 
     A report that holds no ART count earns no ART term. It must not earn a
     perfect ART score for a measurement that the run never made.
+
+    Token economy penalty applies when absolute guided tokens exceed the cohort
+    minimum, using a logarithmic scale to penalise waste without dominating.
     """
     guided = r.avg_guided_score
     plain = r.avg_plain_score
@@ -495,6 +498,24 @@ def _composite_score(r: BenchmarkReport) -> float:
     score = guided * 0.4 + plain * 0.1 + pass_rate * 10 - fct_oh * 20
     if art_oh is not None:
         score -= art_oh * 20
+
+    economy_penalty = 0.0
+    if fct_min and fct_min > 0 and r.total_fct_guided > fct_min:
+        ratio = r.total_fct_guided / fct_min
+        if ratio > 1:
+            import math
+
+            economy_penalty += math.log10(ratio) * 5.0
+    if art_min and art_min > 0 and r.total_art_guided > art_min:
+        ratio = r.total_art_guided / art_min
+        if ratio > 1:
+            import math
+
+            economy_penalty += math.log10(ratio) * 5.0
+    elif art_min is None and fct_min is None:
+        pass
+
+    score -= economy_penalty
     return score
 
 
@@ -569,7 +590,12 @@ def pick_top_n(
     if not latest:
         return []
 
-    latest = sorted(latest, key=lambda r: _composite_score(r), reverse=True)
+    if latest:
+        fct_min = min(r.total_fct_guided for r in latest)
+        art_min = min(r.total_art_guided for r in latest)
+    else:
+        fct_min, art_min = None, None
+    latest = sorted(latest, key=lambda r: _composite_score(r, fct_min, art_min), reverse=True)
     return latest[:n]
 
 
@@ -947,6 +973,11 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
         f"{fmt_int(lowest_abs.total_art_guided)} guided ART."
     ]
 
+    if reports:
+        fct_min_c = min(r.total_fct_guided for r in reports)
+        art_min_c = min(r.total_art_guided for r in reports)
+    else:
+        fct_min_c, art_min_c = None, None
     # ---- Overall Top Models ----
     otm = [
         "| Rank | Agent-Model | Plain Score | Guided Score "
@@ -957,7 +988,7 @@ def generate_summary_sections(reports: list[BenchmarkReport]) -> str:
         tag = _fmt_backtick_tag(r)
         r_fct = pct_delta(r.total_fct_plain, r.total_fct_guided)
         r_art = pct_delta(r.total_art_plain, r.total_art_guided)
-        composite = _composite_score(r)
+        composite = _composite_score(r, fct_min_c, art_min_c)
 
         if i == 1:
             verdict = "Best overall"
@@ -1005,7 +1036,12 @@ def generate_full_ranking_table(reports: list[BenchmarkReport]) -> str:
     if not reports:
         return ""
 
-    ranked = sorted(reports, key=_composite_score, reverse=True)
+    if reports:
+        fct_min = min(r.total_fct_guided for r in reports)
+        art_min = min(r.total_art_guided for r in reports)
+    else:
+        fct_min, art_min = None, None
+    ranked = sorted(reports, key=lambda r: _composite_score(r, fct_min, art_min), reverse=True)
 
     header = (
         "| Rank | Agent-Model | Skill Version | Harness Version "
@@ -1033,7 +1069,7 @@ def generate_full_ranking_table(reports: list[BenchmarkReport]) -> str:
         art_oh = f"{r_art}%" if r_art != "--" else "N/A"
         if r.total_art_plain == 0 and r_fct != "--":
             art_oh = "clean baseline"
-        composite = _composite_score(r)
+        composite = _composite_score(r, fct_min, art_min)
         verdict = _verdict(composite, r.avg_guided_score)
         pass_rate = f"{r.passed_count}/{len(r.projects)}"
 
@@ -1054,7 +1090,12 @@ def write_ranking_file(reports: list[BenchmarkReport]) -> None:
     if not reports:
         return
 
-    ranked = sorted(reports, key=_composite_score, reverse=False)
+    if reports:
+        fct_min = min(r.total_fct_guided for r in reports)
+        art_min = min(r.total_art_guided for r in reports)
+    else:
+        fct_min, art_min = None, None
+    ranked = sorted(reports, key=lambda r: _composite_score(r, fct_min, art_min), reverse=False)
     now = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")
 
     lines = [
@@ -1065,7 +1106,7 @@ def write_ranking_file(reports: list[BenchmarkReport]) -> None:
         "",
         "> Ranked from best to worst by composite score. "
         "Composite score weights guided robustness (40%), plain robustness (10%), "
-        "pass rate (10%), FCT efficiency (20%), and ART efficiency (20%).",
+        "pass rate (10%), FCT efficiency (20%), and ART efficiency (20%), with a token economy penalty for absolute guided token waste.",
         "",
         generate_full_ranking_table(ranked),
         "",

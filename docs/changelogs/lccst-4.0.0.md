@@ -68,6 +68,16 @@ server that sends no valid frame before the timeout fails.
 `SKILL.md` now states the version policy: major for breaking protocol changes,
 minor for new features, patch for bug fixes. The policy was implicit before.
 
+### Benchmark Ranking Penalises Token Waste
+
+The model ranking composite score now applies a token economy penalty for
+absolute guided token consumption. The penalty uses a logarithmic scale based
+on how many times guided FCT and ART exceed the cohort minimum, so models that
+use far more tokens than necessary lose score even when their overhead savings
+are large. The efficiency terms still reward lower overhead and savings, but
+the ranking no longer rewards wasteful absolute token usage.
+
+
 ## New Features
 
 ### Makefile as a Manifest
