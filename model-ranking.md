@@ -1,6 +1,6 @@
 # Model Ranking
 
-Generated: 2026-10-16 21:17
+Generated: 2026-10-17 14:59
 Total runs: 11
 
 > Ranked from best to worst by composite score. Composite score weights guided robustness (40%), plain robustness (10%), pass rate (10%), FCT efficiency (20%), and ART efficiency (20%).
