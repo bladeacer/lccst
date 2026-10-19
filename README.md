@@ -44,7 +44,9 @@ workspace root. The state-changing tools (`init`, `audit`, `swarm`, `lint`,
 or `lean`, default `strict`); the server records the mode and echoes it, and
 the caller enforces it. See `src/index.ts` for implementation details.
 
-The Tooling Ladder checks task runners before manifests:
+The Tooling Ladder checks task runners before manifests. A runner wins only
+when its file declares the command; a runner file that declares no command is
+skipped:
 
 ```bash
 # Task runners (checked first):
@@ -62,7 +64,8 @@ The Tooling Ladder checks task runners before manifests:
 - CMakeLists.txt: ctest
 ```
 
-The server detects the user's platform and chooses the appropriate shell:
+The server detects the user's platform once, before the first command, and
+chooses the appropriate shell:
 - Windows without WSL/MSYS: uses PowerShell for .sh scripts
 - Unix-like: uses bash for .sh scripts
 - Python, TypeScript, and Node scripts run with their native runtimes

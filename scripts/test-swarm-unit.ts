@@ -369,6 +369,56 @@ withTempDir((dir) => {
   assert(cmd?.join(" ") === "bash scripts/lint.sh", "scripts helper fills a missing manifest command");
 });
 
+// -- Task runners must declare the task -------------------------------
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "mise.toml"), "[tasks.test]\ncommand = \"pytest\"\n");
+  assert(resolveCommand(dir, "test")?.join(" ") === "mise run test", "mise section task wins over manifest");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "mise.toml"), "[tasks]\nlint = \"ruff check\"\n");
+  assert(resolveCommand(dir, "lint")?.join(" ") === "mise run lint", "mise table key task wins over manifest");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "mise.toml"), "[tasks.lint]\ncommand = \"ruff check\"\n");
+  fs.writeFileSync(path.join(dir, "pyproject.toml"), "");
+  assert(resolveCommand(dir, "test")?.join(" ") === "uv run pytest", "mise without the task falls to manifest");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "justfile"), "test:\n\tuv run pytest\n");
+  assert(resolveCommand(dir, "test")?.join(" ") === "just test", "just recipe wins over manifest");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "justfile"), "build:\n\tgo build ./...\n");
+  fs.writeFileSync(path.join(dir, "go.mod"), "");
+  assert(resolveCommand(dir, "test")?.join(" ") === "go test ./...", "just without the recipe falls to manifest");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Taskfile.yml"), "version: '3'\ntasks:\n  test:\n    cmds:\n      - go test ./...\n");
+  assert(resolveCommand(dir, "test")?.join(" ") === "task test", "taskfile task wins over manifest");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Taskfile.yml"), "version: '3'\n");
+  fs.writeFileSync(path.join(dir, "package.json"), "{}");
+  assert(resolveCommand(dir, "test")?.join(" ") === "pnpm test", "taskfile without the task falls to manifest");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Makefile"), "build:\n\ttrue\n");
+  assert(resolveCommand(dir, "test") === null, "makefile without the target names no test command");
+});
+
+withTempDir((dir) => {
+  fs.writeFileSync(path.join(dir, "Makefile"), "build:\n\ttrue\n");
+  fs.writeFileSync(path.join(dir, "pyproject.toml"), "");
+  assert(resolveCommand(dir, "test")?.join(" ") === "uv run pytest", "makefile without the target falls to manifest");
+});
+
 // -- Compliance evidence ----------------------------------------------
 withTempDir((dir) => {
   fs.mkdirSync(path.join(dir, "src"));

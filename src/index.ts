@@ -82,7 +82,7 @@ function targetError(raw?: string): string {
 
 // --- Tooling Ladder: project detection -------------------------------
 export interface ProjectInfo {
-  type: "python" | "node" | "go" | "rust" | "cmake" | "julia" | "makefile" | "unknown";
+  type: "python" | "node" | "go" | "rust" | "cmake" | "makefile" | "unknown";
   manifest: string;
   testCommand: string[];
   formatCommand?: string[];
@@ -198,19 +198,48 @@ export function discoverTooling(root: string): ToolingReport {
 // --- Command resolution & execution ----------------------------------
 export type ProjectStep = "test" | "lint" | "format" | "build";
 
+/** Say whether a mise.toml declares the task, by section or by key. */
+export function declaresMiseTask(root: string, kind: ProjectStep): boolean {
+  const file = path.join(root, "mise.toml");
+  if (!fs.existsSync(file)) return false;
+  const text = fs.readFileSync(file, "utf-8");
+  if (new RegExp(`^\\s*\\[tasks\\.${kind}\\]`, "m").test(text)) return true;
+  const lines = text.split("\n");
+  let inTasks = false;
+  for (const line of lines) {
+    if (/^\s*\[tasks\]\s*(#.*)?$/.test(line)) { inTasks = true; continue; }
+    if (/^\s*\[/.test(line)) { inTasks = false; continue; }
+    if (inTasks && new RegExp(`^\\s*${kind}\\s*=`).test(line)) return true;
+  }
+  return false;
+}
+
+/** Say whether a justfile declares the recipe. */
+export function declaresJustRecipe(root: string, kind: ProjectStep): boolean {
+  const file = path.join(root, "justfile");
+  if (!fs.existsSync(file)) return false;
+  const text = fs.readFileSync(file, "utf-8");
+  return new RegExp(`^${kind}(\\s+\\S+)*\\s*:`, "m").test(text);
+}
+
+/** Say whether a Taskfile.yml declares the task under its tasks table. */
+export function declaresTaskfileTask(root: string, kind: ProjectStep): boolean {
+  const file = path.join(root, "Taskfile.yml");
+  if (!fs.existsSync(file)) return false;
+  const text = fs.readFileSync(file, "utf-8");
+  if (!/^tasks\s*:/m.test(text)) return false;
+  return new RegExp(`^\\s+${kind}\\s*:(\\s|$)`, "m").test(text);
+}
+
 export function resolveCommand(root: string, kind: ProjectStep): string[] | null {
-  // Task runners first: check for Makefile, mise, just, Taskfile before manifests
+  // Task runners first: a runner wins only when its file exists in the root
+  // and declares the task. A runner file that declares no task is skipped,
+  // because a runner command that names no task cannot succeed.
   const makeTargets = listMakeTargets(root);
   if (makeTargets.includes(kind)) return ["make", kind];
-  if (fs.existsSync(path.join(root, "mise.toml"))) {
-    return ["mise", "run", kind];
-  }
-  if (fs.existsSync(path.join(root, "justfile"))) {
-    return ["just", kind];
-  }
-  if (fs.existsSync(path.join(root, "Taskfile.yml"))) {
-    return ["task", kind];
-  }
+  if (declaresMiseTask(root, kind)) return ["mise", "run", kind];
+  if (declaresJustRecipe(root, kind)) return ["just", kind];
+  if (declaresTaskfileTask(root, kind)) return ["task", kind];
   const project = detectProject(root);
   const map: Record<ProjectStep, string[] | undefined> = {
     test: project.testCommand,
@@ -219,7 +248,9 @@ export function resolveCommand(root: string, kind: ProjectStep): string[] | null
     build: project.buildCommand,
   };
   const cmd = map[kind];
-  if (cmd && cmd.length > 0) return cmd;
+  // A Makefile manifest won above only when the target exists. When the
+  // target is missing, `make <kind>` cannot succeed, so fall through.
+  if (cmd && cmd.length > 0 && project.type !== "makefile") return cmd;
   // Tooling Ladder completion: when the manifest names no command for this
   // step, use a package.json script of the same name, then a scripts/ helper
   // of the same name. A Makefile target already won above.
@@ -620,7 +651,7 @@ export function clusterHunks(lines: string[]): Cluster[] {
 // --- MCP Server -----------------------------------------------------
 const server = new McpServer({
   name: "lccst-locust",
-  version: "4.0.0",
+  version: "4.1.0",
 });
 
 // Prompt: load SKILL.md into context

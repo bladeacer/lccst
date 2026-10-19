@@ -3,7 +3,7 @@ name: lccst
 license: MIT
 metadata:
   author: bladeacer
-  version: "4.0.0"
+  version: "4.1.0"
 description: "Deterministic workspace gatekeeper. Decomposes workspace
   changes into isolated, test-verified, atomic Git commits."
 arguments:
@@ -58,6 +58,8 @@ test verification.
 - A **subproject** is a child project with its own manifest and test command.
 - The **target path** is the path supplied to a command. The default is the
   workspace root.
+- The **target specification** defines the required behaviour and file layout
+  for a project.
 - A **cluster** is a group of changed hunks that belong to one domain.
 - The **state file** is `.lccst/state.json`. It records the active loop state.
 - A **mode** is the `strict` or `lean` defence level. A mode is not a variant.
@@ -130,6 +132,9 @@ infer a different command from a request that names no command.
 - Use hermetic lockfiles, workspace runners, and declarative ecosystem tools.
 - Read manifests, compiler settings, and language-server results before
   choosing a command. If evidence conflicts, state the conflict.
+- A failing test command names a defect. Fix the cause and run the command
+  again. Do not end the loop after the first failure, and do not claim a
+  pass after a non-zero exit.
 - Do not add a defensive control only to fill a checklist. Do not add a
   fabricated attack or load scenario.
 
@@ -177,8 +182,8 @@ Nice-to-have items do not block a commit:
 
 ## 5. Tooling Ladder
 
-Scan the workspace root for manifests and task runners. Use the first matching
-entry in this order:
+Check the workspace root for each runner and manifest file by its path. Do not
+list directory contents to scan. Use the first matching entry in this order:
 
 ### Task runners
 
@@ -187,10 +192,15 @@ declare commands for any language.
 
 | Runner | Detection | Command pattern |
 | --- | --- | --- |
-| `Makefile` | `make -n test` succeeds | `make <command>` |
-| `mise.toml` | file exists | `mise run <command>` |
-| `justfile` | file exists | `just <command>` |
-| `Taskfile.yml` | file exists | `task <command>` |
+| `Makefile` | file declares the target | `make <command>` |
+| `mise.toml` | file declares the task | `mise run <command>` |
+| `justfile` | file declares the recipe | `just <command>` |
+| `Taskfile.yml` | file declares the task | `task <command>` |
+
+A runner counts only when its file exists in the target path and declares the
+command. Do not run a runner to test whether it exists. A runner file that
+declares no command is a skip, not an error. Do not create a task runner to
+satisfy the ladder.
 
 ### Language manifests
 
@@ -207,14 +217,14 @@ If no task runner declares the command, check for these manifests in order:
 
 ### Platform detection
 
-Before running a command, detect the user's platform:
+Detect the platform once, before the first command:
 
 - On Windows without WSL, MSYS, or Git Bash, prefer PowerShell (`pwsh`) or
   cmd.exe over bash.
 - On Unix-like systems, use the shell that the task runner or manifest
   declares.
-- When a command fails on one shell, try the platform default before giving
-  up.
+- Treat a failed command as a project failure. Fix the cause and run the
+  command again. Do not switch shells after a failure on a Unix-like system.
 
 ### Fallback
 

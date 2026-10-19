@@ -1,6 +1,6 @@
 # Model Ranking
 
-Generated: 2026-10-17 21:21
+Generated: 2026-10-19 19:27
 Total runs: 12
 
 > Ranked from best to worst by composite score. Composite score weights guided robustness (40%), plain robustness (10%), pass rate (10%), FCT efficiency (20%), and ART efficiency (20%), with a token economy penalty for absolute guided token waste.

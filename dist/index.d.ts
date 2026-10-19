@@ -1,6 +1,6 @@
 export declare function resolveTarget(raw: string | undefined, base?: string): string | null;
 export interface ProjectInfo {
-    type: "python" | "node" | "go" | "rust" | "cmake" | "julia" | "makefile" | "unknown";
+    type: "python" | "node" | "go" | "rust" | "cmake" | "makefile" | "unknown";
     manifest: string;
     testCommand: string[];
     formatCommand?: string[];
@@ -18,6 +18,12 @@ export declare function listPackageScripts(root: string): Record<string, string>
 export declare function listShellScripts(root: string): string[];
 export declare function discoverTooling(root: string): ToolingReport;
 export type ProjectStep = "test" | "lint" | "format" | "build";
+/** Say whether a mise.toml declares the task, by section or by key. */
+export declare function declaresMiseTask(root: string, kind: ProjectStep): boolean;
+/** Say whether a justfile declares the recipe. */
+export declare function declaresJustRecipe(root: string, kind: ProjectStep): boolean;
+/** Say whether a Taskfile.yml declares the task under its tasks table. */
+export declare function declaresTaskfileTask(root: string, kind: ProjectStep): boolean;
 export declare function resolveCommand(root: string, kind: ProjectStep): string[] | null;
 /** The most evidence paths that one reply lists. The count is always exact. */
 export declare const COMPLIANCE_EVIDENCE_LIMIT = 10;
