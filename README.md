@@ -1,10 +1,11 @@
 ![Logo Poster](./logo-poster.png)
 
-# LCCST (Locust)
+# lccst (Locust)
 
-A deterministic workspace gatekeeper that decomposes codebase changes into
-isolated, test-verified, atomic Git commits. Enforces architectural cohesion
-and SOLID invariants through a lean execution protocol.
+lccst handles messy workspace diffs by grouping changes into verified, atomic
+Git commits before they reach production. Operating as a deterministic workspace
+gatekeeper, it enforces architectural cohesion and SOLID invariants through a
+lean, test-verified execution protocol.
 
 > "Swarming your messy diffs before they reach production."
 
@@ -13,11 +14,14 @@ and SOLID invariants through a lean execution protocol.
 ### Bare Skill Mode
 
 Load `SKILL.md` directly into the LLM context window. The model follows the
-rules manually. No MCP server required.
+rules manually. Bare Skill Mode needs no server, no dependencies, and no
+background processes -- just feed the skill file to the model and run.
 
 ### MCP Server Mode
 
-The MCP server at `src/index.ts` (built to `dist/index.js`) exposes eleven tools programmatically:
+The MCP server at `src/index.ts` (built to `dist/index.js`) is an optional
+programmatic wrapper that exposes the protocol tools via Model Context
+Protocol:
 
 - **`init`** -- Map project conventions and verify environment
 - **`audit`** -- Scan workspace diffs and generate commit plan
@@ -184,6 +188,12 @@ Benchmarking has its own dependencies -- see [`playground/README.md`](playground
 Measures token impact of skill-guided vs plain code generation across three
 reference projects (Python HTTP server, React timer, Go login CRUD).
 
+We benchmark to prove that structured diff clustering reduces model failure
+loops and slashes token consumption. By comparing a plain model against one
+guided by the skill, the run shows whether the protocol buys correctness for a
+small, predictable context overhead -- or whether it saves runtime tokens by
+avoiding repetitive error-fix cycles.
+
 ```bash
 make benchmark-free     # Ask for a harness and a model, then run the benchmark
 make bench-list         # Show the models that the picker offers
@@ -278,6 +288,12 @@ reports. A report that predates the change counted the test files of one
 variant and not the other.
 
 ### Benchmark Results
+
+> **Legend:** ART stands for Agent Runtime Tokens. A negative ART overhead
+> (e.g. `-96%`) means the skill-guided variant used fewer runtime tokens than
+> the plain variant -- token savings gained by avoiding repetitive
+> error-fix cycles. FCT (File Context Tokens) is the context overhead of the
+> files the model reads.
 
 <!-- BENCHMARK_RESULTS_START -->
 
