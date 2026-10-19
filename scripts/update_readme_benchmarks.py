@@ -1096,12 +1096,10 @@ def write_ranking_file(reports: list[BenchmarkReport]) -> None:
     else:
         fct_min, art_min = None, None
     ranked = sorted(reports, key=lambda r: _composite_score(r, fct_min, art_min), reverse=False)
-    now = __import__("datetime").datetime.now().strftime("%Y-%m-%d %H:%M")
 
     lines = [
         "# Model Ranking",
         "",
-        f"Generated: {now}",
         f"Total runs: {len(ranked)}",
         "",
         "> Ranked from best to worst by composite score. "
