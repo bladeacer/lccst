@@ -1,7 +1,7 @@
 # Model Ranking
 
-Generated: 2026-10-19 20:10
-Total runs: 12
+Generated: 2026-10-19 21:04
+Total runs: 13
 
 > Ranked from best to worst by composite score. Composite score weights guided robustness (40%), plain robustness (10%), pass rate (10%), FCT efficiency (20%), and ART efficiency (20%), with a token economy penalty for absolute guided token waste.
 
@@ -18,4 +18,5 @@ Total runs: 12
 | 9 | `opencode-opencode-space-bunny-free` | v3.8.0 | v2.0.20 | 100/100 | 77/100 | 3/3 | 9,346 | 25,734 | +175% | 2,808,451 | 3,610,241 | +29% | 6.4 | Strong contender |
 | 10 | `opencode-opencode-step-5-preview-free` | v3.8.0 | v2.0.25 | 100/100 | 77/100 | 3/3 | 13,518 | 17,989 | +33% | 2,167,081 | 5,935,681 | +174% | 5.5 | Strong contender |
 | 11 | `kilo-kilo-stepfun-step-5-preview-free` | v3.8.0 | v7.7.9 | 100/100 | 53/100 | 3/3 | 15,392 | 24,257 | +58% | 2,693,369 | 7,750,574 | +188% | -5.7 | Strong contender |
-| 12 | `kilo-kilo-stealth-space-bunny-alpha` | v3.8.0 | v7.7.9 | 100/100 | 77/100 | 3/3 | 10,190 | 28,790 | +183% | 1,748,852 | 4,983,879 | +185% | -27.2 | Strong contender |
+| 12 | `kilo-kilo-minimax-minimax-m3.1-flash-free` | v4.1.0 | v7.7.9 | 100/100 | 77/100 | 3/3 | 8,961 | 16,064 | +79% | 1,991,207 | 6,073,338 | +205% | -9.8 | Strong contender |
+| 13 | `kilo-kilo-stealth-space-bunny-alpha` | v3.8.0 | v7.7.9 | 100/100 | 77/100 | 3/3 | 10,190 | 28,790 | +183% | 1,748,852 | 4,983,879 | +185% | -27.2 | Strong contender |
