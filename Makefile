@@ -12,6 +12,7 @@ PROVIDER     ?= opencode
 MODEL_NAME   ?= space-bunny-free
 AGENT_MODEL  := $(PROVIDER)-$(HARNESS)-$(MODEL_NAME)
 BENCH_DIR    := playground/benchmarks
+HARNESS_VERSION ?= $(shell python3 -c "import sys; sys.path.insert(0, '$(BENCH_DIR)'); import run_benchmark as r; print(r.detect_harness_version('$(HARNESS)'))")
 
 # Model identifier that the harness config pins, such as `kilo/stepfun/step:free`.
 BENCH_MODEL_ID ?= $(PROVIDER)/$(MODEL_NAME)
@@ -173,6 +174,10 @@ TELEMETRY_MCP_DIR := playground/benchmarks/mcp-telemetry
 telemetry-build:
 	@echo "[Harness] Building telemetry MCP server..."
 	@cd $(TELEMETRY_MCP_DIR) && pnpm install --ignore-workspace && pnpm run build
+	@if command -v uv >/dev/null 2>&1; then \
+		echo "[Harness] Syncing the benchmark Python environment..."; \
+		cd $(BENCH_DIR) && uv sync; \
+	fi
 
 # The token that the run puts in the instructions of the workspace. The model
 # must state it, so the report can prove that the model read the instructions.
@@ -265,7 +270,7 @@ benchmark-run: clean-telemetry bench-model
 	+$(MAKE) --no-print-directory bench-config
 	@echo "[Harness] Workspace: $(BENCH_WORKSPACE)"
 	@echo "[Harness] Harness:  $(HARNESS) with $(BENCH_MODEL_ID)"
-	@$(HARNESS) --version 2>&1 | head -2 | sed 's/^/[Harness] Version: /' || true
+	@echo "[Harness] Version: $(HARNESS_VERSION)"
 	@echo "[Harness] Run token: $(BENCH_PROMPT_TOKEN) (the model must state it)"
 	@echo "[Harness] Starting the run in the foreground. Answer the harness, or type"
 	@echo "[Harness] a new message to steer it. The run ends when you leave the TUI."
@@ -274,7 +279,7 @@ benchmark-run: clean-telemetry bench-model
 	if [ $$STATUS -ne 0 ]; then \
 		echo "[Harness] The harness left with status $$STATUS. The report still runs."; \
 	fi; \
-	$(MAKE) -C "$(CURDIR)" --no-print-directory bench-report; \
+	$(MAKE) -C "$(CURDIR)" --no-print-directory bench-report HARNESS_VERSION="$(HARNESS_VERSION)"; \
 	$(MAKE) -C "$(CURDIR)" --no-print-directory bench-cleanup; \
 	exit 0
 
@@ -299,10 +304,23 @@ telemetry-settle:
 
 bench-report: telemetry-settle
 	@echo "[Harness] Parsing compiled outputs and runtime telemetry logs..."
-	python3 $(BENCH_DIR)/run_benchmark.py $(AGENT_MODEL) \
-		--provider $(PROVIDER) --harness $(HARNESS) --model $(MODEL_NAME) \
-		--model-id "$(BENCH_MODEL_ID)" \
-		--workspace "$(BENCH_WORKSPACE)" --install-deps
+	@HARNESS_VERSION="$(HARNESS_VERSION)"; \
+	if [ -z "$$HARNESS_VERSION" ]; then \
+		HARNESS_VERSION="$$(python3 -c "import sys; sys.path.insert(0, '$(BENCH_DIR)'); import run_benchmark as r; print(r.detect_harness_version('$(HARNESS)'))")"; \
+	fi; \
+	if command -v uv >/dev/null 2>&1; then \
+		cd $(BENCH_DIR) && uv run python3 run_benchmark.py $(AGENT_MODEL) \
+			--provider $(PROVIDER) --harness $(HARNESS) --model $(MODEL_NAME) \
+			--model-id "$(BENCH_MODEL_ID)" \
+			--workspace "$(BENCH_WORKSPACE)" --install-deps \
+			--harness-version "$$HARNESS_VERSION"; \
+	else \
+		python3 $(BENCH_DIR)/run_benchmark.py $(AGENT_MODEL) \
+			--provider $(PROVIDER) --harness $(HARNESS) --model $(MODEL_NAME) \
+			--model-id "$(BENCH_MODEL_ID)" \
+			--workspace "$(BENCH_WORKSPACE)" --install-deps \
+			--harness-version "$$HARNESS_VERSION"; \
+	fi
 	@echo "[Harness] Report generated. Use 'make bench-cleanup' to remove the workspace."
 
 bench-cleanup:

@@ -39,7 +39,7 @@ ENCODER = None
 PROJECTS = {
     "python-http-server": {
         "manifest": "pyproject.toml",
-        "install": ["uv", "sync"],
+        "install": [],
         "test_cmd": ["uv", "run", "python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
         "test_env": {"DISABLE_RATE_LIMIT": "1", "VIRTUAL_ENV": ""},
         "usage_exit_codes": {4, 5},
@@ -53,7 +53,7 @@ PROJECTS = {
     },
     "go-login-crud": {
         "manifest": "go.mod",
-        "install": ["go", "mod", "download"],
+        "install": [],
         "test_cmd": ["go", "test", "./tests/", "-v"],
         "test_env": {},
         "usage_exit_codes": set(),
@@ -261,6 +261,8 @@ def install_dependencies(directory, project_name, info):
     The function runs only when the caller asks for it. A failure is a note,
     not a crash, because the report must still state the test result.
     """
+    if not info.get("install"):
+        return ""
     if not (directory / info["manifest"]).is_file():
         return ""
 
@@ -889,6 +891,7 @@ def main():
     parser.add_argument("--workspace", default=None, help="Workspace of the run (defaults to the agent directory)")
     parser.add_argument("--install-deps", action="store_true", help="Install the dependencies of every variant before the tests")
     parser.add_argument("--approximate-tokens", action="store_true", help="Do not start the benchmark environment for `tiktoken`")
+    parser.add_argument("--harness-version", default=None, help="Version of the harness that ran the run, skipping detection")
     args = parser.parse_args()
 
     provider, harness, model = parse_agent_identity(
@@ -918,9 +921,10 @@ def main():
     record = load_telemetry(agent_tag)
     synthesize_missing_breakdown(record, results)
 
+    harness_version = args.harness_version if args.harness_version is not None else detect_harness_version(harness)
     report = generate_markdown(
         results, provider, harness, model, args.model_id, agent_tag,
-        skill_ver, record, encoder_loaded, detect_harness_version(harness)
+        skill_ver, record, encoder_loaded, harness_version
     )
     report_dir = PLAYGROUND / "benchmarks" / agent_tag
     report_dir.mkdir(parents=True, exist_ok=True)

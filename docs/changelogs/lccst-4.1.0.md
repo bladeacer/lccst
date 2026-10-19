@@ -59,6 +59,28 @@ Version 4.0.0 removed the term from the skill, but `agent-prompt.md` and
 The `ProjectInfo` type union still listed `julia` after 4.0.0 removed the
 Julia manifest. The value is removed.
 
+## New Features
+
+### Faster Benchmark Evaluation
+
+The evaluation step of `make benchmark-free` now reuses work that it used to
+repeat:
+
+- `bench-report` runs `uv run python3` directly, so the parent process no
+  longer starts, fails to import `tiktoken`, and respawns.
+- `telemetry-build` pre-syncs the benchmark Python environment, so the first run
+  does not build `tiktoken` on demand.
+- `settle.ts` resolves the host store candidates once and reuses the matching
+  store handle for every phase.
+- `run_benchmark.py` accepts `--harness-version`, so the report skips the
+  1.3 second `kilo --version` call when the Makefile supplies it.
+- Python and Go variants skip their install step, because `uv run` and
+  `go test` sync their own dependencies. React keeps `pnpm install`.
+
+None of these changes alter the file filter, the test commands, or the scoring
+rubric.
+
+
 ## Version
 
 Bumped from 4.0.0 to 4.1.0.

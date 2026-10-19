@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { readTelemetry, resolveTelemetryFile, settlePhase, writeTelemetry } from "./telemetry.js";
-import { readTurnUsage, statesToken } from "./usage.js";
+import { readTurnUsage, resolveStoreCandidates, statesToken } from "./usage.js";
 
 /**
  * Read the run token of the instructions of a run.
@@ -39,6 +39,7 @@ function settle(): void {
   const targetFile = process.argv[2] ?? resolveTelemetryFile();
   const directory = process.argv[3] ?? process.cwd();
   const token = readRunToken(directory);
+  const candidates = resolveStoreCandidates();
   const data = readTelemetry(targetFile);
   let settled = data;
   let pending = 0;
@@ -51,7 +52,8 @@ function settle(): void {
     const usage = readTurnUsage({
       directory,
       sessionId: phase.session_id ?? undefined,
-      window: { fromTime: phase.from_time, toTime: phase.to_time }
+      window: { fromTime: phase.from_time, toTime: phase.to_time },
+      candidates
     });
     if (!usage) {
       process.stderr.write(

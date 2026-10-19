@@ -37,6 +37,8 @@ export interface TurnQuery {
   window: TurnWindow;
   /** Store files to try. Defaults to the stores of every known host. */
   candidates?: string[] | undefined;
+  /** A store handle that the caller already opened. The reader reuses it. */
+  store?: DatabaseSync | undefined;
 }
 
 /** One model turn as the host store keeps it. */
@@ -189,8 +191,59 @@ export function resolveStoreCandidates(
  * token counts of a turn when the turn ends, which is after the tool call of
  * that turn returns.
  */
+let cachedStorePath: string | null = null;
+let cachedStore: DatabaseSync | null = null;
+
+/** Close the cached store handle, if one is open. */
+export function closeCachedStore(): void {
+  if (cachedStore) {
+    try {
+      cachedStore.close();
+    } catch {
+      // A handle that the platform already released needs no closing.
+    }
+  }
+  cachedStore = null;
+  cachedStorePath = null;
+}
+
 export function readTurnUsage(query: TurnQuery): TurnUsage | null {
-  for (const candidate of query.candidates ?? resolveStoreCandidates()) {
+  const candidates = query.candidates ?? resolveStoreCandidates();
+
+  // A caller may hand over a store that it already opened. Use it first, and
+  // leave its lifetime to the caller.
+  if (query.store) {
+    try {
+      const schema = detectSchema(query.store);
+      if (schema) {
+        const sessionIds = resolveSessionIds(query.store, schema, query);
+        if (sessionIds.length > 0) {
+          return sumTurnUsage(readMessages(query.store, schema, sessionIds), query.window);
+        }
+      }
+    } catch (error) {
+      process.stderr.write(`[Telemetry Debug] Store read failed: ${String(error)}\n`);
+    }
+  }
+
+  // Reuse the store that a previous call resolved, so a run does not reopen
+  // the same database for every phase.
+  if (cachedStore && cachedStorePath && candidates.includes(cachedStorePath)) {
+    try {
+      const schema = detectSchema(cachedStore);
+      if (schema) {
+        const sessionIds = resolveSessionIds(cachedStore, schema, query);
+        if (sessionIds.length > 0) {
+          return sumTurnUsage(readMessages(cachedStore, schema, sessionIds), query.window);
+        }
+      }
+    } catch (error) {
+      process.stderr.write(`[Telemetry Debug] Store read failed: ${String(error)}\n`);
+    }
+    closeCachedStore();
+  }
+
+  for (const candidate of candidates) {
     const store = openStore(candidate);
     if (!store) {
       continue;
@@ -198,17 +251,25 @@ export function readTurnUsage(query: TurnQuery): TurnUsage | null {
     try {
       const schema = detectSchema(store);
       if (!schema) {
+        store.close();
         continue;
       }
       const sessionIds = resolveSessionIds(store, schema, query);
       if (sessionIds.length === 0) {
+        store.close();
         continue;
       }
+      closeCachedStore();
+      cachedStore = store;
+      cachedStorePath = candidate;
       return sumTurnUsage(readMessages(store, schema, sessionIds), query.window);
     } catch (error) {
       process.stderr.write(`[Telemetry Debug] Store read failed: ${String(error)}\n`);
-    } finally {
-      store.close();
+      try {
+        store.close();
+      } catch {
+        // A handle that the platform already released needs no closing.
+      }
     }
   }
   return null;
