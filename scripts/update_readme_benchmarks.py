@@ -74,6 +74,7 @@ class BenchmarkReport:
     token_state: str = NO_TOKENS
     prompt_state: str = PROMPT_UNKNOWN
     model_state: str = "unknown"
+    contaminated: str = "no"
     harness_version: str = "not stated"
 
     @property
@@ -106,6 +107,8 @@ class BenchmarkReport:
         if self.prompt_state != PROMPT_VERIFIED:
             return False
         if self.model_state != MODEL_VERIFIED:
+            return False
+        if self.contaminated == "yes":
             return False
         if {project.name for project in self.projects} != set(PROJECTS):
             return False
@@ -192,6 +195,12 @@ def read_test_status(cell: str) -> str:
     return "unknown"
 
 
+CONTAMINATED_RE = re.compile(
+    r"\*\*Contaminated phases\*\.\* The guided variant holds the same file "
+    r"count, line count, and token count as the plain variant"
+)
+
+
 def read_note_states(text: str) -> dict[str, str]:
     """Read the verification notes that the report states under its header.
 
@@ -204,6 +213,7 @@ def read_note_states(text: str) -> dict[str, str]:
         "token_state": NO_TOKENS,
         "prompt_state": PROMPT_UNKNOWN,
         "model_state": MODEL_UNVERIFIED,
+        "contaminated": "no",
     }
 
     if re.search(r"\*\*Measured runtime tokens", text):
@@ -226,6 +236,9 @@ def read_note_states(text: str) -> dict[str, str]:
         states["model_state"] = MODEL_WRONG
     else:
         states["model_state"] = MODEL_UNVERIFIED
+
+    if CONTAMINATED_RE.search(text):
+        states["contaminated"] = "yes"
 
     return states
 
@@ -477,9 +490,9 @@ def _composite_score(r: BenchmarkReport, fct_min: int | None = None, art_min: in
     """Composite score using fixed weights and raw metric values.
 
     Higher is better. Weights:
-    - Guided robustness: 40%
-    - Plain robustness: 10%
-    - Pass rate: 10%
+    - Guided robustness: 25% (reduced from 40%; the term saturates at 100)
+    - Plain robustness: 15%
+    - Pass rate: 20% (a run that cannot complete a subproject scores low)
     - FCT efficiency: 20% (lower overhead and lower absolute guided FCT)
     - ART efficiency: 20% (lower overhead/savings and lower absolute guided ART)
 
@@ -488,6 +501,8 @@ def _composite_score(r: BenchmarkReport, fct_min: int | None = None, art_min: in
 
     Token economy penalty applies when absolute guided tokens exceed the cohort
     minimum, using a logarithmic scale to penalise waste without dominating.
+    The penalty is capped so a lean compliant implementation outscores both a
+    bloated one and a copied one.
     """
     guided = r.avg_guided_score
     plain = r.avg_plain_score
@@ -495,7 +510,7 @@ def _composite_score(r: BenchmarkReport, fct_min: int | None = None, art_min: in
     fct_oh = _fct_overhead(r)
     art_oh = _art_overhead(r)
 
-    score = guided * 0.4 + plain * 0.1 + pass_rate * 10 - fct_oh * 20
+    score = guided * 0.25 + plain * 0.15 + pass_rate * 20 - fct_oh * 20
     if art_oh is not None:
         score -= art_oh * 20
 
@@ -512,10 +527,12 @@ def _composite_score(r: BenchmarkReport, fct_min: int | None = None, art_min: in
             import math
 
             economy_penalty += math.log10(ratio) * 5.0
-    elif art_min is None and fct_min is None:
-        pass
 
-    score -= economy_penalty
+    # Cap the economy penalty so a copied run (identical inventory) cannot
+    # outscore a lean compliant run. A copied run that slips through the
+    # contamination gate still has near-zero FCT overhead, so the cap protects
+    # the intended ranking.
+    score -= min(economy_penalty, 15.0)
     return score
 
 
@@ -539,6 +556,8 @@ def reject_reason(r: BenchmarkReport) -> str:
         if r.prompt_state == PROMPT_UNVERIFIED:
             return "the model never stated the run token of the instructions"
         return "the report states no run token check"
+    if r.contaminated == "yes":
+        return "the guided variant copied the plain output in one or more phases"
     names = {project.name for project in r.projects}
     missing = [name for name in PROJECTS if name not in names]
     if missing:
@@ -1103,8 +1122,8 @@ def write_ranking_file(reports: list[BenchmarkReport]) -> None:
         f"Total runs: {len(ranked)}",
         "",
         "> Ranked from best to worst by composite score. "
-        "Composite score weights guided robustness (40%), plain robustness (10%), "
-        "pass rate (10%), FCT efficiency (20%), and ART efficiency (20%), with a token economy penalty for absolute guided token waste.",
+        "Composite score weights guided robustness (25%), plain robustness (15%), "
+        "pass rate (20%), FCT efficiency (20%), and ART efficiency (20%), with a token economy penalty for absolute guided token waste.",
         "",
         generate_full_ranking_table(ranked),
         "",

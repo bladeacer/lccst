@@ -41,6 +41,8 @@ export interface PhaseRecord {
   model: string | null;
   /** Set to `true` when a turn of the phase stated the run token. */
   token_seen: boolean;
+  /** Flags that mark a phase as contaminated or misattributed. */
+  flag?: string;
 }
 
 /** The whole telemetry record of a benchmark run. */
@@ -228,7 +230,8 @@ function newPhase(boundary: PhaseBoundary, fromTime: number): PhaseRecord {
     completion_tokens: 0,
     cache_read_tokens: 0,
     model: null,
-    token_seen: false
+    token_seen: false,
+    flag: undefined
   };
 }
 
@@ -354,7 +357,8 @@ export function settlePhase(
     completion_tokens: usage.completionTokens,
     cache_read_tokens: usage.cacheReadTokens,
     model: usage.models[0] ?? null,
-    token_seen: phase.token_seen || tokenSeen
+    token_seen: phase.token_seen || tokenSeen,
+    flag: phase.flag
   };
 
   const phases = data.phases.map((item, position) => (position === index ? settled : item));

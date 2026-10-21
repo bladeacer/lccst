@@ -50,6 +50,16 @@ BENCH_WORKSPACE := $(abspath $(BENCH_TMP))/lccst-bench-$(AGENT_MODEL)
 BENCH_MCP_PATH  = $(shell python3 -c "import os; print(os.path.relpath('$(CURDIR)/$(TELEMETRY_MCP_DIR)/build/index.js', '$(BENCH_WORKSPACE)'))")
 # The task that the picker hands to the harness.
 BENCH_TASK     ?= Read AGENTS.md and follow it exactly. Implement every subproject and both variants, run the guided tests, and record each phase with log_turn_telemetry. Begin now.
+# Names of the three subprojects that every run must cover.
+BENCH_SUBPROJECTS := python-http-server react-timer go-login-crud
+# Variants that the run measures.
+BENCH_VARIANTS := plain skill-guided
+
+# The task prompt names the subproject and the variant for one isolated session.
+define SINGLE_VARIANT_TASK
+Read AGENTS.md and follow it exactly. Implement the $(1) subproject for the $(2) variant only. Run the guided tests for that variant, and record the phase with log_turn_telemetry. Begin now.
+endef
+export SINGLE_VARIANT_TASK
 CONFIG_FILE  ?=
 
 # Refuse to remove a workspace path that is empty, the root, or a parent of the
@@ -133,7 +143,7 @@ build:
 	pnpm run build
 
 test:
-	pnpm run test
+	pnpm run test && make test_parity
 
 test_swarm:
 	pnpm tsx scripts/test-swarm-unit.ts
@@ -152,6 +162,9 @@ test_picker_tty:
 
 test_e2e: telemetry-build
 	pnpm tsx scripts/test-telemetry-e2e.ts $(E2E_HARNESS)
+
+test_parity:
+	pnpm tsx scripts/test-parity.ts
 
 test_mcp:
 	pnpm run build && pnpm tsx scripts/test-connection.ts
@@ -258,7 +271,7 @@ benchmark-run: clean-telemetry bench-model
 	@$(call assert_separate_instructions)
 	@rm -rf "$(BENCH_WORKSPACE)"
 	@mkdir -p "$(BENCH_WORKSPACE)/harness-config" "$(BENCH_WORKSPACE)/harness-state"
-	@echo "[Harness] Seeding the workspace files..."
+	@echo "[Harness] Seeding the workspace files once for all sessions..."
 	@cp SKILL.md "$(BENCH_WORKSPACE)/SKILL.md"
 	@cp playground/README.md "$(BENCH_WORKSPACE)/README.md"
 	@cp playground/guide.md "$(BENCH_WORKSPACE)/guide.md"
@@ -272,16 +285,21 @@ benchmark-run: clean-telemetry bench-model
 	@echo "[Harness] Harness:  $(HARNESS) with $(BENCH_MODEL_ID)"
 	@echo "[Harness] Version: $(HARNESS_VERSION)"
 	@echo "[Harness] Run token: $(BENCH_PROMPT_TOKEN) (the model must state it)"
-	@echo "[Harness] Starting the run in the foreground. Answer the harness, or type"
-	@echo "[Harness] a new message to steer it. The run ends when you leave the TUI."
-	@cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(BENCH_HARNESS_STATE) $(HARNESS) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) --prompt "$(BENCH_TASK)"; \
-	STATUS=$$?; \
-	if [ $$STATUS -ne 0 ]; then \
-		echo "[Harness] The harness left with status $$STATUS. The report still runs."; \
-	fi; \
-	$(MAKE) -C "$(CURDIR)" --no-print-directory bench-report HARNESS_VERSION="$(HARNESS_VERSION)"; \
-	$(MAKE) -C "$(CURDIR)" --no-print-directory bench-cleanup; \
-	exit 0
+	@echo "[Harness] Starting one session per subproject variant. Each session runs in the same clean room."
+	@for subproject in $(BENCH_SUBPROJECTS); do \
+		for variant in $(BENCH_VARIANTS); do \
+			echo "[Harness] Session: $$subproject / $$variant"; \
+			$(eval SESSION_TASK := $(call SINGLE_VARIANT_TASK,$$subproject,$$variant)) \\
+			cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(BENCH_HARNESS_STATE) $(HARNESS) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) --prompt "$$SESSION_TASK"; \
+			STATUS=$$?; \
+			if [ $$STATUS -ne 0 ]; then \
+				echo "[Harness] The harness left with status $$STATUS for $$subproject/$$variant. Continuing with the next session."; \
+			fi; \
+		done; \
+	done
+	@$(MAKE) -C "$(CURDIR)" --no-print-directory bench-report HARNESS_VERSION="$(HARNESS_VERSION)"
+	@$(MAKE) -C "$(CURDIR)" --no-print-directory bench-cleanup
+	@exit 0
 
 bench-config:
 ifdef CONFIG_FILE

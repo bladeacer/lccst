@@ -39,7 +39,7 @@ ENCODER = None
 PROJECTS = {
     "python-http-server": {
         "manifest": "pyproject.toml",
-        "install": [],
+        "install": ["uv", "sync"],
         "test_cmd": ["uv", "run", "python3", "-m", "pytest", "tests/", "-v", "--tb=short"],
         "test_env": {"DISABLE_RATE_LIMIT": "1", "VIRTUAL_ENV": ""},
         "usage_exit_codes": {4, 5},
@@ -53,7 +53,7 @@ PROJECTS = {
     },
     "go-login-crud": {
         "manifest": "go.mod",
-        "install": [],
+        "install": ["go", "mod", "download"],
         "test_cmd": ["go", "test", "./tests/", "-v"],
         "test_env": {},
         "usage_exit_codes": set(),
@@ -98,8 +98,8 @@ TEST_TIMEOUT = 300
 # when the machine does not match, because a drift changes every score.
 DECLARED_TOOLCHAIN = {
     "python": "3.13.11",
-    "pnpm": "11.3.0",
-    "go": "1.26.4-X",
+    "pnpm": "12",
+    "go": "1.27",
 }
 
 
@@ -324,7 +324,9 @@ def compute_robustness_score(variant_result, project_name):
 
     The same rubric scores both variants. A pass earns 50 points, a test
     failure earns 15, and a scanner error earns 5. The feature points are the
-    same in both columns.
+    same in both columns. A bloat penalty reduces the score when the variant
+    delivers few features for many lines, so the term discriminates between a
+    lean correct implementation and a bloated one.
     """
     status = variant_result["test_result"]["status"]
     if status == "passed":
@@ -338,6 +340,10 @@ def compute_robustness_score(variant_result, project_name):
         project_name, {"max_typing": 17, "max_security": 17, "max_error_handling": 16}
     )
     features = variant_result["features_aggregate"]
+    feature_count = sum(
+        1 for key in ("has_typing", "has_security", "has_error_handling", "has_test_assertion")
+        if features[key]
+    )
     if features["has_typing"]:
         score += profile["max_typing"]
     if features["has_security"]:
@@ -346,7 +352,20 @@ def compute_robustness_score(variant_result, project_name):
         score += profile["max_error_handling"]
 
     ceiling = SCORE_PASSED + profile["max_typing"] + profile["max_security"] + profile["max_error_handling"]
-    return min(int(score / ceiling * 100), 100)
+    raw = int(score / ceiling * 100)
+
+    # Bloat factor: lines per delivered feature. A variant with many lines and
+    # few features loses points. The threshold is 30 lines per feature for
+    # python-http-server and go-login-crud, and 20 for react-timer (which has
+    # no security or error handling features to detect).
+    lines = variant_result.get("total_lines", 0)
+    if feature_count > 0 and lines > 0:
+        lines_per_feature = lines / feature_count
+        max_lpf = {"python-http-server": 30, "react-timer": 20, "go-login-crud": 30}.get(project_name, 30)
+        if lines_per_feature > max_lpf:
+            raw = int(raw * max_lpf / lines_per_feature)
+
+    return min(raw, 100)
 
 
 def public_path(path):
@@ -728,6 +747,28 @@ def collect_results(install):
     return results
 
 
+def check_contamination(results):
+    """Return a set of (project, variant) pairs that look contaminated.
+
+    A guided variant that holds exactly the same file count, line count, and
+    token count as its plain sibling copied the plain output. A phase whose
+    settled tokens exceed the session total is also contaminated, but that check
+    runs in settle.ts where the telemetry lives.
+    """
+    flagged = set()
+    for project in PROJECT_ORDER:
+        plain = results[project]["plain"]
+        guided = results[project]["skill-guided"]
+        if (
+            plain["file_count"] == guided["file_count"]
+            and plain["total_lines"] == guided["total_lines"]
+            and plain["total_tokens"] == guided["total_tokens"]
+            and plain["file_count"] > 0
+        ):
+            flagged.add((project, "skill-guided"))
+    return flagged
+
+
 def test_status_text(variant_result):
     """Return the status of one variant as the report prints it."""
     outcome = variant_result["test_result"]
@@ -739,12 +780,15 @@ def test_status_text(variant_result):
 
 
 def generate_markdown(results, provider, harness, model, model_id, agent_tag,
-                      skill_ver, record, encoder_loaded, harness_version=None):
+                      skill_ver, record, encoder_loaded, harness_version=None,
+                      contamination=None):
     """Build the report of one run.
 
     The function states the harness version, because a harness version changes
     the prompt, the tool list, and the token accounting. A report that names no
     version cannot be reproduced.
+
+    contamination: set of (project, variant) pairs that look contaminated.
     """
     plain_fct = sum(results[p]["plain"]["total_tokens"] for p in PROJECT_ORDER)
     guided_fct = sum(results[p]["skill-guided"]["total_tokens"] for p in PROJECT_ORDER)
@@ -786,6 +830,18 @@ def generate_markdown(results, provider, harness, model, model_id, agent_tag,
     encoder = encoder_note(encoder_loaded)
     if encoder:
         notes.append(encoder)
+    if contamination:
+        flagged = [
+            f"{project}/{variant}"
+            for project, variant in sorted(contamination)
+        ]
+        notes.append(
+            "> **Contaminated phases.** The guided variant holds the same file "
+            "count, line count, and token count as the plain variant for: "
+            + ", ".join(flagged) +
+            ". The guided column for those phases copied the plain output and "
+            "must not be compared against the plain column."
+        )
 
     harness_note = ""
     if harness_version and "not reported" in harness_version or (
@@ -921,10 +977,12 @@ def main():
     record = load_telemetry(agent_tag)
     synthesize_missing_breakdown(record, results)
 
+    contamination = check_contamination(results)
     harness_version = args.harness_version if args.harness_version is not None else detect_harness_version(harness)
     report = generate_markdown(
         results, provider, harness, model, args.model_id, agent_tag,
-        skill_ver, record, encoder_loaded, harness_version
+        skill_ver, record, encoder_loaded, harness_version,
+        contamination=contamination
     )
     report_dir = PLAYGROUND / "benchmarks" / agent_tag
     report_dir.mkdir(parents=True, exist_ok=True)

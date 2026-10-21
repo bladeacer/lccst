@@ -14,10 +14,9 @@ these instructions. A run that states no token is left out of the results.
 ## 1. Read the assignment
 
 The assignment names one subproject (`python-http-server`, `react-timer`, or
-`go-login-crud`), the required environment, and the scope. The standard
-assignment requests both variants. Implement `plain` first, then
-`skill-guided`. If the host supplies a single `variant` value, implement only
-that value.
+`go-login-crud`), the required environment, and the scope. The assignment
+requests one variant only. If the host supplies a single `variant` value,
+implement only that value.
 
 Read `README.md` and `guide.md` before implementation. Both variants read the
 same two files.
@@ -30,24 +29,16 @@ Do not use a mode name in place of a variant name.
 
 ## 2. Prepare the sandbox
 
-CAUTION: The following deletion removes the contents of the six listed
-benchmark directories.
-
-Remove only these six directories before the mapping step:
+Remove only the target directory for the current variant before the mapping step:
 
 ```text
-python-http-server/plain/
-python-http-server/skill-guided/
-react-timer/plain/
-react-timer/skill-guided/
-go-login-crud/plain/
-go-login-crud/skill-guided/
+<subproject>/<variant>/
 ```
 
-This is a blind deletion pass. Do not read or examine these directories
-before removing them. Do not remove any other path. Do not run `ls`, `find`,
-`git status`, `git diff`, `git log`, or `open`. Do not read, write, or
-delete any path outside the current working directory.
+This is a blind deletion pass for one variant directory. Do not read or examine
+the directory before removing it. Do not remove any other path. Do not run
+`ls`, `find`, `git status`, `git diff`, `git log`, or `open`. Do not read,
+write, or delete any path outside the current working directory.
 
 ### 2.1 Map the conventions
 
@@ -74,21 +65,17 @@ plan before you write code.
 
 ## 3. Implement the subproject
 
-1. Select one subproject.
-2. Create the directory for the current variant.
-3. Follow the target specification in `README.md` and `guide.md`.
-4. Write the manifest, the source files, and the test files of the variant. The
+1. Create the directory for the current variant.
+2. Follow the target specification in `README.md` and `guide.md`.
+3. Write the manifest, the source files, and the test files of the variant. The
    test command of the subproject names the test directory, so create it.
-5. Install dependencies with the command listed in `guide.md`.
-6. For `skill-guided`, run the benchmark test command before the phase ends.
-   For `plain`, complete the target specification without a test run. The
-   harness runs the test command of both variants after the run, so both
-   variants need test files.
-7. Call `log_turn_telemetry` at the end of the phase. For `skill-guided`, call
-   it after the test run. For `plain`, call it after completion.
-8. Do not start the next subproject until all requested variants are complete.
+4. Install dependencies with the command listed in `guide.md`.
+5. Run the benchmark test command before the phase ends. The harness runs the
+   test command after the run, so the variant needs test files that pass.
+6. Call `log_turn_telemetry` at the end of the phase, after the test run.
 
-If the assignment requests one variant, do not create the other.
+Implement only the variant that the assignment names. Do not create the other
+variant.
 
 For `skill-guided`, keep source and test files in the scanner paths. Use
 explicit relative imports. Do not install a global package, create a symlink, or
@@ -97,31 +84,16 @@ configuration.
 
 ## 4. Record telemetry
 
-Call `log_turn_telemetry` at the end of each phase, after the work of the phase
-and after the test run of `skill-guided`. A phase is one subproject variant.
+Call `log_turn_telemetry` once at the end of the phase, after the test run.
+A phase is one subproject variant. Pass only the `subproject` and the `variant`.
+The tool marks the end of the phase. Do not pass token values or state a token
+count. You cannot know the token count of your own turn.
 
-Pass only the `subproject` and the `variant`. The tool marks the end of the
-phase. Do not pass token values. Do not state a token count. You cannot know
-the token count of your own turn.
-
-The harness settles the counts after the phase, so the tool result holds no
-count. Do not use placeholders or estimates.
-
-The server checks the workspace before it records a phase.
-
-- The server refuses a call that arrives before the phase holds its directory
-  and its manifest. A refused call records nothing, so the phase can still be
-  measured. Finish the phase, then call the tool again.
-- The server corrects the end of a phase when a second call names the same
-  phase. A call that came too early is therefore not final. Call the tool again
-  at the true end of the phase.
-
-State the result of the call. A recorded or a corrected phase is a measurement
-of the whole phase. Do not apologise for a call that came early. Call the tool
-once more at the end of the phase, and the measurement is complete.
-
-The telemetry call must be the last tool operation in the phase. You can
-write one short next-step summary after the call.
+The server checks the workspace before it records a phase. A refused call records
+nothing, and a second call for the same phase corrects the end of that phase. If
+the tool refuses or returns early, finish the phase and call the tool again at the
+true end of the phase. Do not apologise. State the result of the call. The
+telemetry call must be the last tool operation in the phase.
 
 ## 5. End the phase
 

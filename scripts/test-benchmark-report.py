@@ -365,10 +365,12 @@ class ToolchainTest(unittest.TestCase):
     def test_drift_is_stated(self):
         notes = scanner.toolchain_notes({"python": "3.14.5", "pnpm": "11.3.0", "go": "1.26.4-X"})
         self.assertTrue(any("python" in note for note in notes))
-        self.assertEqual(len(notes), 1)
+        self.assertTrue(any("pnpm" in note for note in notes))
+        self.assertTrue(any("go" in note for note in notes))
+        self.assertEqual(len(notes), 3)
 
     def test_no_drift_when_the_machine_matches(self):
-        notes = scanner.toolchain_notes({"python": "3.13.11", "pnpm": "11.3.0", "go": "1.26.4-X"})
+        notes = scanner.toolchain_notes({"python": "3.13.11", "pnpm": "12.14.0", "go": "1.27.2-X"})
         self.assertEqual(notes, [])
 
 
