@@ -41,14 +41,9 @@ counted.
   props. Remove local state.
 - **`ts-jest` rejects `toHaveTextContent`**: Read `.textContent` and compare
   with `expect(...).toBe(...)`.
-- **`.ts` file not counted**: The scanner matches `.tsx` only. Rename to `.tsx`.
-- **Workspace install empty but Jest not found**: Add a `packages` key with the
-  playground project paths to the root `pnpm-workspace.yaml`. Run `pnpm install`
-  again.
 
 ## Python environment
 
-Declare dependencies in `[dependency-groups]` or `[tool.uv] dev-dependencies`.
 The benchmark removes `VIRTUAL_ENV`. Use `uv run python3`.
 
 ### Traps
@@ -67,9 +62,6 @@ The benchmark removes `VIRTUAL_ENV`. Use `uv run python3`.
   directory, so a source file under `src/` is counted.
 
 ## Go test packages
-
-Keep tests under `tests/` with `package tests`. Set up repository and handler in
-test setup. Do not import `cmd/server` from a test package.
 
 ### Traps
 

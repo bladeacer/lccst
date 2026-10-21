@@ -32,13 +32,53 @@ Blocked inspection commands: `ls`, `find`, `git status`, `git diff`,
 
 ## Supplied toolchain
 
-- Go 1.26.4-X with `nodwarf5`.
+- Go 1.27.2-X with `nodwarf5`.
 - Python 3.13.11 with `uv` 0.4+.
-- Node.js 18+ with pnpm 11.3.0+.
+- Node.js 18+ with pnpm 12.14.0+.
 - Pre-cached TypeScript type definitions.
 
 The system `python3` can resolve to another version. Use `uv run python3` to
 select the supplied environment. Do not run bare `pytest`.
+
+## Scanner constraints
+
+Both variants read this section. The scanner applies one file filter and one test
+command to both variants, so these constraints apply to the plain column and the
+skill-guided column alike.
+
+### File counting
+
+The scanner counts source files under the variant directory. It skips installed
+and generated directories, lock files, and checksums. For React projects, the
+scanner counts `.tsx` files only. A `.ts` file is not counted.
+
+### pnpm workspace
+
+A React variant needs a `pnpm-workspace.yaml` with a `packages` key that lists
+the playground project paths. Without it, `pnpm install` produces an empty
+workspace and Jest is not found.
+
+### Python environment
+
+Declare dependencies in `[dependency-groups]` or `[tool.uv] dev-dependencies`.
+The benchmark removes `VIRTUAL_ENV`. Use `uv run python3`.
+
+### Go test packages
+
+Keep tests under `tests/` with `package tests`. Set up repository and handler in
+test setup. Do not import `cmd/server` from a test package.
+
+### Test directory layout
+
+Use a standard structure for each toolchain. Both variants must create the test
+directory that the test command of the subproject names.
+
+- Python source and tests live in the variant directory and in `tests/`.
+- A React project uses `src/` for source and `tests/` for tests.
+- A Go project keeps tests under `tests/` with `package tests`.
+
+The scanner counts source files wherever they sit in the variant directory. It
+does not favour one directory over another.
 
 The report states a drift note when the machine does not match the versions
 above. A drift changes every score, so a report with a drift note does not
@@ -64,24 +104,7 @@ the delta between the two columns is a difference between two implementations.
   times out, or that holds no test is an error. An error never scores as a
   pass, and a directory that holds no source file is always an error.
 
-## pnpm 11 build approval
 
-pnpm 11 requires approval for packages that run build scripts. A dependency
-that runs a build script can stop an install until it is approved. The approval
-is a fact of the environment, so both variants must handle it. The file
-`traps.md` names the package that needs the approval.
-
-## File layout
-
-Use a standard structure for each toolchain. Both variants must create the test
-directory that the test command of the subproject names.
-
-- Python source and tests live in the variant directory and in `tests/`.
-- A React project uses `src/` for source and `tests/` for tests.
-- A Go project keeps tests under `tests/` with `package tests`.
-
-The scanner counts source files wherever they sit in the variant directory. It
-does not favour one directory over another.
 
 ## The telemetry server and the working directory
 

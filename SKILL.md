@@ -3,7 +3,7 @@ name: lccst
 license: MIT
 metadata:
   author: bladeacer
-  version: "4.1.0"
+  version: "4.2.0"
 description: "Deterministic workspace gatekeeper. Decomposes workspace
   changes into isolated, test-verified, atomic Git commits."
 arguments:
@@ -28,12 +28,14 @@ arguments:
     dry_run:
       type: boolean
       default: false
-      description: "Preview state-changing steps. YAML: dry_run. Host tool:
-        dryRun. Response: dry_run."
+      description: "Preview state-changing steps. Applies to /swarm, /verify,
+        /lint, /format, /test, and /build. YAML: dry_run. Host tool: dryRun.
+        Response: dry_run."
     abort:
       type: boolean
       default: false
-      description: "Remove interrupted swarm state and allow a new run."
+      description: "Remove interrupted swarm state and allow a new run.
+        Applies to /swarm only."
   required: ["command"]
 ---
 
@@ -60,7 +62,9 @@ test verification.
   workspace root.
 - The **target specification** defines the required behaviour and file layout
   for a project.
-- A **cluster** is a group of changed hunks that belong to one domain.
+- A **cluster** is a top-level group of changed files. The server groups files
+  by their first path segment. Hunk-level isolation is the duty of the caller
+  with `git add -p`, in Bare Skill Mode and in host-tool mode alike.
 - The **state file** is `.lccst/state.json`. It records the active loop state.
 - A **mode** is the `strict` or `lean` defence level. A mode is not a variant.
 - A **variant** is the `plain` or `skill-guided` benchmark implementation. A
@@ -85,6 +89,11 @@ language from the request and reply in that language. Keep code, commands,
 identifiers, and quoted errors unchanged. Ask for manual approval before a
 state-changing action when the host requires it.
 
+Atomic hunk isolation is the duty of the caller. Use `git add -p` to stage
+one hunk at a time in Bare Skill Mode and in host-tool mode alike. The server
+does not claim hunk-level isolation. It groups changed files by their top-level
+directory into clusters.
+
 ## 3. Commands
 
 Each entry in the list that follows defines the intent of one command. If the
@@ -92,29 +101,52 @@ host does not expose the command server, apply the intent yourself as a
 manual step. Do not wait for a tool that the host does not provide.
 
 - `/init`: Map project conventions. Examine the environment. Do not change
-  source files.
+  source files. Accepts `path` and `mode`.
 - `/audit`: Scan the workspace diff. Record anomalies. Give a short commit
-  plan with conventional commit messages.
+  plan with conventional commit messages. Accepts `path` and `mode`.
 - `/swarm`: Enter Active Execution. For each cluster, group changes by
   domain, stage only the current cluster, run the declared test command,
   and make one atomic commit. The host tool returns the cluster plan; the
   caller stages each cluster and commits it. Use interactive `git add -p`
-  in Bare Skill Mode. Pass `--dry-run` or `--abort` in Bare Skill Mode; pass
+  in Bare Skill Mode. Accepts `path`, `mode`, `dryRun`, and `abort`.
+  Pass `--dry-run` or `--abort` in Bare Skill Mode; pass
   `dryRun: true` or `abort: true` for the host tool.
 - `/tooling`: List Makefile targets, `scripts/` helpers, and package scripts.
-  Do not run a command listed by `/tooling`.
-- `/lint` `/format` `/test` `/build`: Run the matching project command. Use a
-  Makefile target first, then the manifest fallback. Report a missing command
-  as skipped.
+  Do not run a command listed by `/tooling`. Accepts `path` only.
+- `/lint`: Run the project lint command. Use a Makefile target first, then
+  the manifest fallback. Report a missing command as skipped. Accepts
+  `path`, `mode`, and `dryRun`.
+- `/format`: Run the project format command. Use a Makefile target first,
+  then the manifest fallback. Report a missing command as skipped. Accepts
+  `path`, `mode`, and `dryRun`.
+- `/test`: Run the project test command. Use a Makefile target first, then
+  the manifest fallback. Report a missing command as skipped. Accepts
+  `path`, `mode`, and `dryRun`.
+- `/build`: Run the project build command. Use a Makefile target first,
+  then the manifest fallback. Report a missing command as skipped. Accepts
+  `path`, `mode`, and `dryRun`.
 - `/verify`: Run `format`, `lint`, `test`, and `build`. Skip a step when no
   command exists. Report a step after a failure as `skipped_after_failure`.
-  End with a pass or fail summary. Pass `--dry-run` in Bare
-  Skill Mode or `dryRun: true` for the host tool.
+  End with a pass or fail summary. Accepts `path`, `mode`, and `dryRun`.
 - `/compliance`: Audit deliverable tiers. Report must-have items first.
-- `/version`: Report the current LCCST version.
+  Accepts `path` only.
+- `/version`: Report the current LCCST version. Accepts no arguments.
 
 Run a command on its own or use it as a step in `/swarm` or `/verify`. Do not
 infer a different command from a request that names no command.
+
+### Argument availability
+
+- `path`: all eleven commands accept a path. The eight state-changing tools
+  (`init`, `audit`, `swarm`, `lint`, `format`, `test`, `build`, `verify`)
+  use it as the workspace root.
+- `mode`: the eight state-changing tools accept a mode (`strict` or `lean`).
+  The server records the mode and echoes it. The caller enforces it.
+- `dryRun`: `/swarm`, `/verify`, `/lint`, `/format`, `/test`, and `/build`
+  accept a dry-run flag. A dry run reports what the command would do without
+  running it.
+- `abort`: `/swarm` alone accepts an abort flag. It clears an interrupted
+  state file.
 
 ## 4. Guardrails
 
@@ -129,14 +161,26 @@ infer a different command from a request that names no command.
   interface only when its methods share one responsibility.
 - Do not use `any`, unchecked casts, or disabled type checks unless the
   language or host makes them unavoidable.
-- Use hermetic lockfiles, workspace runners, and declarative ecosystem tools.
-- Read manifests, compiler settings, and language-server results before
+- Use hermetic lockfiles, workspace runners, and declarative ecosystem tools.- Read manifests, compiler settings, and language-server results before
   choosing a command. If evidence conflicts, state the conflict.
-- A failing test command names a defect. Fix the cause and run the command
-  again. Do not end the loop after the first failure, and do not claim a
-  pass after a non-zero exit.
 - Do not add a defensive control only to fill a checklist. Do not add a
   fabricated attack or load scenario.
+
+### Weak-model checklist
+
+Weak models fail the protocol through predictable paths. Follow this checklist
+before each command:
+
+1. **Check files by path.** Read manifest and runner files by their path. Do not
+   list directory contents to discover them.
+2. **Treat a runner without the task as a skip.** A `mise.toml`, `justfile`, or
+   `Taskfile.yml` that declares no command for the step is a skip, not an error.
+   Do not create a runner file to satisfy the ladder.
+3. **Detect the platform once.** Choose the shell before the first command. Do
+   not switch shells after a failure on a Unix-like system.
+4. **Fix a failing command.** A failing test or build names a defect. Fix the
+   cause and run the command again. Do not end the loop after the first failure,
+   and do not claim a pass after a non-zero exit.
 
 ### Mode rules
 
@@ -157,7 +201,8 @@ in the reply. The server does not enforce the mode; the caller enforces it.
 ### State lifecycle
 
 - `/init`, `/audit`, and `/swarm` create or update `.lccst/state.json`.
-- A completed `/swarm` loop removes the state file after its final commit.
+- The caller clears the state file after the final commit, through `/verify`
+  or `/swarm --abort`. The server never learns of the final commit.
 - `/verify` removes the state file at the end of the run.
 - `/swarm --abort` removes an interrupted state.
 - A dry run does not commit files or run project commands. It can write
@@ -206,14 +251,14 @@ satisfy the ladder.
 
 If no task runner declares the command, check for these manifests in order:
 
-| Manifest | Test command | Format command | Build command |
-| --- | --- | --- | --- |
-| `pyproject.toml` | `uv run pytest` | `uv run ruff format` | - |
-| `Cargo.toml` | `cargo test` | `cargo fmt` | `cargo build` |
-| `go.mod` | `go test ./...` | `gofmt -l .` | `go build ./...` |
-| `package.json` | `pnpm test` | `pnpm run format` | `pnpm run build` |
-| `Makefile` | `make test` | - | `make build` |
-| `CMakeLists.txt` | `ctest` | - | `cmake --build .` |
+| Manifest | Test command | Format command | Lint command | Build command |
+| --- | --- | --- | --- | --- |
+| `pyproject.toml` | `uv run pytest` | `uv run ruff format` | `uv run ruff check` | - |
+| `Cargo.toml` | `cargo test` | `cargo fmt` | `cargo clippy` | `cargo build` |
+| `go.mod` | `go test ./...` | `gofmt -l .` | `go vet ./...` | `go build ./...` |
+| `package.json` | `pnpm test` | `pnpm run format` | `pnpm run lint` | `pnpm run build` |
+| `Makefile` | `make test` | - | `make lint` | `make build` |
+| `CMakeLists.txt` | `ctest` | - | - | `cmake --build .` |
 
 ### Platform detection
 
@@ -231,8 +276,10 @@ Detect the platform once, before the first command:
 When no task runner and no manifest declare a command:
 
 1. Check `package.json` scripts as a last resort for Node projects.
-2. Check `scripts/` helpers: `scripts/<command>.sh`, `scripts/<command>.py`,
-   `scripts/<command>.ts`.
+2. Check `scripts/` helpers: look for an executable file or a file with a
+   `.sh`, `.py`, `.js`, `.ts`, `.mjs`, or `.cjs` extension whose base name
+   matches the command or the plural of the command
+   (`scripts/<command>` or `scripts/<commands>`).
 3. When no command exists, report the step as skipped.
 
 ## 6. Version Policy

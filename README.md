@@ -46,7 +46,14 @@ preserved; `~` expands to `$HOME`; set `LCCST_WORKSPACE` to override the
 workspace root. The state-changing tools (`init`, `audit`, `swarm`, `lint`,
 `format`, `test`, `build`, `verify`) also accept a `mode` argument (`strict`
 or `lean`, default `strict`); the server records the mode and echoes it, and
-the caller enforces it. See `src/index.ts` for implementation details.
+the caller enforces it.
+
+Additional arguments:
+- `dryRun`: accepted by `/swarm`, `/verify`, `/lint`, `/format`, `/test`, and
+  `/build`. A dry run reports what the command would do without running it.
+- `abort`: accepted by `/swarm` only. Clears an interrupted state file.
+
+See `src/index.ts` for implementation details.
 
 The Tooling Ladder checks task runners before manifests. A runner wins only
 when its file declares the command; a runner file that declares no command is
@@ -60,12 +67,12 @@ skipped:
 - Taskfile.yml: task <command>
 
 # Language manifests (checked second):
-- pyproject.toml: uv run pytest
-- Cargo.toml: cargo test
-- go.mod: go test ./...
-- package.json: pnpm test
-- Makefile: make test
-- CMakeLists.txt: ctest
+- pyproject.toml: uv run pytest / uv run ruff format / uv run ruff check
+- Cargo.toml: cargo test / cargo fmt / cargo clippy / cargo build
+- go.mod: go test ./... / gofmt -l . / go vet ./... / go build ./...
+- package.json: pnpm test / pnpm run format / pnpm run lint / pnpm run build
+- Makefile: make test / make lint / make build
+- CMakeLists.txt: ctest / cmake --build .
 ```
 
 The server detects the user's platform once, before the first command, and
@@ -73,6 +80,11 @@ chooses the appropriate shell:
 - Windows without WSL/MSYS: uses PowerShell for .sh scripts
 - Unix-like: uses bash for .sh scripts
 - Python, TypeScript, and Node scripts run with their native runtimes
+
+The server searches `scripts/` for helpers whose base name matches the command
+or its plural (`scripts/<command>` or `scripts/<commands>`). A helper counts
+when it is executable or has a `.sh`, `.py`, `.js`, `.ts`, `.mjs`, or `.cjs`
+extension. The server does not search `tools/`, `bin/`, or `script/`.
 
 ## Core Philosophy
 
@@ -85,9 +97,10 @@ chooses the appropriate shell:
 - **Quality over velocity:** Structural integrity and complete test
   verification beat raw speed. Token discipline applies to output, not
   internal reasoning.
-- **Granularity over convenience:** Locality Clustering groups diffs by domain
-  so each atomic commit rolls back cleanly. The extra commits buy a clear,
-  reversible history.
+- **Granularity over convenience:** Locality Clustering groups changed files by
+  their top-level directory so each atomic commit rolls back cleanly. The extra
+  commits buy a clear, reversible history. Hunk-level isolation is the duty of
+  the caller with `git add -p`, in Bare Skill Mode and in host-tool mode alike.
 - **Proportional defence:** Validation, rate limiting, and caching apply only
   where module exposure justifies them. Omit fabricated attack or load
   scenarios.
