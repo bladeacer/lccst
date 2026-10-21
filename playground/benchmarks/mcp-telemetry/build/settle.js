@@ -69,6 +69,18 @@ function settle() {
     if (pending > 0) {
         writeTelemetry(targetFile, settled);
     }
+    // Flag phases whose settled tokens exceed the session total. A phase that
+    // reports more prompt tokens than the whole session held cannot be a real
+    // measurement, and the report must not present it as one.
+    const sessionTotal = settled.total_prompt_tokens + settled.total_completion_tokens + settled.total_cache_read_tokens;
+    settled.phases.forEach((phase) => {
+        if (!phase.settled)
+            return;
+        const phaseTotal = (phase.prompt_tokens || 0) + (phase.completion_tokens || 0) + (phase.cache_read_tokens || 0);
+        if (sessionTotal > 0 && phaseTotal > sessionTotal) {
+            phase.flag = (phase.flag || '') + 'phase_tokens_exceed_session_total;';
+        }
+    });
     const unsettled = settled.phases.filter((phase) => !phase.settled).length;
     const seen = settled.phases.some((phase) => phase.token_seen);
     if (token) {
@@ -81,5 +93,9 @@ function settle() {
     }
     process.stdout.write(`Telemetry settled: ${settled.phases.length} phases, ${settled.model_turns} model turns, ` +
         `${settled.total_tokens} tokens, ${unsettled} phases without counts.\n`);
+    const flagged = settled.phases.filter((phase) => phase.flag).length;
+    if (flagged > 0) {
+        process.stderr.write(`[Telemetry] ${flagged} phase(s) flagged: ${settled.phases.filter((p) => p.flag).map((p) => `${p.subproject}/${p.variant}: ${p.flag}`).join('; ')}\n`);
+    }
 }
 settle();

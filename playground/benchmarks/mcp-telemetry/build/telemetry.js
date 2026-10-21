@@ -130,7 +130,8 @@ function newPhase(boundary, fromTime) {
         completion_tokens: 0,
         cache_read_tokens: 0,
         model: null,
-        token_seen: false
+        token_seen: false,
+        flag: undefined
     };
 }
 /**
@@ -229,7 +230,8 @@ export function settlePhase(data, index, usage, tokenSeen = false) {
         completion_tokens: usage.completionTokens,
         cache_read_tokens: usage.cacheReadTokens,
         model: usage.models[0] ?? null,
-        token_seen: phase.token_seen || tokenSeen
+        token_seen: phase.token_seen || tokenSeen,
+        flag: phase.flag
     };
     const phases = data.phases.map((item, position) => (position === index ? settled : item));
     const known = data.breakdown?.[phase.subproject]?.[phase.variant] ?? emptyStep();

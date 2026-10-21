@@ -8,10 +8,16 @@ export interface ProjectInfo {
     buildCommand?: string[];
 }
 export declare function detectProject(root: string): ProjectInfo;
+export interface TaskRunnerInfo {
+    mise: boolean;
+    just: boolean;
+    taskfile: boolean;
+}
 export interface ToolingReport {
     makeTargets: string[];
     packageScripts: Record<string, string>;
     shellScripts: string[];
+    taskRunners: TaskRunnerInfo;
 }
 export declare function listMakeTargets(root: string): string[];
 export declare function listPackageScripts(root: string): Record<string, string>;
@@ -146,3 +152,9 @@ export interface VerifyReport {
  * `dry_run` for every runnable step. A failed step is never hidden.
  */
 export declare function runVerifySteps(root: string, dryRun: boolean): VerifyReport;
+export interface ProtocolCommand {
+    name: string;
+    description: string;
+    args: string[];
+}
+export declare const PROTOCOL_COMMANDS: ProtocolCommand[];

@@ -225,7 +225,7 @@ Use Conventional Commits. The format is `<type>(<scope>): <description>`.
 Do one thing in a commit. Split the rest into another commit.
 Solve the problem in the task. Never solve the next task.
 Keep the diff small. A large diff hides a large defect.
-Commit no secret, no `.env` file, and no build output.
+Commit no secret and no `.env` file.
 
 After you finish a change, suggest a commit message.
 Do not run the commit yourself unless the user asks for it.
