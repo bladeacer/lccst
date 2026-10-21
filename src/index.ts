@@ -116,10 +116,17 @@ export function detectProject(root: string): ProjectInfo {
 }
 
 // --- Native tooling discovery (Makefile, package scripts, shell utils) --
+export interface TaskRunnerInfo {
+  mise: boolean;
+  just: boolean;
+  taskfile: boolean;
+}
+
 export interface ToolingReport {
   makeTargets: string[];
   packageScripts: Record<string, string>;
   shellScripts: string[];
+  taskRunners: TaskRunnerInfo;
 }
 
 export function listMakeTargets(root: string): string[] {
@@ -136,8 +143,18 @@ function readMakefile(filePath: string, targets: Set<string>, visiting: Set<stri
   if (visiting.has(filePath)) return;
   visiting.add(filePath);
   const lines = fs.readFileSync(filePath, "utf-8").split("\n");
+  let continuation = "";
   for (const line of lines) {
-    const trimmed = line.trim();
+    // Recipe lines start with a tab and are not targets.
+    if (line.startsWith("\t")) continue;
+    // Handle line continuations: a trailing backslash joins the next line.
+    const combined = continuation + line.trimEnd();
+    if (combined.endsWith("\\")) {
+      continuation = combined.slice(0, -1);
+      continue;
+    }
+    continuation = "";
+    const trimmed = combined.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
     if (trimmed.startsWith(".")) continue;
     if (/[:+?]=/.test(trimmed)) continue;
@@ -170,19 +187,16 @@ export function listPackageScripts(root: string): Record<string, string> {
 }
 
 export function listShellScripts(root: string): string[] {
-  const dirs = ["scripts", "tools", "bin", "script"];
+  const dir = path.join(root, "scripts");
   const out: string[] = [];
-  for (const d of dirs) {
-    const dir = path.join(root, d);
-    if (!fs.existsSync(dir)) continue;
-    for (const entry of fs.readdirSync(dir).sort()) {
-      const full = path.join(dir, entry);
-      let stat;
-      try { stat = fs.statSync(full); } catch { continue; }
-      if (!stat.isFile()) continue;
-      const isExec = (stat.mode & 0o111) !== 0;
-      if (isExec || /\.(sh|py|js|ts|mjs|cjs)$/.test(entry)) out.push(path.join(d, entry));
-    }
+  if (!fs.existsSync(dir)) return out;
+  for (const entry of fs.readdirSync(dir).sort()) {
+    const full = path.join(dir, entry);
+    let stat;
+    try { stat = fs.statSync(full); } catch { continue; }
+    if (!stat.isFile()) continue;
+    const isExec = (stat.mode & 0o111) !== 0;
+    if (isExec || /\.(sh|py|js|ts|mjs|cjs)$/.test(entry)) out.push(path.join("scripts", entry));
   }
   return out;
 }
@@ -192,6 +206,11 @@ export function discoverTooling(root: string): ToolingReport {
     makeTargets: listMakeTargets(root),
     packageScripts: listPackageScripts(root),
     shellScripts: listShellScripts(root),
+    taskRunners: {
+      mise: declaresMiseTask(root, "test") || declaresMiseTask(root, "lint") || declaresMiseTask(root, "format") || declaresMiseTask(root, "build"),
+      just: declaresJustRecipe(root, "test") || declaresJustRecipe(root, "lint") || declaresJustRecipe(root, "format") || declaresJustRecipe(root, "build"),
+      taskfile: declaresTaskfileTask(root, "test") || declaresTaskfileTask(root, "lint") || declaresTaskfileTask(root, "format") || declaresTaskfileTask(root, "build"),
+    },
   };
 }
 
@@ -418,13 +437,18 @@ export function runCommand(command: string[], cwd: string): RunResult {
   // The executor buffer sits above the cap, so a large log is cut by the
   // cap instead of failing with ENOBUFS.
   const maxBuffer = MAX_COMMAND_OUTPUT_CHARS * 500;
+  const timeout = Number(process.env.LCCST_COMMAND_TIMEOUT ?? 300) * 1000;
   try {
-    const raw = execFileSync(command[0], command.slice(1), { cwd, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"], maxBuffer }).toString().trim();
+    const raw = execFileSync(command[0], command.slice(1), { cwd, encoding: "utf-8", stdio: ["ignore", "pipe", "pipe"], maxBuffer, timeout }).toString().trim();
     const capped = capOutput(raw);
     return { command, output: capped.text, code: 0, truncated: capped.truncated };
   } catch (e: any) {
     const stderr = e?.stderr?.toString?.() ?? "";
     const stdout = e?.stdout?.toString?.() ?? "";
+    if (e?.code === 'ETIMEDOUT' || e?.signal === 'SIGTERM') {
+      const capped = capOutput((stdout + stderr).trim() || `The command exceeded ${timeout / 1000} seconds.`);
+      return { command, output: capped.text, code: 124, truncated: capped.truncated };
+    }
     const capped = capOutput((stdout + stderr).trim() || String(e?.message ?? e));
     return { command, output: capped.text, code: e?.status ?? 1, truncated: capped.truncated };
   }
@@ -651,12 +675,12 @@ export function clusterHunks(lines: string[]): Cluster[] {
 // --- MCP Server -----------------------------------------------------
 const server = new McpServer({
   name: "lccst-locust",
-  version: "4.1.0",
+  version: "4.2.0",
 });
 
 // Prompt: load SKILL.md into context
 server.registerPrompt("swarm", {
-  description: "Enforce deterministic lint-cluster-split-test-commit boundaries over the active workspace layout.",
+  description: "Return the SKILL.md content for the active workspace.",
 }, async () => {
   try {
     const skillContent = fs.readFileSync(path.resolve(ROOT, "SKILL.md"), "utf-8");
@@ -710,6 +734,7 @@ server.registerTool("init", {
     test_command: env.project.testCommand.join(" ") || "(none)",
     make_targets: tooling.makeTargets.join(", ") || "(none)",
     script_helpers: tooling.shellScripts.join(", ") || "(none)",
+    task_runners: tooling.taskRunners,
     conventions: env.conventions,
     mode,
     mode_enforcement: "caller_duty",
@@ -733,13 +758,13 @@ server.registerTool("audit", {
 
   const mode = args?.mode ?? "strict";
   const state = new SwarmState(target);
-  state.write({ phase: "audit", mode });
   logEvent(target, { event: "audit_start", mode });
 
   const changes = gitChanges(target);
   if (!changes.ok) {
     return errorReply("/audit", `${target} is not a git repository, or git is unavailable.`);
   }
+  state.write({ phase: "audit", mode });
 
   if (changes.staged.length === 0 && changes.unstaged.length === 0 && changes.untracked.length === 0) {
     return envelope("/audit", { phase: "clean", path: target, mode, mode_enforcement: "caller_duty" }, "Working tree clean.");
@@ -771,7 +796,7 @@ server.registerTool("audit", {
 
 // Tool: /swarm
 server.registerTool("swarm", {
-  description: "Discover and cluster workspace changes into a commit plan. The caller stages and commits each cluster; the server does not commit.",
+  description: "Discover and cluster workspace changes into a commit plan. The caller stages and commits each cluster; the server does not lint, split, or commit.",
   inputSchema: {
     path: z.string().optional().default(".").describe("Workspace-relative or absolute target path; default is the workspace root."),
     dryRun: z.boolean().optional().default(false).describe("Dry-run mode (no mutations)."),
@@ -847,20 +872,20 @@ server.registerTool("swarm", {
 function runStepTool(kind: ProjectStep, args?: { path?: string; dryRun?: boolean; mode?: "strict" | "lean" }): ToolReply {
   const target = resolveTarget(args?.path);
   if (!target) {
-    return errorReply(kind, targetError(args?.path));
+    return errorReply(`/${kind}`, targetError(args?.path));
   }
   const dryRun = args?.dryRun === true;
   const mode = args?.mode ?? "strict";
   const cmd = resolveCommand(target, kind);
   if (!cmd) {
-    return envelope(kind, { phase: "skipped", reason: "no_command", mode, mode_enforcement: "caller_duty" }, `No ${kind} command detected.`);
+    return envelope(`/${kind}`, { phase: "skipped", reason: "no_command", mode, mode_enforcement: "caller_duty" }, `No ${kind} command detected.`);
   }
   if (dryRun) {
-    return envelope(kind, { phase: "dry_run", command: cmd.join(" "), mode, mode_enforcement: "caller_duty" }, `[DRY-RUN] ${cmd.join(" ")}`);
+    return envelope(`/${kind}`, { phase: "dry_run", command: cmd.join(" "), mode, mode_enforcement: "caller_duty" }, `[DRY-RUN] ${cmd.join(" ")}`);
   }
   const result = runCommand(cmd, target);
   logEvent(target, { event: `${kind}_run`, command: cmd.join(" "), exitCode: result.code });
-  return envelope(kind, {
+  return envelope(`/${kind}`, {
     phase: "complete",
     command: cmd.join(" "),
     exitCode: result.code,
@@ -888,6 +913,7 @@ server.registerTool("tooling", {
     make_targets: t.makeTargets,
     shell_scripts: t.shellScripts,
     package_scripts: Object.keys(t.packageScripts),
+    task_runners: t.taskRunners,
   }, "Tooling inventory complete.");
 });
 
@@ -1052,6 +1078,27 @@ server.registerTool("version", {
   } catch { /* ignore */ }
   return envelope("/version", { version: pkgVersion }, `LCCST v${pkgVersion}`);
 });
+
+// --- Protocol command definitions ----------------------------------
+export interface ProtocolCommand {
+  name: string;
+  description: string;
+  args: string[];
+}
+
+export const PROTOCOL_COMMANDS: ProtocolCommand[] = [
+  { name: "init", description: "Map project conventions and verify local environment state.", args: ["path", "mode"] },
+  { name: "audit", description: "Scan workspace diffs and present an ultra-lean commit plan.", args: ["path", "mode"] },
+  { name: "swarm", description: "Discover and cluster workspace changes into a commit plan. The caller stages and commits each cluster; the server does not lint, split, or commit.", args: ["path", "mode", "dryRun", "abort"] },
+  { name: "tooling", description: "Inventory native tooling: Makefile targets, package.json scripts, and scripts/ helpers.", args: ["path"] },
+  { name: "lint", description: "Run the project lint command (Makefile `lint` target first, then manifest lint).", args: ["path", "mode", "dryRun"] },
+  { name: "format", description: "Run the project format command (Makefile `format` target first, then manifest format).", args: ["path", "mode", "dryRun"] },
+  { name: "test", description: "Run the project test command (Makefile `test` target first, then manifest test).", args: ["path", "mode", "dryRun"] },
+  { name: "build", description: "Run the project build command (Makefile `build` target first, then manifest build).", args: ["path", "mode", "dryRun"] },
+  { name: "verify", description: "Run the full quality gate: format, lint, test, build. Reports a later step as skipped_after_failure when an earlier step fails.", args: ["path", "mode", "dryRun"] },
+  { name: "compliance", description: "Audit deliverable tiers: must-haves (unit tests, docstrings) and nice-to-haves (API docs, changelog).", args: ["path"] },
+  { name: "version", description: "Report the LCCST protocol and server version.", args: [] },
+];
 
 // --- Start transport (only when run directly, not when imported) ----
 const isMainModule = process.argv[1] && (

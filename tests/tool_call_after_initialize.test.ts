@@ -33,12 +33,12 @@ export const expectedResponse = (response: any): boolean => {
   const parsed = JSON.parse(text);
   return (
     parsed.success === true &&
-    parsed.step === "test" &&
+    parsed.step === "/test" &&
     parsed.payload?.phase === "dry_run" &&
     parsed.payload?.mode === "lean" &&
     parsed.payload?.mode_enforcement === "caller_duty" &&
 
-    response.result?.structuredContent?.step === "test" &&
+    response.result?.structuredContent?.step === "/test" &&
     response.result?.structuredContent?.payload?.phase === "dry_run" &&
     response.result?.structuredContent?.payload?.mode === "lean" &&
     response.result?.structuredContent?.success === true
