@@ -49,6 +49,8 @@ make test_picker_tty    # Run benchmark picker tests in a pseudo terminal.
 make test_report        # Run benchmark report and README table tests.
 make test_e2e           # Run telemetry end-to-end tests on real harnesses.
 make test_mcp           # Run MCP integration tests.
+make test_bench_run     # Check the expanded benchmark-run recipe of the Makefile.
+make test_sanity        # Open the harness without a prompt, then close it.
 make benchmark-free     # Pick a model, then run the full benchmark.
 make bench-list         # List the models that the picker offers.
 make bench-model        # Check that the harness offers the pinned model.

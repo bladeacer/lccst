@@ -1,8 +1,10 @@
-.PHONY: help default build test tag release clean clean-telemetry bench-update bench-list bench-config bench-model benchmark-free benchmark-run benchmark-report bench-cleanup telemetry-build benchmark-dryrun test_swarm test_telemetry test_e2e test_picker test_picker_tty test_mcp test_report telemetry-settle
+.PHONY: help default build test tag release clean clean-telemetry bench-update bench-list bench-config bench-model benchmark-free benchmark-run benchmark-report bench-cleanup telemetry-build benchmark-dryrun test_swarm test_telemetry test_e2e test_picker test_picker_tty test_mcp test_report test_bench_run test_sanity telemetry-settle
 
 VERSION      ?= $(shell node -p "require('./package.json').version")
 HARNESS      ?= opencode
 E2E_HARNESS  ?=
+# Harness for the connection sanity check. Empty checks every harness.
+SANITY_HARNESS ?=
 AGENT_NAME   ?= $(HARNESS)
 BENCH_PICK   ?= 1
 # The default run must name a model that the harness offers. A harness that
@@ -59,7 +61,16 @@ BENCH_VARIANTS := plain skill-guided
 define SINGLE_VARIANT_TASK
 Read AGENTS.md and follow it exactly. Implement the $(1) subproject for the $(2) variant only. Run the guided tests for that variant, and record the phase with log_turn_telemetry. Begin now.
 endef
-export SINGLE_VARIANT_TASK
+
+# One session implements one subproject and one variant in the clean room. The
+# prompt comes from SINGLE_VARIANT_TASK, so the task text of a session cannot
+# drift from the task definition. The session list unrolls at expansion time,
+# because a make function cannot run once per shell-loop iteration. A harness
+# that leaves with a non-zero status must not stop the other sessions, so the
+# failure prints a note and the next session still runs.
+define RUN_VARIANT_SESSION
+echo "[Harness] Session: $(1) / $(2)"; cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(BENCH_HARNESS_STATE) $(HARNESS) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) --prompt "$(call SINGLE_VARIANT_TASK,$(1),$(2))" || { STATUS=$$?; echo "[Harness] The harness left with status $$STATUS for $(1)/$(2). Continuing with the next session."; };
+endef
 CONFIG_FILE  ?=
 
 # Refuse to remove a workspace path that is empty, the root, or a parent of the
@@ -109,6 +120,8 @@ help:
 	@echo "  make test_report        Run benchmark report and README table tests"
 	@echo "  make test_picker_tty    Run benchmark picker tests in a pseudo terminal"
 	@echo "  make test_e2e           Run telemetry end-to-end tests on real harnesses"
+	@echo "  make test_bench_run     Check the expanded benchmark-run recipe of the Makefile"
+	@echo "  make test_sanity        Open the harness without a prompt, then close it"
 	@echo "  make test_mcp           Run MCP server integration tests"
 	@echo "  make tag                Create and push git tag v$(VERSION)"
 	@echo "  make release            Alias for: make tag"
@@ -162,6 +175,16 @@ test_picker_tty:
 
 test_e2e: telemetry-build
 	pnpm tsx scripts/test-telemetry-e2e.ts $(E2E_HARNESS)
+
+test_bench_run:
+	python3 scripts/test-bench-run.py
+
+# The sanity check opens the harness in a clean room with the telemetry
+# configuration of a benchmark run, and it closes the harness without sending
+# the prompt. The harness must spawn the telemetry server of the clean room,
+# because a run whose server never starts records no phase.
+test_sanity: telemetry-build
+	pnpm tsx scripts/test-bench-sanity.ts $(SANITY_HARNESS)
 
 test_parity:
 	pnpm tsx scripts/test-parity.ts
@@ -286,17 +309,7 @@ benchmark-run: clean-telemetry bench-model
 	@echo "[Harness] Version: $(HARNESS_VERSION)"
 	@echo "[Harness] Run token: $(BENCH_PROMPT_TOKEN) (the model must state it)"
 	@echo "[Harness] Starting one session per subproject variant. Each session runs in the same clean room."
-	@for subproject in $(BENCH_SUBPROJECTS); do \
-		for variant in $(BENCH_VARIANTS); do \
-			echo "[Harness] Session: $$subproject / $$variant"; \
-			$(eval SESSION_TASK := $(call SINGLE_VARIANT_TASK,$$subproject,$$variant)) \\
-			cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(BENCH_HARNESS_STATE) $(HARNESS) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) --prompt "$$SESSION_TASK"; \
-			STATUS=$$?; \
-			if [ $$STATUS -ne 0 ]; then \
-				echo "[Harness] The harness left with status $$STATUS for $$subproject/$$variant. Continuing with the next session."; \
-			fi; \
-		done; \
-	done
+	@$(foreach subproject,$(BENCH_SUBPROJECTS),$(foreach variant,$(BENCH_VARIANTS),$(call RUN_VARIANT_SESSION,$(subproject),$(variant))))
 	@$(MAKE) -C "$(CURDIR)" --no-print-directory bench-report HARNESS_VERSION="$(HARNESS_VERSION)"
 	@$(MAKE) -C "$(CURDIR)" --no-print-directory bench-cleanup
 	@exit 0
