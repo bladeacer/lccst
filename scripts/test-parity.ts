@@ -133,6 +133,56 @@ for (const cmd of PROTOCOL_COMMANDS) {
   }
 }
 
+// --- 6. Capability-claim parity ---
+// Every capability claim in the README opening paragraph must match a rule in
+// SKILL.md or a check in the MCP server. A claim with no backing rule fails.
+const readmeLines = readmeText.split("\n");
+let readmeParagraph = "";
+for (let i = 0; i < readmeLines.length; i++) {
+  if (readmeLines[i].startsWith("lccst handles")) {
+    readmeParagraph = readmeLines.slice(i, i + 4).join(" ");
+    break;
+  }
+}
+const readmeParagraphLC = readmeParagraph.toLowerCase().replace(/-/g, " ");
+const skillTextLC = skillText.toLowerCase();
+const srcContentLC = srcContent.toLowerCase();
+
+// Supported claims: the README may name these only when SKILL.md carries the
+// matching rule and the MCP server carries the matching check.
+const supportedClaims = [
+  { claim: "single-responsibility", backing: ["one file focused on one domain"] },
+  { claim: "cohesion", backing: ["top-level group", "top-level directory"] },
+  { claim: "strict test verification", backing: ["passing test", "test command"] },
+  { claim: "atomic", backing: ["atomic"] },
+  { claim: "deterministic", backing: ["deterministic"] },
+  { claim: "gatekeeper", backing: ["gatekeeper"] },
+];
+for (const { claim, backing } of supportedClaims) {
+  if (readmeParagraphLC.includes(claim.replace(/-/g, " ")) && !backing.some(b => skillTextLC.includes(b))) {
+    errors.push("README.md: capability claim \"" + claim + "\" has no matching rule in SKILL.md");
+  }
+}
+
+// Unsupported claims: these words name capabilities the protocol does not
+// enforce. They must not appear in the README opening paragraph at all.
+const unsupportedClaims = [
+  "solid", "liskov", "open/closed", "interface segregation", "dependency inversion",
+  "before they reach production", "production gate", "push", "pull request",
+];
+for (const claim of unsupportedClaims) {
+  if (readmeParagraphLC.includes(claim)) {
+    errors.push("README.md: unsupported capability claim \"" + claim + "\" has no backing rule in SKILL.md or check in src/index.ts");
+  }
+}
+
+if (readmeParagraphLC.includes("cohesion") && !srcContentLC.includes("clusterpaths")) {
+  errors.push("README.md: cohesion claim has no matching check in src/index.ts");
+}
+if (readmeParagraphLC.includes("test verification") && !srcContentLC.includes("runverifysteps")) {
+  errors.push("README.md: strict test verification claim has no matching check in src/index.ts");
+}
+
 if (!srcContent.includes("envelope(`/${kind}`")) {
   errors.push("src/index.ts: runStepTool does not use / prefix for step field");
 }

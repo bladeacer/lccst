@@ -2,10 +2,10 @@
 
 # lccst (Locust)
 
-lccst handles messy workspace diffs by grouping changes into verified, atomic
-Git commits before they reach production. Operating as a deterministic workspace
-gatekeeper, it enforces architectural cohesion and SOLID invariants through a
-lean, test-verified execution protocol.
+lccst handles messy workspace diffs by grouping changed files into verified,
+atomic Git commits. Operating as a deterministic workspace gatekeeper, it
+enforces single-responsibility, cohesion, and strict test-verification
+invariants through a lean, test-verified execution protocol.
 
 > "Swarming your messy diffs before they reach production."
 
@@ -110,6 +110,24 @@ extension. The server does not search `tools/`, `bin/`, or `script/`.
 - **Token investment:** LCCST puns on low-cost asset management while
   clustering by locality. Tokens are strategic capital -- spent on tests,
   typing, and the Tooling Ladder, not on boilerplate.
+
+## Structural Invariants
+
+The protocol enforces three invariants on every change. The server checks
+the first two and runs the project's own test command for the third; the
+caller owns the commit boundary.
+
+- **Single responsibility.** Keep one file focused on one domain. Permit a
+  cohesive multi-method interface only when its methods share one
+  responsibility. `src/index.ts` is the exception because it holds the whole
+  MCP server and swarm helpers.
+- **Cohesion.** Locality Clustering groups changed files by their top-level
+  directory so each atomic commit rolls back cleanly. Two files in one
+  directory form one cluster; one cohesive domain split across directories
+  becomes two clusters. The extra commits buy a clear, reversible history.
+- **Strict test verification.** No functional change reaches a commit without
+  a passing test. The server runs the project's own test command and reports
+  a failure as a defect, never as a pass.
 
 ## Installation
 

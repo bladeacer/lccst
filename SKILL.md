@@ -3,7 +3,7 @@ name: lccst
 license: MIT
 metadata:
   author: bladeacer
-  version: "4.2.0"
+  version: "4.3.0"
 description: "Deterministic workspace gatekeeper. Decomposes workspace
   changes into isolated, test-verified, atomic Git commits."
 arguments:
@@ -161,7 +161,8 @@ infer a different command from a request that names no command.
   interface only when its methods share one responsibility.
 - Do not use `any`, unchecked casts, or disabled type checks unless the
   language or host makes them unavoidable.
-- Use hermetic lockfiles, workspace runners, and declarative ecosystem tools.- Read manifests, compiler settings, and language-server results before
+- Use hermetic lockfiles, workspace runners, and declarative ecosystem tools.
+- Read manifests, compiler settings, and language-server results before
   choosing a command. If evidence conflicts, state the conflict.
 - Do not add a defensive control only to fill a checklist. Do not add a
   fabricated attack or load scenario.
