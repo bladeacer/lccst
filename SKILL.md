@@ -182,6 +182,13 @@ before each command:
 4. **Fix a failing command.** A failing test or build names a defect. Fix the
    cause and run the command again. Do not end the loop after the first failure,
    and do not claim a pass after a non-zero exit.
+5. **Write a lean implementation.** A benchmark phase scores the implementation,
+   not the commentary. Add only the features the assignment asks for, write them
+   once, and keep the file under the lines-per-feature limit. Do not restate the
+   rules in comments, and do not pad the test file to chase a score.
+6. **Score the source, not the test.** A feature that appears only in a test
+   file does not count, and a test assertion is a state of the variant, not a
+   feature of the implementation.
 
 ### Mode rules
 

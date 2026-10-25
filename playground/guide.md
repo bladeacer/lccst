@@ -30,6 +30,10 @@ directory.
 Blocked inspection commands: `ls`, `find`, `git status`, `git diff`,
 `git log`, `open`. Do not simulate their output.
 
+Do not read `SKILL.md` with a trap parser before you decide whether to load it.
+Treat `SKILL.md` as the protocol file it is, and treat the assignment as the
+task file it is. A run that finds `SKILL.md` twice is still one file.
+
 ## Supplied toolchain
 
 - Go 1.27.2-X with `nodwarf5`.
@@ -84,6 +88,68 @@ The report states a drift note when the machine does not match the versions
 above. A drift changes every score, so a report with a drift note does not
 compare with a report from another machine.
 
+### Feature ceiling
+
+The rubric ceiling is different for each subproject. The `Max Typing`, `Max
+Security`, and `Max Error Handling` values in the scanner set the maximum points
+the rubric can award for that feature class on that subproject. The pass earns 50
+of the ceiling points. The feature points earn the rest. A variant that passes
+and delivers every rewarded feature for its subproject reaches 100.
+
+The plain variant of `react-timer` cannot earn security points or error handling
+points, because the rubric ceiling forbids them. It can still pass, because a
+pass earns 50 points and the typing ceiling adds 17 points.
+
+A score of 100 means the variant passed and delivered every rewarded feature for
+its subproject, with no lines-per-feature penalty.
+
+The scanner detects a feature from the source text, not from the test result. A
+feature the scanner does not find does not count. A feature that appears only
+behind a thin wrapper can score as absent. A feature that appears only in the test
+file does not count for the source score. Do not send the variant to the scanner
+with a feature that the source text does not show.
+
+The bloat penalty uses the line count of the implementation files, not the test
+files. Both variants must write a test file, so a variant cannot buy the ceiling
+by padding its test file. The bloat penalty counts the implementation features
+only, because a test assertion is a state of the variant, not a feature of the
+implementation. A variant that misses the ceiling never gets judged on bloat, and
+a variant that reaches the ceiling can still lose points here if it carries too
+many lines for the features it delivered.
+
+The feature ceiling is not a separate score. It is the maximum points the rubric
+can award for that subproject. The bloat penalty is a separate check. The scanner
+applies it only after the rubric has scored the variant, and only when the variant
+already delivered at least one rewarded feature. A variant that misses the ceiling
+never gets judged on bloat, and a variant that reaches the ceiling can still lose
+points here if it carries too many lines for the features it delivered.
+
+### What the skill-guided variant must reach
+
+The README table rejects a run whose skill-guided variant falls below 100 on
+either of the two subprojects that have a 100 ceiling. It also rejects a run
+whose skill-guided `react-timer` falls below 100, because 100 is the percentage
+that the 67 ceiling yields when the variant reaches it.
+
+The score is a percentage of the ceiling, not a raw point count. A passing
+`react-timer` earns 50 points and the typing ceiling adds 17 points, so a
+passing `react-timer` that delivers typing reaches 67 raw points, which is 100
+percent of the 67 ceiling. A passing `react-timer` that delivers no typing
+reaches 50 raw points, which is 75 percent, and the README table rejects it.
+The skill-guided variant of `react-timer` must therefore pass and deliver typing
+in the source text, and then clear the lines per feature limit.
+
+The plain variant of `react-timer` cannot earn security points or error handling
+points, and neither can the skill-guided variant: the rubric ceiling for that
+subproject sets both to 0. A plain `react-timer` that passes and delivers typing
+reaches 100 percent. A plain `react-timer` that passes but delivers no typing
+reaches 75 percent.
+
+A run can pass every check and still be rejected by the README table. The table
+rejects a run that passes but scores too low, and that case is a tooling fault,
+not a pass. The report still belongs on disk for inspection, and the table still
+leaves it out.
+
 ## The two variants
 
 The scanner applies one file filter and one test command to both variants, so
@@ -103,6 +169,51 @@ the delta between the two columns is a difference between two implementations.
 - A test run that fails is a measurement. A test run that cannot start, that
   times out, or that holds no test is an error. An error never scores as a
   pass, and a directory that holds no source file is always an error.
+- The scanner reads the source text. It does not read the test result for the
+  feature score. A file that passes but hides the feature from the scanner still
+  loses the feature points.
+
+The scanner does not count the number of test assertions. A test file that
+contains many assertions for the same behaviour does not raise the feature score,
+and it can raise the lines-per-feature ratio. Do not pad the test file to chase
+the ceiling.
+
+Do not read `SKILL.md` twice because the file names `SKILL` more than once. The
+scanner and the report do not treat a second mention as a second file, and the
+run does not treat it as a second rubric. If you already have the file, use it.
+Do not split the score into buckets that do not exist.
+
+## The scanner rubric
+
+The scanner scores every variant with the same rubric. The rubric uses one
+scoring ladder for every subproject, but the feature ceiling is different for
+each subproject.
+
+- A passing test run earns 50 points.
+- A failing test run earns 15 points.
+- A test run that cannot start, that times out, or that holds no test earns 5
+  points.
+- A variant earns the maximum feature points for typing, security, and error
+  handling only when it delivers a rewarded feature.
+- The rubric then divides the total points by the feature ceiling of the
+  subproject and multiplies by 100.
+- The rubric then applies a bloat penalty when the variant carries many lines
+  for the features it delivers.
+
+The feature ceiling is different for each subproject. A plain React Timer does
+not earn security points or error handling points, because the rubric ceiling
+for that subproject forbids them. A plain React Timer can still pass, because a
+pass earns 50 points and the typing ceiling adds 17 points.
+
+The scanner reports a raw score, then the feature ceiling, then the bloat
+penalty. The final value is a percentage. A skill-guided variant must reach 100
+on every subproject before it can enter the README table.
+
+The feature ceiling is not a target score for every variant. It is the
+maximum number of points the rubric can award for the features the scanner
+rewards on that subproject. The pass earns 50 of those points, and the feature
+points earn the rest. A variant that passes and delivers every rewarded feature
+for its subproject reaches 100.
 
 
 

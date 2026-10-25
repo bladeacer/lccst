@@ -119,7 +119,17 @@ in the notes under the report header.
 - Every phase holds a settled token count.
 - The host store confirms the model of the run.
 - The model stated the run token of the instructions.
-- All three subprojects hold a passing skill-guided variant at 100 percent.
+- All three subprojects hold a skill-guided variant that reaches the ceiling for
+  that subproject.
+
+The ceiling is 100 for `python-http-server` and `go-login-crud`, and 67 for
+`react-timer`. A skill-guided variant that passes but scores below the ceiling
+for its subproject is rejected. The README table uses the same ceilings that the
+scanner uses.
+
+The README table rejects a run that passes every check but scores too low. That
+case is a tooling fault, not a pass. The report still belongs on disk for
+inspection, and the table still leaves it out.
 
 A run that fails a check stays on disk for inspection, and the table leaves it
 out.
@@ -142,3 +152,134 @@ The header states what a reader needs to reproduce a run.
 
 The report then states a note for every check, and a toolchain drift note when
 the machine does not match `guide.md`.
+
+## What Gets Measured
+
+Every run measures four things for each subproject and each variant.
+
+- File token count. `run_benchmark.py` counts the tokens of every source file
+  that the scanner counts. The report states an estimate when `tiktoken` is
+  absent.
+- Line count. The report counts every source line of every counted file.
+- Test verdict. The scanner runs the test command of the subproject and
+  classifies the result. A pass, a test failure, and a scanner error are three
+  different outcomes.
+- Robustness score. The score rewards the features that the rubric rewards. The
+  ceiling is different for each subproject. A passing skill-guided variant must
+  reach 100 on every subproject.
+
+The scanner scores the source text, not the test result. A feature the scanner
+does not see in the source does not count, even when a passing test exercises it.
+
+The score uses the implementation files, not the test files. A feature that
+appears only in a test file does not count, and the bloat penalty uses the
+implementation lines only, so a variant cannot buy the ceiling by padding its
+test file. The report table still shows the total line count of every counted
+file, so the implementation line count is the difference between the two.
+
+The report labels the columns `Strategy` and `Routine`, but the two implementations
+are `plain` and `skill-guided`. A run does not create a second rubric or a second
+model by using those labels, and the README table still rejects a run whose
+skill-guided variant falls below the ceiling.
+
+The score also needs a short file. Do not try to buy the ceiling by stuffing the
+file with lines that do not add a rewarded feature. A feature in the file is not
+enough when the file is too long, and a short file is not enough when the file
+does not deliver the feature the rubric rewards.
+
+The scanner does not count the number of test assertions. A test file that
+contains many assertions for the same behaviour does not raise the feature score,
+and it can raise the lines-per-feature ratio. Do not pad the test file to chase
+the ceiling.
+
+## Robustness Score Calculation
+
+The same rubric scores the plain variant and the skill-guided variant. A pass
+earns 50 points. A test failure earns 15 points. A scanner error earns 5
+points. The feature points are the same in both columns.
+
+The score then adds the feature ceiling for the subproject. The feature ceiling
+is the maximum points the rubric awards for typing, security, and error
+handling on that subproject. The ceiling is different for each subproject.
+
+### Feature ceilings
+
+| Subproject | Max Typing | Max Security | Max Error Handling | Ceiling |
+| --- | :---: | :---: | :---: | :---: |
+| python-http-server | 17 | 17 | 16 | 100 |
+| react-timer | 17 | 0 | 0 | 67 |
+| go-login-crud | 17 | 17 | 16 | 100 |
+
+The plain variant of `react-timer` does not earn security points or error
+handling points, because the rubric ceiling forbids them. A plain React Timer
+can still pass, because the pass earns 50 points and the typing ceiling adds
+17 points.
+
+The feature ceiling sets the maximum points the rubric can award for a subproject.
+It does not set the score a variant must reach on its own. The score uses the
+pass, the detected features, and the ceiling together. A variant that passes and
+delivers every rewarded feature for its subproject reaches the ceiling.
+
+The bloat penalty is a separate step. The scanner applies it only after the
+rubric has scored the variant, and only when the variant already delivered at
+least one rewarded feature. A variant that delivers no rewarded feature never
+reaches the bloat penalty. A variant that reaches the ceiling can still lose
+points here if it carries too many lines for the features it delivered.
+
+### Bloat penalty
+
+The score then applies a bloat penalty when a variant carries many lines for the
+features it delivers. The penalty uses a lines-per-feature ratio per subproject.
+
+| Subproject | Lines per feature ceiling |
+| --- | :---: |
+| python-http-server | 30 |
+| react-timer | 20 |
+| go-login-crud | 30 |
+
+A variant that exceeds the ratio loses score, because it carries code that does
+not add a rewarded feature.
+
+### Why the columns are comparable
+
+The plain variant and the skill-guided variant share the same rubric, the same
+feature ceilings, and the same bloat penalty. The score of one column is
+therefore directly comparable with the score of the other column.
+
+### What the README table accepts
+
+The README table accepts a run only when the skill-guided variant reaches the
+ceiling for every subproject.
+
+- The skill-guided `python-http-server` must reach 100.
+- The skill-guided `react-timer` must reach 67.
+- The skill-guided `go-login-crud` must reach 100.
+
+A 100 on a subproject with a 100 ceiling means the variant passed and delivered
+every rewarded feature for that subproject, with no lines-per-feature penalty.
+
+A 67 on `react-timer` means the variant passed and delivered every rewarded
+feature for that subproject, with no lines-per-feature penalty. A skill-guided
+`react-timer` that passes and delivers only typing reaches at most 67.
+
+The README table does not accept a skill-guided variant that passes but scores
+below the ceiling for its subproject.
+
+The score has two parts that are not the same thing. The ceiling says how many
+points the rubric can award for a subproject. The bloat penalty says whether a
+variant that already reached the ceiling stays there after the scanner looks at
+its lines. A variant can hit the ceiling and still lose points to the bloat
+penalty. A variant can miss the ceiling and never get to the bloat penalty.
+
+The score is a percentage of the ceiling, not a raw point count. A passing
+`react-timer` earns 50 points and the typing ceiling adds 17 points, so a
+passing `react-timer` that delivers typing reaches 67 raw points, which is 100
+percent of the 67 ceiling. A passing `react-timer` that delivers no typing
+reaches 50 raw points, which is 75 percent, and the README table rejects it.
+The table accepts a skill-guided variant only when its percentage reaches 100
+for its subproject, so a skill-guided `react-timer` must pass and deliver
+typing in the source text.
+
+A run can also be rejected after it passes every other check. A high score needs
+both a detected feature and a short file. A file that carries the feature but also
+carries too many lines can fail the table even when the test passes.

@@ -168,11 +168,37 @@ def estimate_tokens(text):
 def analyze_code_features(text):
     """Report the features that the robustness score rewards."""
     return {
-        "has_typing": bool(re.search(r"(interface\s+\w+|type\s+\w+|:\s*(int|str|bool|float|dict|List|Optional|def\s+\w+\(.*?:\s*\w+)|->\s*\w+)", text)),
+        # A typing marker is an interface or a type alias, a variable annotated
+        # with a type name, a parameter annotated inside its own parameter
+        # list, or a return arrow. The parameter rule keeps the colon inside
+        # the parameter list, so a bare `def run(self):` followed by a return
+        # statement is not a typing marker.
+        "has_typing": bool(re.search(
+            r"(interface\s+\w+|type\s+\w+|:\s*(int|str|bool|float|dict|list|List|Optional|Any|None|tuple|set|Union|Callable)|def\s+\w+\([^)]*:\s*\w+|->\s*\w+)",
+            text)),
         "has_security": bool(re.search(r"(auth|jwt|hash|sha256|bcrypt|crypto|sanitize|escape|rate.limit|password|token|session)", text, re.IGNORECASE)),
         "has_error_handling": bool(re.search(r"(try\s*{|except\s+\w+:|if\s+err\s*!=\s*nil|raise\s+\w+|return.*err)", text)),
         "has_test_assertion": bool(re.search(r"(assert|expect|t\.Fatal|t\.Error|should\.)", text)),
     }
+
+
+# A test file holds assertions, not the implementation. The rubric reads the
+# source text for the features that the implementation delivers, so a feature
+# that appears only in a test file does not count. The function names no
+# framework: it looks at the directory and the file name, because every
+# subproject keeps its tests under a `tests` directory or in a file whose name
+# carries a test marker.
+TEST_FILE_RE = re.compile(r"(\.test\.|_test\.|test_)", re.IGNORECASE)
+
+
+def is_test_file(path):
+    """Say whether a file is a test file."""
+    rel = str(path).replace("\\", "/")
+    parts = [part for part in rel.split("/") if part]
+    if "tests" in parts or "test" in parts:
+        return True
+    name = parts[-1] if parts else ""
+    return bool(TEST_FILE_RE.search(name))
 
 
 def collect_source_files(directory):
@@ -201,7 +227,16 @@ def collect_source_files(directory):
 def measure_files(directory):
     """Measure one variant directory.
 
-    The result holds the totals of the directory, and one entry per file.
+    The result holds the totals of the directory, one entry per file, the
+    aggregate of the features that the rubric rewards, and the line count of
+    the implementation files. The implementation files are the source files
+    that are not test files, and the bloat penalty uses their line count, so a
+    variant cannot buy the ceiling by padding its test file.
+
+    The report counts every source file under the variant directory, including
+    the test files, because both variants must write a test file. The feature
+    score and the bloat penalty use the implementation files only, so a feature
+    that appears only in a test file does not count.
     """
     files = []
     for path in collect_source_files(directory):
@@ -217,14 +252,16 @@ def measure_files(directory):
             "features": analyze_code_features(text),
         })
 
+    impl_files = [item for item in files if not is_test_file(Path(directory) / item["file"])]
     return {
         "files": files,
         "file_count": len(files),
         "total_lines": sum(item["lines"] for item in files),
         "total_chars": sum(item["chars"] for item in files),
         "total_tokens": sum(item["tokens"] for item in files),
+        "impl_lines": sum(item["lines"] for item in impl_files),
         "features_aggregate": {
-            key: any(item["features"][key] for item in files)
+            key: any(item["features"][key] for item in impl_files)
             for key in ("has_typing", "has_security", "has_error_handling", "has_test_assertion")
         },
     }
@@ -327,6 +364,13 @@ def compute_robustness_score(variant_result, project_name):
     same in both columns. A bloat penalty reduces the score when the variant
     delivers few features for many lines, so the term discriminates between a
     lean correct implementation and a bloated one.
+
+    The bloat penalty uses the line count of the implementation files, so a
+    variant cannot buy the ceiling by padding its test file. The feature score
+    uses the same files, so a feature that appears only in a test file does not
+    count. The bloat penalty counts the implementation features only, because a
+    test assertion is a state of the variant, not a feature of the
+    implementation.
     """
     status = variant_result["test_result"]["status"]
     if status == "passed":
@@ -340,10 +384,6 @@ def compute_robustness_score(variant_result, project_name):
         project_name, {"max_typing": 17, "max_security": 17, "max_error_handling": 16}
     )
     features = variant_result["features_aggregate"]
-    feature_count = sum(
-        1 for key in ("has_typing", "has_security", "has_error_handling", "has_test_assertion")
-        if features[key]
-    )
     if features["has_typing"]:
         score += profile["max_typing"]
     if features["has_security"]:
@@ -354,13 +394,21 @@ def compute_robustness_score(variant_result, project_name):
     ceiling = SCORE_PASSED + profile["max_typing"] + profile["max_security"] + profile["max_error_handling"]
     raw = int(score / ceiling * 100)
 
-    # Bloat factor: lines per delivered feature. A variant with many lines and
-    # few features loses points. The threshold is 30 lines per feature for
-    # python-http-server and go-login-crud, and 20 for react-timer (which has
-    # no security or error handling features to detect).
-    lines = variant_result.get("total_lines", 0)
-    if feature_count > 0 and lines > 0:
-        lines_per_feature = lines / feature_count
+    # Bloat factor: lines per delivered implementation feature. A variant with
+    # many lines and few features loses points. The threshold is 30 lines per
+    # feature for python-http-server and go-login-crud, and 20 for react-timer
+    # (which has no security or error handling features to detect). The count
+    # uses the implementation features only, because a test assertion is a
+    # state of the variant, not a feature of the implementation. The line count
+    # falls back to the total when the variant result carries no
+    # implementation count, because a hand-built result may omit it.
+    lines = variant_result.get("impl_lines", variant_result.get("total_lines", 0))
+    impl_feature_count = sum(
+        1 for key in ("has_typing", "has_security", "has_error_handling")
+        if features[key]
+    )
+    if impl_feature_count > 0 and lines > 0:
+        lines_per_feature = lines / impl_feature_count
         max_lpf = {"python-http-server": 30, "react-timer": 20, "go-login-crud": 30}.get(project_name, 30)
         if lines_per_feature > max_lpf:
             raw = int(raw * max_lpf / lines_per_feature)
@@ -750,10 +798,12 @@ def collect_results(install):
 def check_contamination(results):
     """Return a set of (project, variant) pairs that look contaminated.
 
-    A guided variant that holds exactly the same file count, line count, and
-    token count as its plain sibling copied the plain output. A phase whose
-    settled tokens exceed the session total is also contaminated, but that check
-    runs in settle.ts where the telemetry lives.
+    A guided variant that holds exactly the same file count, implementation
+    line count, and token count as its plain sibling copied the plain output.
+    The comparison uses the implementation files, because both variants must
+    write a test file and a copied test file is not contamination. A phase
+    whose settled tokens exceed the session total is also contaminated, but
+    that check runs in settle.ts where the telemetry lives.
     """
     flagged = set()
     for project in PROJECT_ORDER:
@@ -761,7 +811,7 @@ def check_contamination(results):
         guided = results[project]["skill-guided"]
         if (
             plain["file_count"] == guided["file_count"]
-            and plain["total_lines"] == guided["total_lines"]
+            and plain["impl_lines"] == guided["impl_lines"]
             and plain["total_tokens"] == guided["total_tokens"]
             and plain["file_count"] > 0
         ):
@@ -792,8 +842,8 @@ def generate_markdown(results, provider, harness, model, model_id, agent_tag,
     """
     plain_fct = sum(results[p]["plain"]["total_tokens"] for p in PROJECT_ORDER)
     guided_fct = sum(results[p]["skill-guided"]["total_tokens"] for p in PROJECT_ORDER)
-    plain_lines = sum(results[p]["plain"]["total_lines"] for p in PROJECT_ORDER)
-    guided_lines = sum(results[p]["skill-guided"]["total_lines"] for p in PROJECT_ORDER)
+    plain_lines = sum(results[p]["plain"]["impl_lines"] for p in PROJECT_ORDER)
+    guided_lines = sum(results[p]["skill-guided"]["impl_lines"] for p in PROJECT_ORDER)
     token_diff = guided_fct - plain_fct
     token_pct = (token_diff / max(plain_fct, 1)) * 100
     versions = detect_tool_versions()
@@ -837,7 +887,8 @@ def generate_markdown(results, provider, harness, model, model_id, agent_tag,
         ]
         notes.append(
             "> **Contaminated phases.** The guided variant holds the same file "
-            "count, line count, and token count as the plain variant for: "
+            "count, implementation line count, and token count as the plain "
+            "variant for: "
             + ", ".join(flagged) +
             ". The guided column for those phases copied the plain output and "
             "must not be compared against the plain column."
@@ -911,7 +962,7 @@ rules.
             score = compute_robustness_score(data, project)
             md += (
                 f"| **{project}** | {label} | {data['file_count']} | "
-                f"{data['total_lines']} | {data['total_tokens']} | "
+                f"{data['impl_lines']} | {data['total_tokens']} | "
                 f"{test_status_text(data)} | **{score}%** |\n"
             )
 
