@@ -1,4 +1,4 @@
-.PHONY: help default build test tag release clean clean-telemetry bench-update bench-list bench-config bench-model benchmark-free benchmark-run benchmark-report bench-cleanup telemetry-build benchmark-dryrun test_swarm test_telemetry test_e2e test_picker test_picker_tty test_mcp test_report test_bench_run test_sanity telemetry-settle
+.PHONY: help default build test tag release clean clean-telemetry bench-update bench-list bench-config bench-model benchmark-free benchmark-run benchmark-report bench-cleanup telemetry-build benchmark-dryrun test_swarm test_telemetry test_e2e test_picker test_picker_tty test_mcp test_report test_bench_run test_bench_leak test_sanity telemetry-settle
 
 VERSION      ?= $(shell node -p "require('./package.json').version")
 HARNESS      ?= opencode
@@ -118,6 +118,7 @@ help:
 	@echo "  make test_telemetry     Run telemetry MCP unit tests"
 	@echo "  make test_picker        Run benchmark picker unit tests"
 	@echo "  make test_report        Run benchmark report and README table tests"
+	@echo "  make test_bench_leak    Check that the seeded documents hold no scoring terms"
 	@echo "  make test_picker_tty    Run benchmark picker tests in a pseudo terminal"
 	@echo "  make test_e2e           Run telemetry end-to-end tests on real harnesses"
 	@echo "  make test_bench_run     Check the expanded benchmark-run recipe of the Makefile"
@@ -156,7 +157,7 @@ build:
 	pnpm run build
 
 test:
-	pnpm run test && make test_parity
+	pnpm run test && make test_parity test_bench_leak
 
 test_swarm:
 	pnpm tsx scripts/test-swarm-unit.ts
@@ -175,6 +176,9 @@ test_picker_tty:
 
 test_e2e: telemetry-build
 	pnpm tsx scripts/test-telemetry-e2e.ts $(E2E_HARNESS)
+
+test_bench_leak:
+	python3 scripts/test-bench-leak.py
 
 test_bench_run:
 	python3 scripts/test-bench-run.py
@@ -295,8 +299,11 @@ benchmark-run: clean-telemetry bench-model
 	@rm -rf "$(BENCH_WORKSPACE)"
 	@mkdir -p "$(BENCH_WORKSPACE)/harness-config" "$(BENCH_WORKSPACE)/harness-state"
 	@echo "[Harness] Seeding the workspace files once for all sessions..."
+	@# The run seeds the skill, the guide, the traps, and the prompt only. The
+	@# rubric stays in `playground/README.md`, which the run never copies, so
+	@# the model under test cannot read the scoring. `make test_bench_leak`
+	@# guards the rule.
 	@cp SKILL.md "$(BENCH_WORKSPACE)/SKILL.md"
-	@cp playground/README.md "$(BENCH_WORKSPACE)/README.md"
 	@cp playground/guide.md "$(BENCH_WORKSPACE)/guide.md"
 	@cp playground/traps.md "$(BENCH_WORKSPACE)/traps.md"
 	@cp playground/agent-prompt.md "$(BENCH_WORKSPACE)/agent-prompt.md"

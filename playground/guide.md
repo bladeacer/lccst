@@ -2,15 +2,16 @@
 
 ## Purpose
 
-This guide states the environment and the operational constraints of a benchmark
-run. It names no solution, so both variants read it. The `skill-guided` variant
-also reads `traps.md` and `SKILL.md`. The `plain` variant reads neither.
+This guide states the target specification, the environment, and the
+operational constraints of a benchmark run. It names no solution, so both
+variants read it. The `skill-guided` variant also reads `traps.md` and
+`SKILL.md`. The `plain` variant reads neither.
 
 ## Clean-room sandbox rules
 
 The run happens in a clean room outside the repository. The harness starts in
 that directory, so no other project file can reach it. The directory holds
-`SKILL.md`, `README.md`, `guide.md`, `traps.md`, `agent-prompt.md`, `AGENTS.md`,
+`SKILL.md`, `guide.md`, `traps.md`, `agent-prompt.md`, `AGENTS.md`,
 `prompt-token.txt`, and the configuration file of the harness. The telemetry
 server is named by a path that is relative to the clean room.
 
@@ -24,11 +25,20 @@ directory.
 - Do not alter, upgrade, or modify global packages at run time.
 - Do not read, write, or delete any path outside the current workspace.
 - Do not use a global test runner when a project runner exists.
-- Do not change the benchmark scanner or its file filter.
+- Do not change the configuration file of the harness.
 - Do not create a symlink to bypass a Go `internal/` boundary.
 
 Blocked inspection commands: `ls`, `find`, `git status`, `git diff`,
 `git log`, `open`. Do not simulate their output.
+
+## Target specification
+
+- The `python-http-server` subproject is an HTTP server with user create,
+  read, update, and delete operations.
+- The `react-timer` subproject is a stopwatch application with start, stop,
+  and reset actions.
+- The `go-login-crud` subproject is a login system with user create, read,
+  update, and delete operations.
 
 ## Supplied toolchain
 
@@ -40,17 +50,10 @@ Blocked inspection commands: `ls`, `find`, `git status`, `git diff`,
 The system `python3` can resolve to another version. Use `uv run python3` to
 select the supplied environment. Do not run bare `pytest`.
 
-## Scanner constraints
+## Project layout and tests
 
-Both variants read this section. The scanner applies one file filter and one test
-command to both variants, so these constraints apply to the plain column and the
-skill-guided column alike.
-
-### File counting
-
-The scanner counts source files under the variant directory. It skips installed
-and generated directories, lock files, and checksums. For React projects, the
-scanner counts `.tsx` files only. A `.ts` file is not counted.
+Both variants follow the constraints in this section, so the two variants
+write to the same kind of layout.
 
 ### pnpm workspace
 
@@ -74,82 +77,20 @@ Use a standard structure for each toolchain. Both variants must create the test
 directory that the test command of the subproject names.
 
 - Python source and tests live in the variant directory and in `tests/`.
-- A React project uses `src/` for source and `tests/` for tests.
+- A React project writes components and tests with the `.tsx` extension.
 - A Go project keeps tests under `tests/` with `package tests`.
 
-The scanner counts source files wherever they sit in the variant directory. It
-does not favour one directory over another.
-
-The report states a drift note when the machine does not match the versions
-above. A drift changes every score, so a report with a drift note does not
-compare with a report from another machine.
-
-### The score
-
-The scanner scores every variant with the same rubric:
-
-- A passing test run earns 50 points, a failing run earns 15 points, and a run
-  that cannot start, that times out, or that holds no test earns 5 points.
-- The scanner adds typing, security, and error handling points only for
-  features it detects in the text of the implementation files. A feature that
-  appears only in a test file, behind a thin wrapper, or in the model
-  commentary does not count.
-- The scanner divides the total by the feature ceiling of the subproject and
-  reports a percentage. The feature ceiling is the pass plus the maximum
-  feature points of that subproject:
-
-| Subproject | Max Typing | Max Security | Max Error Handling | Ceiling |
-| --- | :---: | :---: | :---: | :---: |
-| python-http-server | 17 | 17 | 16 | 100 |
-| react-timer | 17 | 0 | 0 | 67 |
-| go-login-crud | 17 | 17 | 16 | 100 |
-
-- The scanner then applies a bloat penalty: a percentage of implementation
-  lines per delivered feature above the subproject limit (30 for
-  `python-http-server` and `go-login-crud`, 20 for `react-timer`) reduces the
-  score. The penalty reads implementation lines only, so a variant cannot buy
-  the ceiling by padding its test file. A variant that delivers no rewarded
-  feature receives no bloat penalty. Extra lines that the target behaviour
-  needs cost points only through this penalty.
-
-### What the README table accepts
-
-The README table accepts a run only when the skill-guided variant reaches 100
-percent of its subproject ceiling. The score is a percentage, not a raw point
-count. A `react-timer` variant that passes and delivers typing reaches
-67 raw points, which is 100 percent of the 67 ceiling. A `react-timer` variant
-that passes without typing reaches 75 percent, and the table rejects the run.
-A variant that slides below 100 percent through the bloat penalty is rejected
-as well. The report stays on disk for inspection, and the table leaves it out.
+The test command of each subproject runs inside the variant directory.
 
 ## The two variants
 
-The scanner applies one file filter and one test command to both variants, so
-the delta between the two columns is a difference between two implementations.
-
-- The `plain` variant reads `README.md`, `guide.md`, and the assignment. It
-  writes source files and test files. It does not read `SKILL.md` or
-  `traps.md`.
-- The `skill-guided` variant reads the same files, plus `SKILL.md` and
+- The `plain` variant reads `guide.md` and the assignment, then writes source
+  files and test files. It does not read `SKILL.md` or `traps.md`.
+- The `skill-guided` variant reads the same documents, plus `SKILL.md` and
   `traps.md`.
 - Both variants create `<subproject>/<variant>/` in the working directory, and
   both write a manifest, source files, and test files there.
-- The scanner counts every source file under the variant directory. It skips
-  installed and generated directories, and it skips lock files and checksums.
-- The scanner runs the test command of the subproject inside the variant
-  directory. The command is the same for both variants.
-- A test run that fails is a measurement. A test run that cannot start, that
-  times out, or that holds no test is an error. An error never scores as a
-  pass, and a directory that holds no source file is always an error.
-- The scanner reads the source text. It does not read the test result for the
-  feature score. A file that passes but hides the feature from the scanner still
-  loses the feature points.
-
-The scanner does not count the number of test assertions. A test file that
-contains many assertions for the same behaviour does not raise the feature score,
-and it can raise the lines-per-feature ratio.
-
-
+- The test command of the subproject must pass inside the variant directory.
 ## The telemetry server and the working directory
 
 A harness does not start an MCP server in the directory of the workspace. The

@@ -239,9 +239,11 @@ only when the registry states that it calls tools, reads text, and writes text,
 and when the registry states no charge for it, or when its name carries a free
 marker. Routers, image models, and families that an author rejects for agentic
 work are left out. The run then happens in a clean room outside the repository.
-The target seeds `SKILL.md`, `README.md`, `guide.md`, `traps.md`, and
-`agent-prompt.md` into the clean room, and it copies `agent-prompt.md` to
-`AGENTS.md`, which the harness reads as the project instructions. The target
+The target seeds `SKILL.md`, `guide.md`, `traps.md`, and `agent-prompt.md`
+into the clean room, and it copies `agent-prompt.md` to `AGENTS.md`, which the
+harness reads as the project instructions. `playground/README.md`, which
+states the rubric, never reaches the clean room, so the model under test
+cannot read the scoring. The target
 then starts the harness in the foreground so you can steer it. It settles the
 token counts, writes the report, removes the clean room, and refreshes the table
 below. Set `BENCH_PICK=0` to skip the picker and pass `HARNESS`, `PROVIDER`,
@@ -279,8 +281,8 @@ The scanner applies one file filter and one test command to the `plain` and
 the `skill-guided` variant, and it scores both with the same rubric.
 A test failure is a measurement. A test run that cannot start, that times out,
 or that holds no test is an error, and an error never scores as a pass. The
-`plain` variant reads `README.md` and `guide.md`. The `skill-guided` variant
-reads those files plus `SKILL.md` and `traps.md`.
+`plain` variant reads `guide.md`. The `skill-guided` variant
+also reads `SKILL.md` and `traps.md`.
 
 4. A run enters the table only when every check passes.
 

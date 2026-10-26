@@ -8,7 +8,7 @@ for each of three subprojects.
 - A **benchmark workspace** is a directory named `<provider>-<harness>-<model>`.
 - A **subproject** is `python-http-server`, `react-timer`, or `go-login-crud`.
 - A **plain variant** is the smallest implementation that meets the target
-  specification. It reads `README.md` and `guide.md`. It does not apply
+  specification. It reads `guide.md`. It does not apply
   `SKILL.md` or `traps.md`.
 - A **skill-guided variant** applies `SKILL.md` and `traps.md` as well.
 - An **agent tag** is the benchmark workspace directory name.
@@ -110,6 +110,17 @@ Set `BENCH_ALL_MODELS=1` to offer every model that can do the work. Set
 list in `scripts/benchmark-picker.ts`, so a new family or a new router is one
 line in that file.
 
+## Benchmark hygiene
+
+The model under test reads every document of the clean room. The run therefore
+seeds only the task documents: the guide, the traps, the skill, and the prompt.
+The run never copies `playground/README.md` into the clean room, because this
+file states the rubric. A model that reads the rubric writes the signal, not
+the behaviour. The target specification of the three subprojects lives in
+`playground/guide.md`. `make test_bench_leak` asks make for the dry-run
+recipe, confirms the seeded set, and fails when a scoring term reaches one of
+the seeded documents.
+
 ## What a report must show
 
 A report enters the README table only when every check passes. The checks are
@@ -121,7 +132,8 @@ in the notes under the report header.
 - The model stated the run token of the instructions.
 - All three skill-guided variants pass their tests and reach 100 percent of
   their subproject ceiling. The ceiling is 100 for `python-http-server` and
-  `go-login-crud`, and 67 for `react-timer`. See `guide.md` for the rubric.
+  `go-login-crud`, and 67 for `react-timer`. See the `Robustness score`
+  section.
 
 
 A run that fails a check stays on disk for inspection, and the table leaves it
@@ -159,8 +171,7 @@ Every run measures four things for each subproject and each variant:
 - Test verdict. The scanner runs the test command of the subproject and
   classifies the result. A pass, a test failure, and a scanner error are three
   different outcomes.
-- Robustness score. See `guide.md` for the rubric, the feature ceilings, and
-  the bloat penalty.
+- Robustness score. See the `Robustness score` section.
 
 ## Robustness score
 

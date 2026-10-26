@@ -47,6 +47,7 @@ make test_telemetry     # Run telemetry MCP unit tests.
 make test_picker        # Run benchmark picker unit tests.
 make test_picker_tty    # Run benchmark picker tests in a pseudo terminal.
 make test_report        # Run benchmark report and README table tests.
+make test_bench_leak    # Check that the seeded documents hold no scoring terms.
 make test_e2e           # Run telemetry end-to-end tests on real harnesses.
 make test_mcp           # Run MCP integration tests.
 make test_bench_run     # Check the expanded benchmark-run recipe of the Makefile.
@@ -81,9 +82,11 @@ needs no terminal.
 The run happens in a clean room outside the repository, under
 `$(BENCH_TMP)/lccst-bench-$(AGENT_MODEL)`. The target checks that the harness
 offers `BENCH_MODEL_ID`, because a harness that cannot resolve the model starts
-a different one. The target seeds `SKILL.md`, `README.md`, `guide.md`,
+a different one. The target seeds `SKILL.md`, `guide.md`,
 `traps.md`, and `agent-prompt.md` into the clean room, and copies
-`agent-prompt.md` to `AGENTS.md` so that the harness injects it. The target
+`agent-prompt.md` to `AGENTS.md` so that the harness injects it. The rubric
+stays in `playground/README.md`, which the run never copies, so the model
+under test cannot read the scoring. The target
 writes the run token to `prompt-token.txt` and to the last line of `AGENTS.md`.
 The target then starts the harness in the foreground with the `BENCH_TASK`
 prompt, so the user can steer the run. The run points the configuration

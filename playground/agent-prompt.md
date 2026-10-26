@@ -18,17 +18,15 @@ The assignment names one subproject (`python-http-server`, `react-timer`, or
 requests one variant only. If the host supplies a single `variant` value,
 implement only that value.
 
-Read `README.md` and `guide.md` before implementation. Both variants read the
-same two files.
+Read `guide.md` before implementation. Both variants read the same file.
 
 - For `plain`, do not load or apply `SKILL.md` or `traps.md`.
 - For `skill-guided`, load and apply `SKILL.md` and `traps.md`.
 
 A `mode` value (`strict` or `lean`) is independent of the benchmark `variant`.
-Do not use a mode name in place of a variant name. The scanner and the report
-always use the names `plain` and `skill-guided`. The report labels the plain
-column `Plain Strategy` and the skill-guided column `Skill-Guided`; these are
-display labels only. Always write the variant value that the assignment names.
+Do not use a mode name in place of a variant name. The two variant names are
+`plain` and `skill-guided`. Always write the variant value that the assignment
+names.
 
 ## 2. Prepare the sandbox
 
@@ -62,7 +60,7 @@ plan once, before you write code:
 - The manifest. Use `pyproject.toml` for `python-http-server`, `package.json`
   for `react-timer`, and `go.mod` for `go-login-crud`.
 - The tools. Use the supplied toolchain list in `guide.md`.
-- The conventions. Use `README.md` and `guide.md`. For `skill-guided`, also use
+- The conventions. Use `guide.md`. For `skill-guided`, also use
   the guardrails and the deliverables in `SKILL.md`.
 
 The variant directory is empty. The manifest does not exist yet. You create
@@ -71,12 +69,12 @@ the manifest in section 3.
 ## 3. Implement the subproject
 
 1. Create the directory for the current variant.
-2. Follow the target specification in `README.md` and `guide.md`.
+2. Follow the target specification in `guide.md`.
 3. Write the manifest, the source files, and the test files of the variant. The
    test command of the subproject names the test directory, so create it.
 4. Install dependencies with the command listed in `guide.md`.
-5. Run the benchmark test command before the phase ends. The harness runs the
-   test command after the run, so the variant needs test files that pass.
+5. Run the test command of the subproject before the phase ends, and fix what
+   fails.
 6. Call `log_turn_telemetry` at the end of the phase, after the test run.
    Call it once. Do not call it inside a loop, and do not make extra tool calls.
 
@@ -84,10 +82,10 @@ Implement only the variant that the assignment names. Do not create the other
 variant, a second implementation, or extra files that the assignment does not
 ask for. A phase names one variant.
 
-For `skill-guided`, keep source and test files in the scanner paths. Use
-explicit relative imports. Do not install a global package, create a symlink,
-or add a second toolchain. Do not change the benchmark scanner or its
-configuration.
+For `skill-guided`, keep source and test files in the paths that `guide.md`
+states. Use explicit relative imports. Do not install a global package, create
+a symlink, or add a second toolchain. Do not change the configuration file of
+the harness.
 
 ## 4. Keep the implementation lean
 
@@ -99,12 +97,12 @@ Plan the smallest file that satisfies the assignment, then write it once:
    in the source costs nothing to remove and room to carry.
 3. Write one test file that checks the behaviour. Extra assertions for one
    behaviour add no value.
-4. A long implementation costs points, but the target behaviour comes first.
-   When the task needs the lines, spend them on the feature, not on prose.
+4. Target behaviour comes first. When the task needs the lines, spend them on
+   the behaviour, not on prose.
 
-The scanner reads the text of the source file only. A feature that appears
-only in a test file, in a wrapper, or in your closing commentary does not
-count. Write the feature into the source file itself.
+Write each behaviour into the source file itself. A behaviour that appears
+only in a test file, in a wrapper, or in your closing commentary is not an
+implementation.
 
 ## 5. Record telemetry
 
