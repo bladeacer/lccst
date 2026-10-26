@@ -893,6 +893,254 @@ class ReportTextTest(unittest.TestCase):
         self.assertFalse(report.is_usable)
 
 
+class TestFileBoundaryTest(unittest.TestCase):
+    """The feature score and the bloat penalty must read implementation files only.
+
+    A feature that appears only in a test file does not count, and a padded
+    test file must not change the score of the variant.
+    """
+
+    def test_a_test_directory_marks_a_test_file(self):
+        self.assertTrue(scanner.is_test_file(Path("x") / "tests" / "app.py"))
+        self.assertTrue(scanner.is_test_file(Path("x") / "test" / "app.py"))
+        self.assertFalse(scanner.is_test_file(Path("x") / "src" / "app.py"))
+
+    def test_a_test_file_name_marks_a_test_file(self):
+        self.assertTrue(scanner.is_test_file(Path("x") / "test_app.py"))
+        self.assertTrue(scanner.is_test_file(Path("x") / "app_test.go"))
+        self.assertTrue(scanner.is_test_file(Path("x") / "app.test.tsx"))
+        self.assertFalse(scanner.is_test_file(Path("x") / "app.py"))
+        self.assertFalse(scanner.is_test_file(Path("x") / "latest.py"))
+
+    def test_a_feature_only_in_the_test_file_does_not_count(self):
+        """The detector aggregates the implementation files, not every file."""
+        with tempfile.TemporaryDirectory() as dir:
+            root = Path(dir)
+            (root / "src").mkdir()
+            (root / "tests").mkdir()
+            (root / "src" / "app.py").write_text("def f():\n    return 1\n")
+            (root / "tests" / "test_app.py").write_text(
+                "def f(x: int) -> int:\n    value = hash('x')\n    try:\n        pass\n    except ValueError:\n        raise\n"
+            )
+            measured = scanner.measure_files(root)
+        self.assertFalse(measured["features_aggregate"]["has_typing"])
+        self.assertFalse(measured["features_aggregate"]["has_security"])
+        self.assertFalse(measured["features_aggregate"]["has_error_handling"])
+
+    def test_a_feature_in_the_implementation_counts(self):
+        with tempfile.TemporaryDirectory() as dir:
+            root = Path(dir)
+            (root / "src").mkdir()
+            (root / "src" / "app.py").write_text(
+                "def f(x: int) -> int:\n    return x\n"
+            )
+            measured = scanner.measure_files(root)
+        self.assertTrue(measured["features_aggregate"]["has_typing"])
+
+    def test_impl_lines_excludes_test_lines(self):
+        with tempfile.TemporaryDirectory() as dir:
+            root = Path(dir)
+            (root / "tests").mkdir()
+            (root / "app.py").write_text("a = 1\nb = 2\n")
+            (root / "tests" / "test_app.py").write_text("assert a\nassert b\nassert a\n")
+            measured = scanner.measure_files(root)
+        self.assertEqual(measured["impl_lines"], 2)
+        self.assertEqual(measured["total_lines"], 5)
+
+    def test_the_bloat_penalty_reads_impl_lines(self):
+        """A padded test file must not change the score of the variant."""
+        def variant(impl_lines):
+            return {
+                "test_result": {"status": "passed"},
+                "features_aggregate": {
+                    "has_typing": True, "has_security": False,
+                    "has_error_handling": False, "has_test_assertion": True,
+                },
+                "impl_lines": impl_lines,
+            }
+
+        name = "react-timer"
+        self.assertEqual(
+            scanner.compute_robustness_score(variant(19), name),
+            100,
+        )
+        # The ratio of a variant with more lines per feature than the limit
+        # loses score, and the loss grows with the ratio.
+        penalised = scanner.compute_robustness_score(variant(41), name)
+        self.assertGreater(penalised, 0)
+        self.assertLess(penalised, 100)
+        self.assertGreater(penalised, 40)
+
+    def test_the_bloat_penalty_falls_back_to_the_total(self):
+        """A hand-built result without an implementation count keeps a score."""
+        variant = {
+            "test_result": {"status": "passed"},
+            "features_aggregate": {
+                "has_typing": True, "has_security": False,
+                "has_error_handling": False, "has_test_assertion": True,
+            },
+            "total_lines": 10,
+        }
+        self.assertEqual(scanner.compute_robustness_score(variant, "react-timer"), 100)
+
+    def test_a_variant_with_no_feature_receives_no_bloat_penalty(self):
+        variant = {
+            "test_result": {"status": "passed"},
+            "features_aggregate": {
+                "has_typing": False, "has_security": False,
+                "has_error_handling": False, "has_test_assertion": True,
+            },
+            "impl_lines": 500,
+        }
+        self.assertEqual(scanner.compute_robustness_score(variant, "python-http-server"), 50)
+
+    def test_the_score_is_a_percentage_of_the_ceiling(self):
+        def variant(feature_keys):
+            aggregate = {
+                "has_typing": "has_typing" in feature_keys,
+                "has_security": "has_security" in feature_keys,
+                "has_error_handling": "has_error_handling" in feature_keys,
+                "has_test_assertion": True,
+                "impl_lines": 0,
+            }
+            return {
+                "test_result": {"status": "passed"},
+                "features_aggregate": aggregate,
+                "impl_lines": 0,
+            }
+
+        # A passing react-timer with typing reaches 67/67, which is 100 percent.
+        self.assertEqual(
+            scanner.compute_robustness_score(variant(["has_typing"]), "react-timer"), 100
+        )
+        # A passing react-timer without typing reaches 50/67, which is 74 percent,
+        # so truncation must not round it up to a pass.
+        self.assertEqual(
+            scanner.compute_robustness_score(variant([]), "react-timer"), 74
+        )
+        # A passing python-http-server with every feature reaches the ceiling.
+        self.assertEqual(
+            scanner.compute_robustness_score(
+                variant(["has_typing", "has_security", "has_error_handling"]),
+                "python-http-server",
+            ),
+            100,
+        )
+
+
+class TypingDetectionTest(unittest.TestCase):
+    """The typing marker must not read a return statement through the colon."""
+
+    def test_a_bare_parameter_list_is_not_a_typing_marker(self):
+        text = "def run(self):\n    return self.value\n"
+        self.assertFalse(scanner.analyze_code_features(text)["has_typing"])
+
+    def test_a_annotated_parameter_is_a_typing_marker(self):
+        text = "def run(self, start: int) -> None:\n    return\n"
+        self.assertTrue(scanner.analyze_code_features(text)["has_typing"])
+
+    def test_a_return_arrow_and_a_variable_annotation_count(self):
+        text = "def f() -> int:\n    return 1\n"
+        self.assertTrue(scanner.analyze_code_features(text)["has_typing"])
+        self.assertTrue(scanner.analyze_code_features("x: int = 1\n")["has_typing"])
+
+    def test_the_annotated_list_keeps_the_colon_inside_the_parameters(self):
+        """A colon after the parameter list must not read as an annotation."""
+        text = "def run(self):\n    if self.state:\n        return self.state\n"
+        self.assertFalse(scanner.analyze_code_features(text)["has_typing"])
+
+
+class ContaminationTest(unittest.TestCase):
+    """The contamination check must read the implementation counts."""
+
+    def result(self, file_count, impl_lines, total_lines, tokens):
+        return {
+            "file_count": file_count,
+            "impl_lines": impl_lines,
+            "total_lines": total_lines,
+            "total_tokens": tokens,
+        }
+
+    def test_identical_counts_are_flagged(self):
+        pair = {
+            "python-http-server": {
+                "plain": self.result(3, 60, 100, 400),
+                "skill-guided": self.result(3, 60, 100, 400),
+            },
+            "react-timer": {
+                "plain": self.result(2, 20, 20, 65),
+                "skill-guided": self.result(2, 20, 20, 65),
+            },
+            "go-login-crud": {
+                "plain": self.result(2, 50, 50, 300),
+                "skill-guided": self.result(2, 50, 50, 300),
+            },
+        }
+        self.assertEqual(
+            scanner.check_contamination(pair),
+            {("python-http-server", "skill-guided"),
+             ("react-timer", "skill-guided"),
+             ("go-login-crud", "skill-guided")},
+        )
+
+    def test_a_different_implementation_is_not_flagged(self):
+        pair = {
+            "python-http-server": {
+                "plain": self.result(3, 60, 100, 400),
+                "skill-guided": self.result(4, 80, 100, 500),
+            },
+            "react-timer": {
+                "plain": self.result(2, 20, 20, 65),
+                "skill-guided": self.result(2, 20, 20, 65),
+            },
+            "go-login-crud": {
+                "plain": self.result(2, 50, 50, 300),
+                "skill-guided": self.result(2, 50, 50, 300),
+            },
+        }
+        flag = scanner.check_contamination(pair)
+        self.assertNotIn(("python-http-server", "skill-guided"), flag)
+        self.assertIn(("react-timer", "skill-guided"), flag)
+
+    def test_a_copied_test_file_alone_is_not_contamination(self):
+        """Both variants write a test file, so the total must not decide."""
+        pair = {
+            "python-http-server": {
+                "plain": self.result(2, 60, 100, 400),
+                "skill-guided": self.result(2, 60, 130, 430),
+            },
+            "react-timer": {
+                "plain": self.result(2, 20, 20, 65),
+                "skill-guided": self.result(2, 20, 20, 65),
+            },
+            "go-login-crud": {
+                "plain": self.result(2, 50, 50, 300),
+                "skill-guided": self.result(2, 50, 50, 300),
+            },
+        }
+        flag = scanner.check_contamination(pair)
+        self.assertNotIn(("python-http-server", "skill-guided"), flag)
+
+    def test_an_empty_variant_is_never_flagged(self):
+        pair = {
+            "python-http-server": {
+                "plain": self.result(0, 0, 0, 0),
+                "skill-guided": self.result(0, 0, 0, 0),
+            },
+            "react-timer": {
+                "plain": self.result(2, 20, 20, 65),
+                "skill-guided": self.result(2, 20, 20, 65),
+            },
+            "go-login-crud": {
+                "plain": self.result(2, 50, 50, 300),
+                "skill-guided": self.result(2, 50, 50, 300),
+            },
+        }
+        flag = scanner.check_contamination(pair)
+        self.assertNotIn(("python-http-server", "skill-guided"), flag)
+        self.assertIn(("react-timer", "skill-guided"), flag)
+
+
 def main():
     """Run every test case of the file."""
     loader = unittest.TestLoader()
