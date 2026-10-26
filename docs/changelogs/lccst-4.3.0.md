@@ -84,12 +84,12 @@ behaviour needs remain acceptable.
 `scripts/test-parity.ts` now also checks that every capability claim in the
 README opening paragraph matches a rule in SKILL.md or a check in the MCP
 server. A claim with no backing rule fails the check. It now also checks that
-the weak-model guidance appears in both SKILL.md and the MCP server, so a
+the execution guidance appears in both SKILL.md and the MCP server, so a
 checklist rule cannot exist on one side only.
 
-### Weak-Model Checklist Carries No Scoring Vocabulary
+### Execution Checklist Carries No Scoring Vocabulary
 
-The weak-model checklist of SKILL.md described benchmark mechanics, such as a
+The execution checklist of SKILL.md described benchmark mechanics, such as a
 lines-per-feature limit and a score to chase, which read as noise outside a
 benchmark run. The checklist now states the general rule: implement the
 asked-for behaviour once, place the behaviour in the source itself, and spend

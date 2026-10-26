@@ -701,7 +701,7 @@ server.registerPrompt("swarm", {
 });
 
 // Tool: /init
-/** The implementation guidance that mirrors the weak-model checklist of SKILL.md. */
+/** The implementation guidance that mirrors the execution checklist of SKILL.md. */
 export const WEAK_MODEL_GUIDANCE: string[] = [
   "Implement only the behaviour the task asks for, write each part once, and do not restate the rules in comments. Do not pad the test file. Extra lines that the behaviour needs are acceptable; extra lines that add no behaviour are waste.",
   "Put each required behaviour into the source file itself. A behaviour that exists only in a test or in reply commentary is not implemented.",

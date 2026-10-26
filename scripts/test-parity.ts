@@ -196,7 +196,7 @@ for (const step of errorReplySteps) {
 }
 
 // --- 7. Guidance parity ---
-// The weak-model checklist of SKILL.md and the guidance field of the MCP
+// The execution checklist of SKILL.md and the guidance field of the MCP
 // server must state the same three rules. Only a shared anchor phrase proves
 // that both sides carry the rule.
 for (const phrase of [
