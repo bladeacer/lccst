@@ -87,11 +87,12 @@ The benchmark removes `VIRTUAL_ENV`. Use `uv run python3`.
 - **Module path does not match import**: Compare every import with `go.mod`.
 - **Empty path value in test request**: Call `req.SetPathValue("id", "...")`
   after `httptest.NewRequest`.
-- **Scanner checks error branches**: Keep `if err != nil` for clarity.## Score ceiling
+- **Scanner checks error branches**: Keep `if err != nil` for clarity.
+
+## Score ceiling
 
 The scanner uses fixed ceilings. The README table accepts a run only when the
-skill-guided variant reaches the ceiling for every subproject. The ceilings are
-not advice. They are the same numbers the scanner awards.
+skill-guided variant reaches 100 percent of the ceiling for every subproject.
 
 | Subproject | Ceiling | Why that ceiling |
 | --- | :---: | --- |
@@ -99,52 +100,27 @@ not advice. They are the same numbers the scanner awards.
 | react-timer | 67 | Pass 50 + typing 17 |
 | go-login-crud | 100 | Pass 50 + typing 17 + security 17 + error handling 16 |
 
+The score is a percentage of the ceiling, not a raw point count. A passing
+`react-timer` that delivers typing reaches 67 raw points, which is 100 percent.
+A passing `react-timer` without typing reaches 75 percent, and the table
+rejects the run.
+
 ### Traps
 
-- **Plain React Timer cannot earn security points**: The rubric ceiling for
-  `react-timer` sets `Max Security` to 0 and `Max Error Handling` to 0. Do not
-  chase those features for the plain React Timer.
-- **Plain React Timer can still pass**: A pass earns 50 points, and the typing
-  ceiling adds 17 points. That is enough for a passing plain React Timer.
-- **Skill-guided variants must reach the ceiling on every subproject**: The README
-  table rejects a run whose skill-guided variant falls below the ceiling on any
-  subproject.
-- **Same rubric, different ceiling**: The plain variant and the skill-guided
-  variant share the same rubric. The feature ceiling is the only thing that
-  differs by subproject.
-- **`Max Typing`, `Max Security`, and `Max Error Handling` are rubric ceilings**:
-  they are not separate bonuses. They set the maximum points the rubric can award
-  for each feature class on that subproject.
-- **A skill-guided React Timer must reach 67, not 100**: the ceiling for
-  `react-timer` is 67. A skill-guided React Timer that passes and delivers every
-  rewarded feature for that subproject reaches 67. A skill-guided React Timer that
-  passes and delivers only typing reaches at most 67.
-- **A skill-guided React Timer can fail the gate with a passing test**: the README
-  table rejects a skill-guided React Timer that passes but scores below 67.
-- **Do not confuse ceiling with target**: the 100 gate is the README table, not
-  the rubric. The rubric ceiling for `react-timer` is 67, and the rubric ceiling
-  for `python-http-server` and `go-login-crud` is 100.
-- **A high score needs a real feature and a short file**: The ceiling is reached
-  by a pass plus every detected feature, with no lines-per-feature penalty. A file
-  that carries a feature but also carries many lines of prose can fail the gate
-even with the right feature text, so keep the variant small and the feature real.
-- **A feature the scanner does not find does not count**: The scanner checks the
-  text of the source file. If the file has the right behaviour but not the right
-  term, the score still misses that feature. Do not assume the test proves the
-  feature to the scanner.
-- **Do not split the score into the wrong buckets**: The scanner and the report
-  use the words `plain` and `skill-guided`. Do not use `Strategy` and
-  `Routine` in your own work, except when you quote the report labels. The report
-  labels are not a second model and they are not a second rubric.
-- **The ceiling and the bloat penalty are not the same check**: The ceiling says
-  how many points the rubric can award. The bloat penalty says whether a variant
-  that already reached the ceiling stays there after the scanner looks at its
-  lines. A variant can hit the ceiling and still lose points to bloat. Do not
-  confuse the two.
-- **The scanner does not check the test for the feature score**: The scanner looks
-  at the source file, not at the test result, for typing, security, and error
-  handling. A test that asserts the feature does not put the feature into the
-  source score. It also does not count the number of assertions. Do not pad the
-  test file with many assertions expecting the same thing. The scanner does not
-  turn that into score, and it can turn into bloat, and it can fail the gate even
-  when the test passes.
+- **React Timer reaches the ceiling through typing alone**: The ceiling for
+  `react-timer` sets security and error handling to 0, so a passing variant
+  with a typing signal in the source already holds every rewarded feature.
+- **A high score needs a real feature and a lean file**: The ceiling is reached
+  by a pass plus every detected feature, with no lines-per-feature penalty.
+  Spend lines on the target behaviour, not on prose that adds no feature.
+- **A feature the scanner does not find does not count**: The scanner reads the
+  text of the source file. A file with the right behaviour but not the right
+  signal still misses the feature. Do not trust a passing test to carry the
+  feature.
+- **The bloat penalty lowers the score, it is not a target**: The penalty
+  applies only to a variant that already delivered a rewarded feature, and it
+  reads implementation lines only. Lines that the target behaviour needs cost
+  points only through the penalty.
+- **The scanner does not count test assertions**: Many assertions for one
+  behaviour add no score. Deliver the behaviour in the source file.
+
