@@ -138,6 +138,8 @@ export declare function gitChanges(root: string): GitChanges;
  */
 export declare function clusterPaths(paths: string[]): Cluster[];
 export declare function clusterHunks(lines: string[]): Cluster[];
+/** The implementation guidance that mirrors the weak-model checklist of SKILL.md. */
+export declare const WEAK_MODEL_GUIDANCE: string[];
 export interface VerifyReport {
     /** One entry per step. A later step after a failure is reported, not run. */
     results: Record<string, unknown>;

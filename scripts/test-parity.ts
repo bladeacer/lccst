@@ -195,6 +195,23 @@ for (const step of errorReplySteps) {
   }
 }
 
+// --- 7. Guidance parity ---
+// The weak-model checklist of SKILL.md and the guidance field of the MCP
+// server must state the same three rules. Only a shared anchor phrase proves
+// that both sides carry the rule.
+for (const phrase of [
+  "write each part once",
+  "exists only in a test",
+  "restate the plan between steps",
+]) {
+  if (!skillText.includes(phrase)) {
+    errors.push("SKILL.md: weak-model guidance missing the phrase \"" + phrase + "\"");
+  }
+  if (!srcContent.includes(phrase)) {
+    errors.push("src/index.ts: guidance field missing the phrase \"" + phrase + "\"");
+  }
+}
+
 // --- Report results ---
 if (errors.length === 0) {
   console.log("Parity check passed: SKILL.md, README.md, and MCP server agree on the protocol.");
