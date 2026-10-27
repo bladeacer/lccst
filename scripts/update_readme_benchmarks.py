@@ -2,8 +2,8 @@
 """Update README.md with latest top-N benchmark results.
 
 Scans playground/benchmarks/ for agent-model directories, parses the
-latest benchmark report for each unique agent-model, picks the top N by
-average guided robustness score, and regenerates the benchmark table in
+latest benchmark report for each unique agent-model, picks the top three
+by performance and token efficiency, and regenerates the benchmark table in
 README.md.
 """
 
@@ -16,10 +16,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-BENCH_DIR = Path("playground/benchmarks")
-README_PATH = Path("README.md")
-RANKING_PATH = Path("model-ranking.md")
-TOP_N = 5
+# The paths are anchored to the file, so the generator works from every
+# directory. A path relative to the working directory would find no report
+# from another directory, and the generator would overwrite the README table
+# with no findings.
+ROOT = Path(__file__).resolve().parent.parent
+BENCH_DIR = ROOT / "playground" / "benchmarks"
+README_PATH = ROOT / "README.md"
+RANKING_PATH = ROOT / "model-ranking.md"
 
 ART_RE = re.compile(r"\*\*(\d+)\s+tokens?\*\*")
 SCORE_RE = re.compile(r"\*\*(\d+)%\*\*")
@@ -75,6 +79,8 @@ class BenchmarkReport:
     prompt_state: str = PROMPT_UNKNOWN
     model_state: str = "unknown"
     contaminated: str = "no"
+    flagged: str = "no"
+    drift: str = "no"
     harness_version: str = "not stated"
 
     @property
@@ -97,10 +103,16 @@ class BenchmarkReport:
         harness, the run covers the three subprojects, every skill-guided
         subproject scores 100 percent and passes its tests, every phase holds a
         settled count, the host store confirms the model of the run, and the
-        model stated the run token of the instructions. A report that fails any
-        check must not rank a model.
+        model stated the run token of the instructions, the settle step
+        flagged no phase with an impossible count, and the machine of the run
+        matches the declared toolchain. A report that fails any check must not
+        rank a model.
         """
         if not self.is_reproducible:
+            return False
+        if self.flagged == "yes":
+            return False
+        if self.drift == "yes":
             return False
         if self.token_state != MEASURED:
             return False
@@ -196,9 +208,11 @@ def read_test_status(cell: str) -> str:
 
 
 CONTAMINATED_RE = re.compile(
-    r"\*\*Contaminated phases\*\.\* The guided variant holds the same file "
-    r"count, line count, and token count as the plain variant"
+    r"\*\*Contaminated phases\.\*\* The guided variant holds the same file "
+    r"count, implementation line count, and token count as the plain variant"
 )
+
+FLAGGED_RE = re.compile(r"\*\*Flagged phases\.\*\* The settle step flagged")
 
 
 def read_note_states(text: str) -> dict[str, str]:
@@ -214,6 +228,8 @@ def read_note_states(text: str) -> dict[str, str]:
         "prompt_state": PROMPT_UNKNOWN,
         "model_state": MODEL_UNVERIFIED,
         "contaminated": "no",
+        "flagged": "no",
+        "drift": "no",
     }
 
     if re.search(r"\*\*Measured runtime tokens", text):
@@ -239,6 +255,12 @@ def read_note_states(text: str) -> dict[str, str]:
 
     if CONTAMINATED_RE.search(text):
         states["contaminated"] = "yes"
+
+    if FLAGGED_RE.search(text):
+        states["flagged"] = "yes"
+
+    if re.search(r"\*\*Toolchain drift\.\*\*", text):
+        states["drift"] = "yes"
 
     return states
 
@@ -544,6 +566,10 @@ def reject_reason(r: BenchmarkReport) -> str:
     """
     if not r.is_reproducible:
         return "the report names no harness version, so the run cannot be reproduced"
+    if r.flagged == "yes":
+        return "the settle step flagged a phase with an impossible token count"
+    if r.drift == "yes":
+        return "the machine of the run drifted from the declared toolchain"
     if r.token_state != MEASURED:
         if r.token_state == UNSETTLED:
             return "a phase holds no settled token count"

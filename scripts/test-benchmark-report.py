@@ -199,6 +199,21 @@ class TestStatusTest(unittest.TestCase):
         verdict = self.verdict(1, 3, stdout="No tests found, exiting with code 1")
         self.assertEqual(verdict["status"], "error")
 
+    def test_a_go_run_with_no_test_file_is_an_error(self):
+        """`go test ./tests/` exits with 0 for a package with no test file."""
+        verdict = self.verdict(0, 3, stdout="?    demo/tests\t[no test files]\n")
+        self.assertEqual(verdict["status"], "error")
+        self.assertIn("no test", verdict["reason"])
+
+    def test_a_go_run_with_a_real_test_is_not_an_error(self):
+        """A workspace with one empty package still scores its real result."""
+        verdict = self.verdict(
+            0, 3,
+            stdout="=== RUN   TestLogin\n--- PASS: TestLogin (0.00s)\n"
+                   "?    demo/tests/handlers\t[no test files]\n",
+        )
+        self.assertEqual(verdict["status"], "passed")
+
     def test_error_scores_below_failure(self):
         """An error must not outscore a real failure."""
         def variant(status):
@@ -359,19 +374,52 @@ class HarnessVersionTest(unittest.TestCase):
                 scanner.WORKSPACE = original
 
 
+class PathAnchoringTest(unittest.TestCase):
+    """The generator must read its paths from the script, not from the directory.
+
+    A run of `make bench-update` starts in the repository root, but a call from
+    another directory must find the same reports and the same README. A path
+    that the working directory decides finds nothing, and the generator then
+    wipes the table of the README with no findings.
+    """
+
+    def test_every_path_is_anchored_to_the_repository(self):
+        self.assertTrue(table.BENCH_DIR.is_absolute(), "BENCH_DIR is an absolute path")
+        self.assertTrue(table.BENCH_DIR.is_dir(), "BENCH_DIR names the playground")
+        self.assertEqual(
+            table.BENCH_DIR.resolve(), (ROOT / "playground" / "benchmarks").resolve()
+        )
+        self.assertTrue(table.README_PATH.is_absolute(), "README_PATH is absolute")
+        self.assertEqual(
+            table.README_PATH.resolve(), (ROOT / "README.md").resolve()
+        )
+        self.assertEqual(
+            table.RANKING_PATH.resolve(), (ROOT / "model-ranking.md").resolve()
+        )
+
+
+class ToolchainTest(unittest.TestCase):
+    """The report must state a toolchain drift."""
+
 class ToolchainTest(unittest.TestCase):
     """The report must state a toolchain drift."""
 
     def test_drift_is_stated(self):
         notes = scanner.toolchain_notes({"python": "3.14.5", "pnpm": "11.3.0", "go": "1.26.4-X"})
         self.assertTrue(any("python" in note for note in notes))
-        self.assertTrue(any("pnpm" in note for note in notes))
-        self.assertTrue(any("go" in note for note in notes))
-        self.assertEqual(len(notes), 3)
 
     def test_no_drift_when_the_machine_matches(self):
         notes = scanner.toolchain_notes({"python": "3.13.11", "pnpm": "12.14.0", "go": "1.27.2-X"})
         self.assertEqual(notes, [])
+
+    def test_a_version_that_carries_the_declared_text_is_a_drift(self):
+        """A substring match is not a version match."""
+        notes = scanner.toolchain_notes({"python": "3.13.110"})
+        self.assertTrue(any("python" in note for note in notes))
+        self.assertEqual(scanner.version_matches("12.14.0", "12"), True)
+        self.assertTrue(any("pnpm" in note for note in notes))
+        self.assertTrue(any("go" in note for note in notes))
+        self.assertEqual(len(notes), 3)
 
 
 class BenchmarkEnvironmentTest(unittest.TestCase):
@@ -469,8 +517,28 @@ class TelemetryFileTest(unittest.TestCase):
         finally:
             scanner.WORKSPACE = original
         self.assertEqual(record["unsettled_phases"], 1)
+        self.assertEqual(record["models"], ["opencode/x"])
         self.assertTrue(record["prompt_verified"])
         self.assertEqual(record["models"], ["opencode/x"])
+
+    def test_one_stated_token_among_the_phases_is_no_proof(self):
+        """The model must state the run token in every settled phase."""
+        self.write({
+            "total_tokens": 20,
+            "phases": [
+                {"subproject": "react-timer", "variant": "plain", "settled": True,
+                 "model": "opencode/x", "token_seen": True},
+                {"subproject": "python-http-server", "variant": "plain", "settled": True,
+                 "model": "opencode/x", "token_seen": False},
+            ],
+        })
+        original = scanner.WORKSPACE
+        scanner.WORKSPACE = self.workspace
+        try:
+            record = scanner.load_telemetry("tag")
+        finally:
+            scanner.WORKSPACE = original
+        self.assertFalse(record["prompt_verified"])
 
     def test_damaged_file_gives_an_empty_record(self):
         (self.workspace / "runtime-telemetry.json").write_text("{not json")
@@ -481,6 +549,24 @@ class TelemetryFileTest(unittest.TestCase):
         finally:
             scanner.WORKSPACE = original
         self.assertEqual(record["total_tokens"], 0)
+
+    def test_a_flagged_phase_reaches_the_record(self):
+        self.write({
+            "total_tokens": 9000,
+            "phases": [
+                {"subproject": "react-timer", "variant": "plain", "settled": True,
+                 "model": "opencode/x", "token_seen": True,
+                 "flag": "phase_tokens_exceed_run_total;"},
+            ],
+        })
+        original = scanner.WORKSPACE
+        scanner.WORKSPACE = self.workspace
+        try:
+            record = scanner.load_telemetry("tag")
+        finally:
+            scanner.WORKSPACE = original
+        self.assertEqual(len(record["flagged_phases"]), 1)
+        self.assertEqual(record["flagged_phases"][0]["subproject"], "react-timer")
 
 
 class NoteParserTest(unittest.TestCase):
@@ -524,6 +610,26 @@ class NoteParserTest(unittest.TestCase):
         self.assertEqual(table.read_test_status("`FAILED (code 1)`"), "failed")
         self.assertEqual(table.read_test_status("`ERROR: the variant holds no source file`"), "error")
         self.assertEqual(table.read_test_status("`Skipped`"), "unknown")
+
+    def test_a_flagged_report_states_the_flag(self):
+        states = table.read_note_states(
+            "> **Flagged phases.** The settle step flagged `react-timer/plain`."
+        )
+        self.assertEqual(states["flagged"], "yes")
+
+    def test_a_clean_report_holds_no_flag(self):
+        states = table.read_note_states("> **Model verified.** ok\n")
+        self.assertEqual(states["flagged"], "no")
+
+    def test_a_drift_report_states_the_drift(self):
+        states = table.read_note_states(
+            "> **Toolchain drift.** python 3.14.5 instead of 3.13.11."
+        )
+        self.assertEqual(states["drift"], "yes")
+
+    def test_a_clean_report_states_no_drift(self):
+        states = table.read_note_states("> **Model verified.** ok\n")
+        self.assertEqual(states["drift"], "no")
 
 
 ROBUSTNESS_TABLE = """## Robustness Metrics
@@ -629,6 +735,20 @@ class GateTest(unittest.TestCase):
         report = make_report()
         report.projects[1].guided_score = 74
         self.assertFalse(report.is_usable)
+
+    def test_a_flagged_phase_is_rejected(self):
+        report = make_report(flagged="yes")
+        self.assertFalse(report.is_usable)
+        self.assertIn(
+            "impossible token count", table.reject_reason(report),
+        )
+
+    def test_a_toolchain_drift_is_rejected(self):
+        report = make_report(drift="yes")
+        self.assertFalse(report.is_usable)
+        self.assertIn(
+            "toolchain", table.reject_reason(report),
+        )
 
     def test_an_error_subproject_is_rejected(self):
         report = make_report()
@@ -772,7 +892,7 @@ class ReportTextTest(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def build(self, record, harness_version="opencode v2.0.18 (/usr/bin/opencode)"):
+    def build(self, record, harness_version="opencode v2.0.18 (/usr/bin/opencode)", contamination=None):
         original = scanner.WORKSPACE
         scanner.WORKSPACE = self.workspace
         try:
@@ -780,7 +900,7 @@ class ReportTextTest(unittest.TestCase):
             text = scanner.generate_markdown(
                 results, "opencode", "opencode", "ling-free", "opencode/ling-free",
                 "opencode-opencode-ling-free", "v3.7.0", record, True,
-                harness_version,
+                harness_version, contamination=contamination,
             )
         finally:
             scanner.WORKSPACE = original
@@ -792,6 +912,11 @@ class ReportTextTest(unittest.TestCase):
         self.assertIn("**Prompt unverified.**", text)
         self.assertIn("**Model unverified.**", text)
         self.assertIn("**No runtime tokens.**", text)
+
+    def test_the_score_is_named_a_proxy(self):
+        """A keyword detector is a proxy for the real design qualities."""
+        text = self.build(scanner.empty_telemetry())
+        self.assertIn("text-level proxy", text)
 
     def test_a_measured_run_is_labelled(self):
         record = scanner.empty_telemetry()
@@ -859,6 +984,48 @@ class ReportTextTest(unittest.TestCase):
         )
         self.assertTrue(report.is_reproducible)
         self.assertEqual(table._short_version(report.harness_version), "v2.0.18")
+
+    def test_a_contaminated_report_names_the_note(self):
+        """The gate reads the note that the scanner emits for a copied variant.
+
+        The note text of the report and the note pattern of the gate must stay
+        one pair. A pattern that lags behind the emitter leaves the gate open.
+        """
+        text = self.build(scanner.empty_telemetry(), contamination={("react-timer", "skill-guided")})
+        states = table.read_note_states(text)
+        self.assertEqual(states["contaminated"], "yes")
+
+    def test_a_contaminated_report_never_enters_the_table(self):
+        record = scanner.empty_telemetry()
+        record["models"] = ["opencode/ling-free"]
+        record["prompt_verified"] = True
+        record["phases"] = [
+            {"subproject": p, "variant": v, "settled": True, "model": "opencode/ling-free"}
+            for p in scanner.PROJECT_ORDER for v in scanner.VARIANTS
+        ]
+        record["measured_breakdown"] = True
+        record["total_tokens"] = 500
+        text = self.build(record, contamination={("python-http-server", "skill-guided")})
+        report = table.parse_report(text, "opencode-opencode-ling-free")
+        assert report is not None
+        self.assertEqual(report.contaminated, "yes")
+        self.assertFalse(report.is_usable)
+
+    def test_a_flagged_report_never_enters_the_table(self):
+        record = scanner.empty_telemetry()
+        record["models"] = ["opencode/ling-free"]
+        record["prompt_verified"] = True
+        record["phases"] = [
+            {"subproject": "react-timer", "variant": "plain", "settled": True,
+             "model": "opencode/ling-free", "flag": "phase_tokens_exceed_run_total;"}
+        ]
+        record["flagged_phases"] = [{"subproject": "react-timer", "variant": "plain"}]
+        text = self.build(record)
+        self.assertIn("**Flagged phases.**", text)
+        report = table.parse_report(text, "opencode-opencode-ling-free")
+        assert report is not None
+        self.assertEqual(report.flagged, "yes")
+        self.assertFalse(report.is_usable)
 
     def test_a_report_with_no_version_line_is_not_reproducible(self):
         text = self.build(scanner.empty_telemetry(), harness_version=None)

@@ -127,9 +127,11 @@ A report enters the README table only when every check passes. The checks are
 in the notes under the report header.
 
 - The report names the version of the harness and the path of the command.
-- Every phase holds a settled token count.
+- Every phase holds a settled token count, and the settle step flagged no
+  phase with an impossible count.
 - The host store confirms the model of the run.
 - The model stated the run token of the instructions.
+- The machine of the run matches the declared toolchain.
 - All three skill-guided variants pass their tests and reach 100 percent of
   their subproject ceiling. The ceiling is 100 for `python-http-server` and
   `go-login-crud`, and 67 for `react-timer`. See the `Robustness score`

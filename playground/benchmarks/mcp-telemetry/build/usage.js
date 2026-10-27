@@ -228,6 +228,71 @@ export function sumTurnUsage(messages, window) {
     return usage;
 }
 /**
+ * Sum the token usage of every model turn of one workspace.
+ *
+ * The settle step compares a settled phase with the whole workspace, so one
+ * phase cannot report more tokens than every session of the workspace held.
+ * The phase totals of the telemetry record sum into the record total, so the
+ * record total cannot serve as the bound. The function therefore reads the
+ * first store that holds sessions whose workspace directory matches, and it
+ * sums the assistant turns of those sessions over every span. The function
+ * returns `null` when no store holds the workspace.
+ */
+export function readWorkspaceUsage(query) {
+    const candidates = query.candidates ?? resolveStoreCandidates();
+    const directory = path.resolve(query.directory);
+    for (const candidate of candidates) {
+        const store = openStore(candidate);
+        if (!store) {
+            continue;
+        }
+        try {
+            const schema = detectSchema(store);
+            if (!schema) {
+                store.close();
+                continue;
+            }
+            const rootRows = store
+                .prepare(`SELECT id FROM ${schema.sessions} WHERE directory = ?`)
+                .all(directory);
+            const ids = rootRows.map((row) => String(row.id));
+            if (ids.length === 0) {
+                store.close();
+                continue;
+            }
+            // The children of one root session may also be children of another root
+            // session, so the walk de-duplicates every identifier it holds.
+            for (let index = 0; index < ids.length; index++) {
+                const children = store
+                    .prepare(`SELECT id FROM ${schema.sessions} WHERE parent_id = ?`)
+                    .all(ids[index]);
+                for (const child of children) {
+                    const id = String(child.id);
+                    if (!ids.includes(id)) {
+                        ids.push(id);
+                    }
+                }
+            }
+            const usage = sumTurnUsage(readMessages(store, schema, ids), {
+                fromTime: 0,
+                toTime: Number.MAX_SAFE_INTEGER,
+            });
+            store.close();
+            return usage;
+        }
+        catch (error) {
+            process.stderr.write(`[Telemetry Debug] Store read failed: ${String(error)}\n`);
+            try {
+                store.close();
+            }
+            catch {
+                // A handle that the platform already released needs no closing.
+            }
+        }
+    }
+    return null;
+}
+/**
  * Say whether the model wrote the run token of the instructions.
  *
  * The instructions of a run carry a token. A model that received them repeats

@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { readTelemetry, resolveTelemetryFile, settlePhase, writeTelemetry } from "./telemetry.js";
-import { readTurnUsage, resolveStoreCandidates, statesToken } from "./usage.js";
+import { readTurnUsage, readWorkspaceUsage, resolveStoreCandidates, statesToken } from "./usage.js";
 /**
  * Read the run token of the instructions of a run.
  *
@@ -66,23 +66,40 @@ function settle() {
             `prompt ${step.prompt_tokens}, completion ${step.completion_tokens}, ` +
             `cache read ${step.cache_read_tokens}, model turns ${step.model_turns}.\n`);
     });
-    if (pending > 0) {
-        writeTelemetry(targetFile, settled);
-    }
-    // Flag phases whose settled tokens exceed the session total. A phase that
-    // reports more prompt tokens than the whole session held cannot be a real
-    // measurement, and the report must not present it as one.
-    const sessionTotal = settled.total_prompt_tokens + settled.total_completion_tokens + settled.total_cache_read_tokens;
+    // Flag the phases whose counts exceed the independent total of the
+    // workspace. The phase totals sum into the record total, so a phase can
+    // never pass the record total. The workspace total comes from every session
+    // of the workspace store instead, so a phase that reports a count above
+    // every turn of the run surfaces as a flag.
+    const workspaceUsage = readWorkspaceUsage({ directory, candidates });
+    const workspaceTotal = workspaceUsage
+        ? workspaceUsage.promptTokens +
+            workspaceUsage.completionTokens +
+            workspaceUsage.cacheReadTokens
+        : 0;
+    const marker = "phase_tokens_exceed_run_total;";
+    let flaggedNew = 0;
     settled.phases.forEach((phase) => {
         if (!phase.settled)
             return;
         const phaseTotal = (phase.prompt_tokens || 0) + (phase.completion_tokens || 0) + (phase.cache_read_tokens || 0);
-        if (sessionTotal > 0 && phaseTotal > sessionTotal) {
-            phase.flag = (phase.flag || '') + 'phase_tokens_exceed_session_total;';
+        if (workspaceTotal > 0 && phaseTotal > workspaceTotal) {
+            const known = phase.flag ?? "";
+            if (!known.includes(marker)) {
+                phase.flag = known + marker;
+                flaggedNew++;
+            }
         }
     });
+    const flagged = settled.phases.filter((phase) => (phase.flag ?? "").includes(marker)).length;
+    if (flagged > 0) {
+        process.stderr.write(`[Telemetry] ${flagged} phase(s) flagged: ${settled.phases.filter((p) => (p.flag ?? "").includes(marker)).map((p) => `${p.subproject}/${p.variant}`).join('; ')}\n`);
+    }
+    if (pending > 0 || flaggedNew > 0) {
+        writeTelemetry(targetFile, settled);
+    }
     const unsettled = settled.phases.filter((phase) => !phase.settled).length;
-    const seen = settled.phases.some((phase) => phase.token_seen);
+    const seen = settled.phases.length > 0 && settled.phases.every((phase) => phase.settled && phase.token_seen);
     if (token) {
         process.stdout.write(seen
             ? `Run token ${token} found in the model turns: the model received the instructions.\n`
@@ -93,9 +110,5 @@ function settle() {
     }
     process.stdout.write(`Telemetry settled: ${settled.phases.length} phases, ${settled.model_turns} model turns, ` +
         `${settled.total_tokens} tokens, ${unsettled} phases without counts.\n`);
-    const flagged = settled.phases.filter((phase) => phase.flag).length;
-    if (flagged > 0) {
-        process.stderr.write(`[Telemetry] ${flagged} phase(s) flagged: ${settled.phases.filter((p) => p.flag).map((p) => `${p.subproject}/${p.variant}: ${p.flag}`).join('; ')}\n`);
-    }
 }
 settle();

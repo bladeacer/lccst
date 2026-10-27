@@ -8,6 +8,7 @@ import {
   readModel,
   readText,
   readTurnUsage,
+  readWorkspaceUsage,
   resolveStoreCandidates,
   statesToken,
   sumTurnUsage
@@ -815,6 +816,42 @@ assert(
 );
 assert(readText("user", { content: [{ type: "text", text: "x" }] }) === "", "a user turn has no text");
 assert(readText("assistant", {}) === "", "a turn with no list has no text");
+
+// -- Workspace usage ----------------------------------------------
+withTempDir((dir) => {
+  const workspace = path.join(dir, "room");
+  fs.mkdirSync(workspace, { recursive: true });
+  const file = path.join(dir, "host.db");
+  const store = createStore(file, "v1");
+  addSession(store, "v1", "s1", workspace, null, 1);
+  addSession(store, "v1", "s2", workspace, null, 2);
+  addSession(store, "v1", "child", workspace, "s1", 3);
+  addSession(store, "v1", "elsewhere", path.join(dir, "other"), null, 4);
+  addMessage(store, "v1", "m1", "s1", "assistant", 10, assistantTokens(100, 10));
+  addMessage(store, "v1", "m2", "child", "assistant", 20, assistantTokens(50, 5, 0, 25));
+  addMessage(store, "v1", "m3", "s2", "assistant", 30, assistantTokens(30, 3));
+  addMessage(store, "v1", "m4", "elsewhere", "assistant", 40, assistantTokens(999, 99));
+  addMessage(store, "v1", "m5", "s1", "user", 15, assistantTokens(1, 1));
+  const usage = readWorkspaceUsage({ directory: workspace, candidates: [file] });
+  assert(usage !== null, "a store that holds the workspace returns a count");
+  assert(
+    usage !== null && usage.promptTokens === 180,
+    "the workspace count sums the prompt tokens of every session of the workspace"
+  );
+  assert(
+    usage !== null && usage.cacheReadTokens === 25,
+    "the workspace count sums the cache read tokens of the child sessions"
+  );
+  assert(usage !== null && usage.messageIds.length === 3, "a session of another workspace is skipped");
+  store.close();
+
+  assert(readWorkspaceUsage({ directory: dir, candidates: [file] }) === null,
+    "a workspace with no session yields no count");
+  assert(
+    readWorkspaceUsage({ directory: workspace, candidates: ["missing.db"] }) === null,
+    "a store that cannot open yields no count"
+  );
+});
 
 // -- Telemetry file -----------------------------------------------
 withTempDir((dir) => {

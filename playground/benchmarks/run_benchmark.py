@@ -331,6 +331,10 @@ def classify_test(result, files_found, info):
         return {"status": "error", "reason": f"the test command exited with usage code {result['exit_code']}"}
     if "No tests found" in result["stdout"] or "no tests ran" in result["stdout"]:
         return {"status": "error", "reason": "the test command found no test"}
+    if result["exit_code"] == 0 and "no test files" in result["stdout"] and "--- PASS" not in result["stdout"]:
+        # `go test ./tests/` exits with 0 when no package of the tree holds a
+        # test file, so an exit code alone announces a pass for zero coverage.
+        return {"status": "error", "reason": "the test command found no test"}
     if result["exit_code"] == 0:
         return {"status": "passed", "reason": ""}
     return {"status": "failed", "reason": ""}
@@ -491,12 +495,25 @@ def detect_tool_versions():
     return versions
 
 
+def version_matches(found, declared):
+    """Say whether a version starts with the declared dotted prefix.
+
+    The comparison reads whole components, so `3.13.110` does not match a
+    declared `3.13.11`, while `12.14.0` matches a declared `12`.
+    """
+    found_parts = str(found).split(".")
+    declared_parts = str(declared).split(".")
+    if len(found_parts) < len(declared_parts):
+        return False
+    return found_parts[:len(declared_parts)] == declared_parts
+
+
 def toolchain_notes(versions):
     """State every tool that does not match the declared toolchain."""
     notes = []
     for key, declared in DECLARED_TOOLCHAIN.items():
         found = versions.get(key, "not found")
-        if not found.startswith(declared):
+        if not version_matches(found, declared):
             notes.append(f"{key} {found} (the guide declares {declared})")
     return notes
 
@@ -551,6 +568,7 @@ def empty_telemetry():
         "measured_breakdown": False,
         "models": [],
         "prompt_verified": False,
+        "flagged_phases": [],
     }
 
 
@@ -591,9 +609,26 @@ def load_telemetry(agent_tag):
             phase["model"] for phase in record["phases"]
             if phase.get("settled") and isinstance(phase.get("model"), str)
         })
-        record["prompt_verified"] = any(
-            bool(phase.get("token_seen")) for phase in record["phases"]
+        settled = [
+            phase for phase in record["phases"] if phase.get("settled", False)
+        ]
+        # The run delivers the instructions to every session, so the model must
+        # state the run token in every settled phase. One stated token among
+        # several phases is no proof that every session received them.
+        record["prompt_verified"] = bool(settled) and all(
+            bool(phase.get("token_seen")) for phase in settled
         )
+        record["flagged_phases"] = [
+            {
+                "subproject": str(phase.get("subproject")),
+                "variant": str(phase.get("variant")),
+                "flag": str(phase.get("flag")),
+            }
+            for phase in record["phases"]
+            if phase.get("settled", False)
+            and isinstance(phase.get("flag"), str)
+            and phase["flag"].strip()
+        ]
 
     breakdown = loaded.get("breakdown")
     if isinstance(breakdown, dict):
@@ -687,6 +722,25 @@ def prompt_note(verified, token):
         f"> **Prompt unverified.** No turn of the run stated the run token "
         f"`{token}`, so the report cannot confirm that the model received "
         "`AGENTS.md`. Do not use this report."
+    )
+
+
+def flag_note(record):
+    """State whether the settle step flagged a phase with an impossible count.
+
+    The count of a flagged phase exceeds the total of every session of the
+    workspace, so the count cannot be a real measurement of the phase.
+    """
+    flagged = record.get("flagged_phases", [])
+    if not flagged:
+        return ""
+    names = ", ".join(
+        f"{phase['subproject']}/{phase['variant']}" for phase in flagged
+    )
+    return (
+        "> **Flagged phases.** The settle step flagged " + names + ": the count "
+        "of the phase exceeds the total of every session of the workspace store, "
+        "so the count cannot be a real measurement. Do not rank this report."
     )
 
 
@@ -858,6 +912,9 @@ def generate_markdown(results, provider, harness, model, model_id, agent_tag,
     notes = [model_note(model_id or model, record["models"])]
     notes.append(prompt_note(record["prompt_verified"], read_prompt_token(WORKSPACE)))
     notes.append(token_note(record, encoder_loaded))
+    flag = flag_note(record)
+    if flag:
+        notes.append(flag)
     if record.get("estimated_breakdown"):
         notes.append(
             "> **Estimated breakdown.** No phase recorded a count, so the rows "
@@ -895,8 +952,8 @@ def generate_markdown(results, provider, harness, model, model_id, agent_tag,
         )
 
     harness_note = ""
-    if harness_version and "not reported" in harness_version or (
-        harness_version and "not on the path" in harness_version
+    if harness_version and (
+        "not reported" in harness_version or "not on the path" in harness_version
     ):
         harness_note = (
             "> **Harness version unreported.** The report names no harness "
@@ -927,8 +984,8 @@ rules.
 
 | Metric Dimension | Plain Strategy | Skill-Guided Routine | Delta Variance |
 |---|:-:|:-:|:-:|
-| File-Content Tokens (FCT) | {plain_fct} | {guided_fct} | +{token_diff} ({token_pct:+.0f}%) |
-| Total Program Lines | {plain_lines} | {guided_lines} | +{guided_lines - plain_lines} |
+| File-Content Tokens (FCT) | {plain_fct} | {guided_fct} | {token_diff:+d} ({token_pct:+.0f}%) |
+| Total Program Lines | {plain_lines} | {guided_lines} | {guided_lines - plain_lines:+d} |
 | Agent Runtime Tokens (ART) | {record['total_tokens']} total tokens | {record['model_turns']} model turns over {len(record['phases'])} phases | -- |
 
 ## Runtime Cost Partitioning (ART breakdown)
@@ -951,6 +1008,11 @@ rules.
 
     md += """
 ## Robustness Metrics
+
+The score below is a text-level proxy, not a proof of design quality. The
+feature detectors read the text of the source files, so a term in a comment
+can earn what a real implementation earns. The test run is the only
+behavioural proof in this report.
 
 | Project Submodule Target | Strategy Variant | Files | Lines | Tokens | Unit Test Standing | Robustness Score |
 |---|---|:-:|:-:|:-:|:-:|:-:|
