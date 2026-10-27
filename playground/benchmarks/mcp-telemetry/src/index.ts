@@ -14,7 +14,7 @@ import { readHostSessionId } from "./usage.js";
 
 const server = new McpServer({
   name: "lccst-telemetry",
-  version: "4.4.0"
+  version: "4.5.0"
 });
 
 server.tool(
