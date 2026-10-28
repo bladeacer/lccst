@@ -85,10 +85,8 @@ The benchmark removes `VIRTUAL_ENV`. Use `uv run python3`.
 
 ## Guards
 
-The assignment in `guide.md` states each behaviour and the size budget. The
-traps in this section apply only to a behaviour that the assignment states.
-A guard whose need the assignment does not state is waste, and the variant
-removes it.
+The traps in this section apply only to a behaviour that the assignment
+states.
 
 - **Security by proxy only**: When the assignment states a security need, a
   thin wrapper around a library protects nothing. Give the source its own

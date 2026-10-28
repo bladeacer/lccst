@@ -872,7 +872,7 @@ def _fmt_names(reports: list[BenchmarkReport]) -> str:
 def _fmt_intro_line(perfect: list[BenchmarkReport]) -> str:
     return (
         f"All evaluated models ({_fmt_names(perfect)}) achieved a perfect "
-        f"guided score of 100/100 under the protocol. However, their "
+        f"guided score of 100/100 on every subproject. However, their "
         f"resource efficiency varied significantly:"
     )
 

@@ -239,12 +239,12 @@ def measure_files(directory):
     The result holds the totals of the directory, one entry per file, the
     aggregate of the features that the rubric rewards, and the line count of
     the implementation files. The implementation files are the source files
-    that are not test files, and the bloat penalty uses their line count, so a
+    that are not test files, and the size penalty uses their line count, so a
     variant cannot buy the ceiling by padding its test file.
 
     The report counts every source file under the variant directory, including
     the test files, because both variants must write a test file. The feature
-    score and the bloat penalty use the implementation files only, so a feature
+    score and the size penalty use the implementation files only, so a feature
     that appears only in a test file does not count.
     """
     files = []
