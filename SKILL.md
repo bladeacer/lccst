@@ -3,7 +3,7 @@ name: lccst
 license: MIT
 metadata:
   author: bladeacer
-  version: "4.6.0"
+  version: "4.7.0"
 description: "Deterministic workspace gatekeeper. Decomposes workspace
   changes into isolated, test-verified, atomic Git commits."
 arguments:
@@ -23,8 +23,7 @@ arguments:
       type: string
       enum: ["strict", "lean"]
       default: "strict"
-      description: "Defence level for defensive controls. Not a benchmark
-        variant."
+      description: "Defence level for defensive controls."
     dry_run:
       type: boolean
       default: false
@@ -66,9 +65,7 @@ test verification.
   by their first path segment. Hunk-level isolation is the duty of the caller
   with `git add -p`, in Bare Skill Mode and in host-tool mode alike.
 - The **state file** is `.lccst/state.json`. It records the active loop state.
-- A **mode** is the `strict` or `lean` defence level. A mode is not a variant.
-- A **variant** is the `plain` or `skill-guided` benchmark implementation. A
-  variant is not a mode.
+- A **mode** is the `strict` or `lean` defence level.
 - A **dry-run value** of `true` enables a preview. The YAML argument is
   `dry_run`. The host tool input is `dryRun`. The response field is `dry_run`.
 
