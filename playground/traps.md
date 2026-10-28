@@ -7,7 +7,9 @@ point of the comparison.
 
 A trap is a known failure of the supplied toolchain, or a known habit that
 ruins an implementation. A trap is not a target specification. Read `guide.md`
-for the specification.
+for the specification. A trap never asks for a behaviour that `guide.md` does
+not state. A guard whose need the assignment does not state is waste, and the
+variant removes it.
 
 ## pnpm 11 build approval
 
@@ -43,12 +45,6 @@ tests in `.tsx` files.
 - **Types that hold only casts**: A wrapper type that holds only casts
   describes no data. Declare the real shapes: an interface for the data, typed
   props, and typed function signatures.
-- **Security by proxy only**: A thin wrapper around a library protects
-  nothing. Give the source its own guards: hash a password, check a session,
-  enforce a rate limit.
-- **Error handling only in tests**: A passing test does not guard a caller.
-  Write the guard in the source: a `try`/`except` around a risky call, or an
-  error branch.
 
 ## Python environment
 
@@ -56,7 +52,9 @@ The benchmark removes `VIRTUAL_ENV`. Use `uv run python3`.
 
 ### Traps
 
-- **Rate limiter blocks tests**: Set `DISABLE_RATE_LIMIT=1` before import.
+- **Rate limiter blocks tests**: The assignment states no rate limiter. A
+  rate limiter that no rule asks for blocks the tests: remove it, or set
+  `DISABLE_RATE_LIMIT=1` before import when one exists.
 - **Email expression too narrow**: Use
   `^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`.
 - **`uv` selects parent environment**: Remove `VIRTUAL_ENV` before the command.
@@ -73,12 +71,28 @@ The benchmark removes `VIRTUAL_ENV`. Use `uv run python3`.
 
 ### Traps
 
-- **`package tests` imports `package main`**: Cannot compile. Import
-  `internal/repository` and `internal/handler` directly.
+- **`package tests` imports `package main`**: Cannot compile. Move the types
+  and handlers into one importable package, such as `internal/store`, and
+  import that.
 - **Password field not absent from JSON**: Examine JSON keys, not the field.
 - **Go returns cached test result**: Add `-count=1` for fresh results.
 - **Module path does not match import**: Compare every import with `go.mod`.
 - **Empty path value in test request**: Call `req.SetPathValue("id", "...")`
   after `httptest.NewRequest`.
-- **Missing error branches**: Check every error that a call returns with
-  `if err != nil`. A missing branch hides a failure from the caller.
+- **Missing error branches**: Check each error that a call returns when the
+  caller must see the failure: `if err != nil`. A missing branch hides a
+  failure from the caller.
+
+## Guards
+
+The assignment in `guide.md` states each behaviour and the size budget. The
+traps in this section apply only to a behaviour that the assignment states.
+A guard whose need the assignment does not state is waste, and the variant
+removes it.
+
+- **Security by proxy only**: When the assignment states a security need, a
+  thin wrapper around a library protects nothing. Give the source its own
+  check: hash a password, check a session, or enforce a stated limit.
+- **Error handling only in tests**: When the assignment states a failure
+  mode, write the guard in the source: a `try`/`except` around a risky call,
+  or an error branch. A passing test does not guard a caller.
