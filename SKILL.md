@@ -164,7 +164,7 @@ infer a different command from a request that names no command.
 - Use hermetic lockfiles, workspace runners, and declarative ecosystem tools.
 - Read manifests, compiler settings, and language-server results before
   choosing a command. If evidence conflicts, state the conflict.
-- Do not add a defensive control only to fill a checklist. Do not add a
+- Do not add a defensive control that no stated risk requires. Do not add a
   fabricated attack or load scenario.
 
 ### Execution checklist
@@ -185,8 +185,10 @@ which rules to follow. Follow this checklist before each command:
    and do not claim a pass after a non-zero exit.
 5. **Write a lean implementation.** Implement only the behaviour the task
    asks for, write each part once, and do not restate the rules in comments.
-   Do not pad the test file. Extra lines that the behaviour needs are
-   acceptable. Extra lines that add no behaviour are waste.
+   A docstring that describes the behaviour of a public export is content,
+   not a restatement. Do not pad the test file. Extra lines that the
+   behaviour needs are acceptable. Extra lines that add no behaviour are
+   waste.
 6. **Show the behaviour in the source.** Put each required behaviour into the
    source file itself. A behaviour that exists only in a test or in reply
    commentary is not implemented.
@@ -200,16 +202,19 @@ which rules to follow. Follow this checklist before each command:
 Apply `mode` only to defensive controls. Do not use it to change a variant.
 The host server records the mode on the state-changing tools and echoes it
 in the reply. The server does not enforce the mode; the caller enforces it.
+The assignment or the host states each risk. A control that no stated risk
+requires is over-engineering.
 
 - **Pure logic or UI, `strict`**: Boundary validation and typed errors. Add
   another control when a stated risk requires it.
 - **Pure logic or UI, `lean`**: Boundary validation and typed errors. Omit
   rate throttling and caching.
-- **Network or data, `strict`**: Boundary validation, typed errors, rate
-  throttling, structured errors, and architectural isolation. Add caching
-  when lookup cost justifies it.
-- **Network or data, `lean`**: Boundary validation, typed errors, and rate
-  throttling. Add caching when lookup cost justifies it.
+- **Network or data, `strict`**: Boundary validation, typed errors, and
+  structured errors. Add rate throttling, caching, or architectural
+  isolation when a stated risk or a lookup cost requires it.
+- **Network or data, `lean`**: Boundary validation and typed errors. Add
+  rate throttling or caching when a stated risk or a lookup cost requires
+  it.
 
 ### State lifecycle
 

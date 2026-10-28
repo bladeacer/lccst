@@ -703,7 +703,7 @@ server.registerPrompt("swarm", {
 // Tool: /init
 /** The implementation guidance that mirrors the execution checklist of SKILL.md. */
 export const WEAK_MODEL_GUIDANCE: string[] = [
-  "Implement only the behaviour the task asks for, write each part once, and do not restate the rules in comments. Do not pad the test file. Extra lines that the behaviour needs are acceptable; extra lines that add no behaviour are waste.",
+  "Implement only the behaviour the task asks for, write each part once, and do not restate the rules in comments. A docstring that describes the behaviour of a public export is content, not a restatement. Do not pad the test file. Extra lines that the behaviour needs are acceptable; extra lines that add no behaviour are waste.",
   "Put each required behaviour into the source file itself. A behaviour that exists only in a test or in reply commentary is not implemented.",
   "Make one plan and implement it in bounded steps. Do not restate the plan between steps, do not re-read a file you already read, and do not loop on read-only inspection.",
 ];
