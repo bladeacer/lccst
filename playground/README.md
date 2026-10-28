@@ -1,20 +1,14 @@
 # LCCST Playground
 
-Clean-room benchmark harness for LCCST. Compares two implementation variants
-for each of three subprojects.
+Clean-room evaluation harness for LCCST. Tests and evaluates the protocol with
+different AI models and configurations.
 
 ## Vocabulary
 
-- A **benchmark workspace** is a directory named `<provider>-<harness>-<model>`.
+- A **workspace** is a directory named `<provider>-<harness>-<model>`.
 - A **subproject** is `python-http-server`, `react-timer`, or `go-login-crud`.
-- A **plain variant** is the smallest implementation that meets the target
-  specification. It reads `guide.md`. It does not apply
-  `SKILL.md` or `traps.md`.
-- A **skill-guided variant** applies `SKILL.md` and `traps.md` as well.
-- An **agent tag** is the benchmark workspace directory name.
-
-A variant is not a mode. A variant is `plain` or `skill-guided`. A mode is
-`strict` or `lean`.
+- An **agent tag** is the workspace directory name.
+- A **mode** is `strict` or `lean` -- the defence level for defensive controls.
 
 ## Subprojects
 
@@ -37,17 +31,14 @@ A login system with user create, read, update, and delete operations.
 | Node.js | 20 | LCCST server and React projects |
 | pnpm | 9 | Node dependencies |
 | TypeScript | 5.4 | LCCST source |
-| Python | 3.10 | Benchmark script |
+| Python | 3.10 | Evaluation script |
 | Go | 1.21 | Go project |
 | `uv` | 0.4 | Python dependencies |
 
-Clean-room run: Go 1.26.4-X with `nodwarf5`, Python 3.13.11, Node.js 18+,
-pnpm 11.3.0+, pre-cached TypeScript types.
-
 ## Setup
 
-The benchmark environment holds `tiktoken`, which the scanner uses to count the
-tokens of a file. The scanner starts it through `uv` when the current
+The evaluation environment holds `tiktoken`, which the scanner uses to count
+the tokens of a file. The scanner starts it through `uv` when the current
 interpreter holds no encoder.
 
 ```bash
@@ -56,17 +47,16 @@ uv sync
 cd ../..
 ```
 
-## Running the Benchmark
+## Running the Evaluation
 
 ```bash
 python3 playground/benchmarks/run_benchmark.py <agent-tag> \
     [--model-id <provider/model>] [--workspace <dir>] [--install-deps]
 ```
 
-The scanner applies one file filter and one test command to both variants, so
-the plain column and the skill-guided column measure the same thing. Pass
-`--model-id` with the full identifier that the run pinned, so the report can
-compare the model of the host store with the model of the run.
+The scanner applies one file filter and one test command to the implementation.
+Pass `--model-id` with the full identifier that the run pinned, so the report
+can compare the model of the host store with the model of the run.
 
 The report is written to:
 
@@ -76,13 +66,13 @@ playground/benchmarks/<agent-tag>/benchmark-report-v<skill-version>.md
 
 ## Choosing a model
 
-`make benchmark-free` asks for a harness and a model in a fuzzy search. Type part
-of a model name and press Enter on the row that the search leaves. Every row
-names the harness and the model, so a search matches a harness name too.
+`make benchmark-free` asks for a harness and a model in a fuzzy search. Type
+part of a model name and press Enter on the row that the search leaves. Every
+row names the harness and the model, so a search matches a harness name too.
 `fzf` provides the search. Without `fzf`, the picker asks for a filter and a
 number instead. `make bench-list` prints the same list and needs no terminal.
 
-The picker offers a model when the model can do the work and costs nothing.
+The picker offers a model when the model can do the work.
 
 - A model can do the work when the registry states that it calls tools, that it
   reads text, and that it writes text. A model that generates images, audio, or
@@ -110,74 +100,28 @@ Set `BENCH_ALL_MODELS=1` to offer every model that can do the work. Set
 list in `scripts/benchmark-picker.ts`, so a new family or a new router is one
 line in that file.
 
-## Benchmark hygiene
+## Evaluation rubric (for documentation only)
 
-The model under test reads every document of the clean room. The run therefore
-seeds only the task documents: the guide, the traps, the skill, and the prompt.
-The run never copies `playground/README.md` into the clean room, because this
-file states the rubric. A model that reads the rubric writes the signal, not
-the behaviour. The target specification of the three subprojects lives in
-`playground/guide.md`. `make test_bench_leak` asks make for the dry-run
-recipe, confirms the seeded set, and fails when a scoring term reaches one of
-the seeded documents.
+The evaluation rubric defines how implementations are scored. This document is
+never sent to the model under test. The model only reads `SKILL.md`, `guide.md`,
+and `traps.md`.
 
-## What a report must show
+### What gets measured
 
-A report enters the README table only when every check passes. The checks are
-in the notes under the report header.
+Every run measures four things for each subproject:
 
-- The report names the version of the harness and the path of the command.
-- Every phase holds a settled token count, and the settle step flagged no
-  phase with an impossible count.
-- The host store confirms the model of the run.
-- The model stated the run token of the instructions.
-- The machine of the run matches the declared toolchain.
-- All six variants pass their tests, and the skill-guided score of each
-  subproject is at least the plain score of the same subproject. See the
-  `Robustness score` section.
-
-
-A run that fails a check stays on disk for inspection, and the table leaves it
-out.
-
-## The report header
-
-The header states what a reader needs to reproduce a run.
-
-| Field | Source |
-| --- | --- |
-| Provider | The provider of the run |
-| Harness | The harness that ran the phases |
-| Harness Version | `harness --version` and the path of the command |
-| Model | The model name of the run |
-| Requested Model ID | The full identifier that the run pinned |
-| Agent Tag | The directory name of the report |
-| Active Ecosystem MCPs | The servers the host recorded |
-| Skill Protocol Engine | The version of `SKILL.md` |
-| Python, pnpm, Go | The versions on the machine |
-
-The report then states a note for every check, and a toolchain drift note when
-the machine does not match `guide.md`.
-
-## What Gets Measured
-
-## What a run measures
-
-Every run measures four things for each subproject and each variant:
-
-- File token count. `run_benchmark.py` counts the tokens of every source file
-  that the scanner counts. The report states an estimate when `tiktoken` is
-  absent.
+- File token count. The scanner counts the tokens of every source file. The
+  report states an estimate when `tiktoken` is absent.
 - Line count. The report counts every source line of every counted file.
 - Test verdict. The scanner runs the test command of the subproject and
   classifies the result. A pass, a test failure, and a scanner error are three
   different outcomes.
-- Robustness score. See the `Robustness score` section.
+- Implementation quality. The scanner evaluates typing, security, and error
+  handling for features it detects in the text of the implementation files.
+  A feature that appears only in a test file, behind a thin wrapper, or in
+  the model commentary does not count.
 
-## Robustness score
-
-The same rubric scores the plain variant and the skill-guided variant, so the
-columns are directly comparable.
+### Scoring rules
 
 - A passing test run earns 50 points, a failing run earns 15 points, and a
   scanner error earns 5 points.
@@ -201,10 +145,66 @@ columns are directly comparable.
   assignment: `guide.md` states the same number to both variants, so no
   variant is judged against a hidden bar.
 
-The report labels the columns `Plain Strategy` and `Skill-Guided`, but the
-implementations are the variants `plain` and `skill-guided`. The labels are
-display text only.
+## Evaluation hygiene
 
-A run that passes every check but whose skill-guided score is below the
-plain score of a subproject stays on disk for inspection, and the README
-table leaves it out.
+The model under test reads every document of the clean room. The run therefore
+seeds only the task documents: the guide, the traps, and the prompt. The run
+never copies `playground/README.md` into the clean room, because this file
+states the rubric. A model that reads the rubric writes the signal, not the
+behaviour. The target specification of the three subprojects lives in
+`playground/guide.md`. `make test_bench_leak` asks make for the dry-run
+recipe, confirms the seeded set, and fails when a scoring term reaches one of
+the seeded documents.
+
+## What a report must show
+
+A report enters the README table only when every check passes. The checks are
+in the notes under the report header.
+
+- The report names the version of the harness and the path of the command.
+- Every phase holds a settled token count, and the settle step flagged no
+  phase with an impossible count.
+- The host store confirms the model of the run.
+- The model stated the run token of the instructions.
+- The machine of the run matches the declared toolchain.
+- All variants pass their tests.
+
+A run that fails a check stays on disk for inspection, and the table leaves it
+out.
+
+## The report header
+
+The header states what a reader needs to reproduce a run.
+
+| Field | Source |
+| --- | --- |
+| Provider | The provider of the run |
+| Harness | The harness that ran the phases |
+| Harness Version | `harness --version` and the path of the command |
+| Model | The model name of the run |
+| Requested Model ID | The full identifier that the run pinned |
+| Agent Tag | The directory name of the report |
+| Active Ecosystem MCPs | The servers the host recorded |
+| Skill Protocol Engine | The version of `SKILL.md` |
+| Python, pnpm, Go | The versions on the machine |
+
+The report then states a note for every check, and a toolchain drift note when
+the machine does not match the environment table above.
+
+## What Gets Measured
+
+## What a run measures
+
+Every run measures four things for each subproject:
+
+- File token count. `run_benchmark.py` counts the tokens of every source file
+  that the scanner counts. The report states an estimate when `tiktoken` is
+  absent.
+- Line count. The report counts every source line of every counted file.
+- Test verdict. The scanner runs the test command of the subproject and
+  classifies the result. A pass, a test failure, and a scanner error are three
+  different outcomes.
+- Implementation quality. The scanner evaluates typing, security, and error
+  handling for features it detects in the text of the implementation files.
+  A feature that appears only in a test file, behind a thin wrapper, or in
+  the model commentary does not count.
