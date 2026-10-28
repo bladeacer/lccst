@@ -31,7 +31,8 @@ export interface Harness {
 /** The harnesses that the playground supports. */
 export const HARNESSES: Harness[] = [
   { name: "opencode", config: "opencode.json" },
-  { name: "kilo", config: "kilo.json" }
+  { name: "kilo", config: "kilo.json" },
+  { name: "kiro-cli", config: "kilo.json", skipModelCheck: true }
 ];
 
 /** Model identifier of one free model, such as `:free` or `-free`. */
@@ -265,6 +266,12 @@ function asRecord(value: unknown): Record<string, unknown> {
  * the picker can skip it without failing the run.
  */
 export function listModels(harness: string): string[] {
+  // kiro-cli does not have a 'models' command, so hardcode its supported models
+  if (harness === "kiro-cli") {
+    return [
+      "kiro-cli/qwen3-coder-next"
+    ];
+  }
   const result = spawnSync(harness, ["models"], { encoding: "utf-8", timeout: 60000 });
   if (result.error || result.status !== 0) {
     return [];

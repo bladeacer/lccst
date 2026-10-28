@@ -11,7 +11,7 @@ BENCH_PICK   ?= 1
 # cannot resolve the pinned model starts a different model, so the run would
 # measure a model that the report does not name.
 PROVIDER     ?= opencode
-MODEL_NAME   ?= space-bunny-free
+MODEL_NAME   ?= deepseek-v4.1-flash-free
 AGENT_MODEL  := $(PROVIDER)-$(HARNESS)-$(MODEL_NAME)
 BENCH_DIR    := playground/benchmarks
 HARNESS_VERSION ?= $(shell python3 -c "import sys; sys.path.insert(0, '$(BENCH_DIR)'); import run_benchmark as r; print(r.detect_harness_version('$(HARNESS)'))")
@@ -34,9 +34,10 @@ BENCH_HARNESS_PRIVATE ?= $(if $(filter opencode,$(HARNESS)),--standalone,)
 # each agent. A harness restores that model after it starts, and the restored
 # model wins over the model in the configuration of the run. The run would then
 # measure the model of the user, so the run names the model on the command line.
-# Kilo accepts `--model`. The OpenCode terminal interface has no such flag, so
-# the run relies on the configuration of the clean room for that harness.
-BENCH_HARNESS_MODEL ?= $(if $(filter kilo,$(HARNESS)),--model $(BENCH_MODEL_ID),)
+# Kilo and Kiro CLI accept `--model`. The OpenCode terminal interface has no
+# such flag, so the run relies on the configuration of the clean room for that
+# harness.
+BENCH_HARNESS_MODEL ?= $(if $(filter kilo kiro-cli,$(HARNESS)),--model $(BENCH_MODEL_ID),)
 # The state directory also holds the prompt history and the list of recent
 # models of the user. A run must not read it, so the run points the state
 # directory of the harness at the clean room. Both harnesses read the state
@@ -272,23 +273,38 @@ benchmark-free: telemetry-build
 # report would then name a model that never ran, so the check refuses the run
 # before the clean room is built.
 bench-model:
-	@echo "[Harness] Checking that $(HARNESS) offers $(BENCH_MODEL_ID)..."
-	@if ! command -v $(HARNESS) >/dev/null 2>&1; then \
-		echo "[Harness] The command $(HARNESS) is not on the path. Install it, or set HARNESS."; \
-		exit 1; \
-	fi; \
-	MODELS="$$(timeout 120 $(HARNESS) models 2>/dev/null | tr -d '\r')"; \
-	if [ -z "$$MODELS" ]; then \
-		echo "[Harness] The command '$(HARNESS) models' returned no model."; \
-		echo "[Harness] The run needs the list to check the pinned model."; \
-		exit 1; \
-	fi; \
-	if ! printf '%s\n' "$$MODELS" | grep -qxF "$(BENCH_MODEL_ID)"; then \
-		echo "[Harness] The harness $(HARNESS) does not offer the model $(BENCH_MODEL_ID)."; \
-		echo "[Harness] A harness that cannot resolve the model starts a different one, so"; \
-		echo "[Harness] the run would measure a model that the report does not name."; \
-		echo "[Harness] Run 'make bench-list' to see the models, or set BENCH_MODEL_ID."; \
-		exit 1; \
+	@if [ "$(HARNESS)" = "kiro-cli" ]; then \
+		echo "[Harness] Checking that $(HARNESS) offers $(BENCH_MODEL_ID)..."; \
+		MODELS="$$(timeout 120 $(HARNESS) chat --list-models 2>/dev/null | tr -d '\r')"; \
+		# kiro-cli lists bare model names, so match the model part of BENCH_MODEL_ID. \
+		BENCH_MODEL_SUGGEST="$$(echo "$(BENCH_MODEL_ID)" | sed 's|.*/||')"; \
+		if [ -z "$$MODELS" ]; then \
+			echo "[Harness] The command '$(HARNESS) chat --list-models' returned no model."; \
+			echo "[Harness] The run needs the list to check the pinned model."; \
+			exit 1; \
+		fi; \
+		if ! printf '%s\n' "$$MODELS" | grep -qF "$$BENCH_MODEL_SUGGEST"; then \
+			echo "[Harness] The harness $(HARNESS) does not offer the model $(BENCH_MODEL_ID)."; \
+			echo "[Harness] A harness that cannot resolve the model starts a different one, so"; \
+			echo "[Harness] the run would measure a model that the report does not name."; \
+			echo "[Harness] Run 'make bench-list' to see the models, or set BENCH_MODEL_ID."; \
+			exit 1; \
+		fi; \
+	else \
+		echo "[Harness] Checking that $(HARNESS) offers $(BENCH_MODEL_ID)..."; \
+		MODELS="$$(timeout 120 $(HARNESS) models 2>/dev/null | tr -d '\r')"; \
+		if [ -z "$$MODELS" ]; then \
+			echo "[Harness] The command '$(HARNESS) models' returned no model."; \
+			echo "[Harness] The run needs the list to check the pinned model."; \
+			exit 1; \
+		fi; \
+		if ! printf '%s\n' "$$MODELS" | grep -qxF "$(BENCH_MODEL_ID)"; then \
+			echo "[Harness] The harness $(HARNESS) does not offer the model $(BENCH_MODEL_ID)."; \
+			echo "[Harness] A harness that cannot resolve the model starts a different one, so"; \
+			echo "[Harness] the run would measure a model that the report does not name."; \
+			echo "[Harness] Run 'make bench-list' to see the models, or set BENCH_MODEL_ID."; \
+			exit 1; \
+		fi; \
 	fi; \
 	echo "[Harness] Model confirmed: $(BENCH_MODEL_ID)"
 

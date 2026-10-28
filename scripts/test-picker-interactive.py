@@ -238,7 +238,7 @@ def check_seeded_workspace(report_dir: Path) -> None:
     # the restored model wins over the model in the configuration of the run.
     # The run must name the model on the command line, or the run measures the
     # model of the user.
-    check("BENCH_HARNESS_MODEL ?= $(if $(filter kilo,$(HARNESS)),--model" in makefile,
+    check("BENCH_HARNESS_MODEL ?= $(if $(filter kilo kiro-cli,$(HARNESS)),--model" in makefile,
           "the run names the model on the command line for a harness that accepts it")
     check("XDG_STATE_HOME=$(BENCH_WORKSPACE)/harness-state" in makefile,
           "the run points the state directory of the harness at the clean room")
