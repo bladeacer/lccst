@@ -288,10 +288,10 @@ also reads `SKILL.md` and `traps.md`.
 
 The table needs the version of the harness, a measured count for every phase,
 a model that the host store confirms, a stated run token, a toolchain that
-matches the declared versions, and a passing
-skill-guided variant at 100 percent for all three subprojects. A run that
-fails a check stays on disk, and the table leaves it out. The report states
-the reason.
+matches the declared versions, six passing variants, and a skill-guided
+variant that scores at least the plain variant on every subproject. A run
+that fails a check stays on disk, and the table leaves it out. The report
+states the reason.
 
 5. Every report names the harness version.
 

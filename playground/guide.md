@@ -40,6 +40,14 @@ Blocked inspection commands: `ls`, `find`, `git status`, `git diff`,
 - The `go-login-crud` subproject is a login system with user create, read,
   update, and delete operations.
 
+## Implementation size
+
+The implementation files of a variant stay within the size budget of the
+subproject: 120 lines for `python-http-server`, 60 lines for `react-timer`,
+and 200 lines for `go-login-crud`. The budget counts the lines of the
+implementation files together. It does not count test files, manifests, or
+generated files.
+
 ## Supplied toolchain
 
 - Go 1.27.2-X with `nodwarf5`.

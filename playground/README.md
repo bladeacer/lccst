@@ -132,10 +132,9 @@ in the notes under the report header.
 - The host store confirms the model of the run.
 - The model stated the run token of the instructions.
 - The machine of the run matches the declared toolchain.
-- All three skill-guided variants pass their tests and reach 100 percent of
-  their subproject ceiling. The ceiling is 100 for `python-http-server` and
-  `go-login-crud`, and 67 for `react-timer`. See the `Robustness score`
-  section.
+- All six variants pass their tests, and the skill-guided score of each
+  subproject is at least the plain score of the same subproject. See the
+  `Robustness score` section.
 
 
 A run that fails a check stays on disk for inspection, and the table leaves it
@@ -191,17 +190,21 @@ columns are directly comparable.
   `go-login-crud` (pass 50 + typing 17 + security 17 + error handling 16), and
   67 for `react-timer` (pass 50 + typing 17). The `react-timer` ceiling sets
   security and error handling to 0.
-- The scanner then applies a bloat penalty. A variant whose implementation
-  carries more lines per delivered feature than the subproject limit (30 for
-  `python-http-server` and `go-login-crud`, 20 for `react-timer`) loses
-  score. The penalty reads implementation lines only, so a variant cannot buy
-  the ceiling by padding its test file. A variant that delivers no rewarded
-  feature receives no bloat penalty.
+- The scanner then applies a bloat penalty. The implementation of a variant
+  must fit the line budget of the subproject: 120 lines for
+  `python-http-server`, 60 for `react-timer`, and 200 for `go-login-crud`.
+  A variant whose implementation files carry more lines than the budget
+  loses score in proportion to the excess. The penalty reads implementation
+  lines only, so a variant cannot buy the ceiling by padding its test file.
+  The budget applies to every variant, so a variant cannot escape the
+  penalty by delivering no rewarded feature. The budget is part of the
+  assignment: `guide.md` states the same number to both variants, so no
+  variant is judged against a hidden bar.
 
 The report labels the columns `Plain Strategy` and `Skill-Guided`, but the
 implementations are the variants `plain` and `skill-guided`. The labels are
 display text only.
 
-A run that passes every check but whose skill-guided variant reaches less
-than 100 percent of its ceiling stays on disk for inspection, and the README
+A run that passes every check but whose skill-guided score is below the
+plain score of a subproject stays on disk for inspection, and the README
 table leaves it out.

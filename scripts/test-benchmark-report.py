@@ -731,9 +731,19 @@ class GateTest(unittest.TestCase):
         self.assertFalse(make_report(model_state=table.MODEL_WRONG).is_usable)
         self.assertFalse(make_report(model_state=table.MODEL_UNVERIFIED).is_usable)
 
-    def test_a_failing_subproject_is_rejected(self):
+    def test_a_subproject_below_the_plain_variant_is_rejected(self):
+        """A skill-guided score below the plain score of the same subproject
+        states that the skill hurt the run, so the report must not rank."""
         report = make_report()
+        report.projects[1].plain_score = 80
         report.projects[1].guided_score = 74
+        self.assertFalse(report.is_usable)
+
+    def test_a_failed_plain_variant_is_rejected(self):
+        """A broken plain variant gives the skill a free win, so the pair is
+        not comparable and must not rank."""
+        report = make_report()
+        report.projects[0].plain_test_status = "failed"
         self.assertFalse(report.is_usable)
 
     def test_a_flagged_phase_is_rejected(self):
@@ -809,36 +819,50 @@ class GateTest(unittest.TestCase):
         self.assertIn(table.PROJECTS[0], reason)
         self.assertIn("failed", reason)
 
-    def test_reject_reason_names_a_low_score_and_not_a_passing_test(self):
-        """A subproject whose tests passed but whose score fell needs the score.
+    def test_reject_reason_names_a_failed_plain_test(self):
+        """A plain failure names both variants, so the reader knows which one
+        broke."""
+        report = make_report()
+        report.projects[0].plain_test_status = "error"
+        reason = table.reject_reason(report)
+        self.assertIn("failed their tests", reason)
+        self.assertIn("(plain error, guided passed)", reason)
 
-        The old message printed the test state for a subproject that passed, so
-        the line read `did not all pass: x (passed)`.
+    def test_reject_reason_names_a_score_below_the_plain_variant(self):
+        """A subproject whose tests passed but whose score fell below the
+        plain variant needs the score pair.
+
+        The old message compared the score with a perfect 100, so the line
+        could not state whether the plain variant did better.
         """
         report = make_report()
+        report.projects[0].plain_score = 90
         report.projects[0].guided_score = 84
         reason = table.reject_reason(report)
-        self.assertIn("scored below 100", reason)
-        self.assertIn(f"{table.PROJECTS[0]} (84/100)", reason)
+        self.assertIn("scored below the plain variant", reason)
+        self.assertIn(f"{table.PROJECTS[0]} (84/90)", reason)
         self.assertNotIn("(passed)", reason)
 
     def test_reject_reason_prefers_the_failed_test_over_the_low_score(self):
         """A subproject can fail both checks, and the test failure comes first."""
         report = make_report()
+        report.projects[0].plain_score = 90
         report.projects[0].guided_score = 84
         report.projects[0].guided_test_status = "error"
         reason = table.reject_reason(report)
         self.assertIn("failed their tests", reason)
-        self.assertNotIn("scored below 100", reason)
+        self.assertNotIn("scored below the plain variant", reason)
 
     def test_reject_reason_lists_every_failing_subproject(self):
         """The line names each subproject that the gate rejected."""
         report = make_report()
+        report.projects[0].plain_score = 90
         report.projects[0].guided_score = 84
+        report.projects[2].plain_score = 90
         report.projects[2].guided_score = 50
         reason = table.reject_reason(report)
-        self.assertIn(f"{table.PROJECTS[0]} (84/100)", reason)
-        self.assertIn(f"{table.PROJECTS[2]} (50/100)", reason)
+        self.assertIn(f"{table.PROJECTS[0]} (84/90)", reason)
+        self.assertIn(f"{table.PROJECTS[2]} (50/90)", reason)
         self.assertNotIn(f"{table.PROJECTS[1]}", reason)
 
     def test_a_report_with_no_art_is_rejected_and_earns_no_art_term(self):
@@ -1061,7 +1085,7 @@ class ReportTextTest(unittest.TestCase):
 
 
 class TestFileBoundaryTest(unittest.TestCase):
-    """The feature score and the bloat penalty must read implementation files only.
+    """The feature score and the size penalty must read implementation files only.
 
     A feature that appears only in a test file does not count, and a padded
     test file must not change the score of the variant.
@@ -1114,7 +1138,7 @@ class TestFileBoundaryTest(unittest.TestCase):
         self.assertEqual(measured["impl_lines"], 2)
         self.assertEqual(measured["total_lines"], 5)
 
-    def test_the_bloat_penalty_reads_impl_lines(self):
+    def test_the_size_penalty_reads_impl_lines(self):
         """A padded test file must not change the score of the variant."""
         def variant(impl_lines):
             return {
@@ -1131,14 +1155,17 @@ class TestFileBoundaryTest(unittest.TestCase):
             scanner.compute_robustness_score(variant(19), name),
             100,
         )
-        # The ratio of a variant with more lines per feature than the limit
-        # loses score, and the loss grows with the ratio.
-        penalised = scanner.compute_robustness_score(variant(41), name)
-        self.assertGreater(penalised, 0)
-        self.assertLess(penalised, 100)
-        self.assertGreater(penalised, 40)
+        # A variant within the budget keeps its score. A variant above the
+        # budget loses score in proportion to the excess, and the loss grows
+        # with the ratio.
+        self.assertEqual(
+            scanner.compute_robustness_score(variant(60), name),
+            100,
+        )
+        penalised = scanner.compute_robustness_score(variant(120), name)
+        self.assertEqual(penalised, 50)
 
-    def test_the_bloat_penalty_falls_back_to_the_total(self):
+    def test_the_size_penalty_falls_back_to_the_total(self):
         """A hand-built result without an implementation count keeps a score."""
         variant = {
             "test_result": {"status": "passed"},
@@ -1150,7 +1177,8 @@ class TestFileBoundaryTest(unittest.TestCase):
         }
         self.assertEqual(scanner.compute_robustness_score(variant, "react-timer"), 100)
 
-    def test_a_variant_with_no_feature_receives_no_bloat_penalty(self):
+    def test_the_size_penalty_applies_without_features(self):
+        """A variant that delivers no feature cannot escape the size penalty."""
         variant = {
             "test_result": {"status": "passed"},
             "features_aggregate": {
@@ -1159,7 +1187,10 @@ class TestFileBoundaryTest(unittest.TestCase):
             },
             "impl_lines": 500,
         }
-        self.assertEqual(scanner.compute_robustness_score(variant, "python-http-server"), 50)
+        # 50 points for the pass, 120-line budget, 500 lines: 50 * 120 / 500.
+        self.assertEqual(
+            scanner.compute_robustness_score(variant, "python-http-server"), 12
+        )
 
     def test_the_score_is_a_percentage_of_the_ceiling(self):
         def variant(feature_keys):

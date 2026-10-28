@@ -100,13 +100,14 @@ class BenchmarkReport:
         """True when every check of the report passes.
 
         A report enters the README only when it names the version of the
-        harness, the run covers the three subprojects, every skill-guided
-        subproject scores 100 percent and passes its tests, every phase holds a
-        settled count, the host store confirms the model of the run, and the
-        model stated the run token of the instructions, the settle step
-        flagged no phase with an impossible count, and the machine of the run
-        matches the declared toolchain. A report that fails any check must not
-        rank a model.
+        harness, the run covers the three subprojects, both variants of every
+        subproject pass their tests, the skill-guided score of every
+        subproject is at least the plain score of the same subproject, every
+        phase holds a settled count, the host store confirms the model of the
+        run, and the model stated the run token of the instructions, the
+        settle step flagged no phase with an impossible count, and the machine
+        of the run matches the declared toolchain. A report that fails any
+        check must not rank a model.
         """
         if not self.is_reproducible:
             return False
@@ -125,7 +126,9 @@ class BenchmarkReport:
         if {project.name for project in self.projects} != set(PROJECTS):
             return False
         return all(
-            project.guided_score >= 100 and project.test_status == "passed"
+            project.plain_test_status == "passed"
+            and project.guided_test_status == "passed"
+            and project.guided_score >= project.plain_score
             for project in self.projects
         )
 
@@ -588,25 +591,27 @@ def reject_reason(r: BenchmarkReport) -> str:
     missing = [name for name in PROJECTS if name not in names]
     if missing:
         return "the run skipped " + ", ".join(missing)
-    # The gate needs two facts per subproject: the skill-guided tests must pass,
-    # and the skill-guided robustness score must be 100. The two checks fail in
-    # different ways, so the reason names the check that failed. Printing the
-    # test state for a subproject whose tests passed states the opposite of the
-    # reason for the rejection.
+    # The gate needs two facts per subproject: both variants must pass their
+    # tests, and the skill-guided score must reach the plain score. The two
+    # checks fail in different ways, so the reason names the check that
+    # failed. Printing the test state for a subproject whose tests passed
+    # states the opposite of the reason for the rejection.
     untested = [
-        f"{project.name} ({project.test_status})"
+        f"{project.name} (plain {project.plain_test_status}, "
+        f"guided {project.guided_test_status})"
         for project in r.projects
-        if project.test_status != "passed"
+        if project.plain_test_status != "passed"
+        or project.guided_test_status != "passed"
     ]
     if untested:
-        return "the skill-guided subprojects failed their tests: " + ", ".join(untested)
+        return "the variants failed their tests: " + ", ".join(untested)
     weak = [
-        f"{project.name} ({project.guided_score}/100)"
+        f"{project.name} ({project.guided_score}/{project.plain_score})"
         for project in r.projects
-        if project.guided_score < 100
+        if project.guided_score < project.plain_score
     ]
     if weak:
-        return "the skill-guided subprojects scored below 100: " + ", ".join(weak)
+        return "the skill-guided variant scored below the plain variant: " + ", ".join(weak)
     return "the report passes every check"
 
 

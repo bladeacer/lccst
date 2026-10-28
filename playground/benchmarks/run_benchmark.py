@@ -76,6 +76,15 @@ PROJECT_PROFILES = {
     "go-login-crud": {"max_typing": 17, "max_security": 17, "max_error_handling": 16},
 }
 
+# Implementation line budget per subproject. The budget is the size of a lean
+# implementation of the assignment. guide.md states the same number to both
+# variants, so no variant is judged against a hidden bar.
+LINE_BUDGETS = {
+    "python-http-server": 120,
+    "react-timer": 60,
+    "go-login-crud": 200,
+}
+
 # Source extensions that the scanner counts, for both variants.
 SOURCE_EXTENSIONS = {
     ".py", ".go", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".html", ".css"
@@ -365,16 +374,16 @@ def compute_robustness_score(variant_result, project_name):
 
     The same rubric scores both variants. A pass earns 50 points, a test
     failure earns 15, and a scanner error earns 5. The feature points are the
-    same in both columns. A bloat penalty reduces the score when the variant
-    delivers few features for many lines, so the term discriminates between a
-    lean correct implementation and a bloated one.
+    same in both columns. A size penalty reduces the score when the variant
+    spends more implementation lines than the budget of the subproject, so
+    the term discriminates between a lean correct implementation and a
+    bloated one.
 
-    The bloat penalty uses the line count of the implementation files, so a
+    The size penalty uses the line count of the implementation files, so a
     variant cannot buy the ceiling by padding its test file. The feature score
     uses the same files, so a feature that appears only in a test file does not
-    count. The bloat penalty counts the implementation features only, because a
-    test assertion is a state of the variant, not a feature of the
-    implementation.
+    count. The penalty applies to every variant, so a variant cannot escape it
+    by delivering no feature.
     """
     status = variant_result["test_result"]["status"]
     if status == "passed":
@@ -398,24 +407,15 @@ def compute_robustness_score(variant_result, project_name):
     ceiling = SCORE_PASSED + profile["max_typing"] + profile["max_security"] + profile["max_error_handling"]
     raw = int(score / ceiling * 100)
 
-    # Bloat factor: lines per delivered implementation feature. A variant with
-    # many lines and few features loses points. The threshold is 30 lines per
-    # feature for python-http-server and go-login-crud, and 20 for react-timer
-    # (which has no security or error handling features to detect). The count
-    # uses the implementation features only, because a test assertion is a
-    # state of the variant, not a feature of the implementation. The line count
-    # falls back to the total when the variant result carries no
-    # implementation count, because a hand-built result may omit it.
+    # Size factor: the implementation must fit the line budget of the
+    # subproject. The same budget applies to both variants and to a variant
+    # that delivers no feature, so neither column can buy the pass score with
+    # volume. The line count falls back to the total when the variant result
+    # carries no implementation count, because a hand-built result may omit it.
     lines = variant_result.get("impl_lines", variant_result.get("total_lines", 0))
-    impl_feature_count = sum(
-        1 for key in ("has_typing", "has_security", "has_error_handling")
-        if features[key]
-    )
-    if impl_feature_count > 0 and lines > 0:
-        lines_per_feature = lines / impl_feature_count
-        max_lpf = {"python-http-server": 30, "react-timer": 20, "go-login-crud": 30}.get(project_name, 30)
-        if lines_per_feature > max_lpf:
-            raw = int(raw * max_lpf / lines_per_feature)
+    budget = LINE_BUDGETS.get(project_name, 120)
+    if lines > budget:
+        raw = int(raw * budget / lines)
 
     return min(raw, 100)
 
