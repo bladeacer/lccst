@@ -41,6 +41,14 @@ const filesToUpdate = [
     replacement: `version: "${targetVersion}"`,
   },
   {
+    // The tracked bundle of the telemetry server. The bump keeps the
+    // artefact at the bumped version, so a release commit never pairs a
+    // rebuilt source with a stale build.
+    filePath: path.join(rootDir, "playground/benchmarks/mcp-telemetry/build/index.js"),
+    regex: /version:\s*"\d+\.\d+\.\d+"/,
+    replacement: `version: "${targetVersion}"`,
+  },
+  {
     filePath: path.join(rootDir, "SKILL.md"),
     regex: /version:\s*"\d+\.\d+\.\d+"/,
     replacement: `version: "${targetVersion}"`,

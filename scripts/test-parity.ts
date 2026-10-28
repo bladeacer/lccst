@@ -115,6 +115,19 @@ if (fs.existsSync(telemetryPkgPath)) {
   }
 }
 
+// The tracked bundle must match too. A release that rebuilds the telemetry
+// source but not the bundle would otherwise pair a new source with an old
+// artefact, and the clean room would run the stale server.
+const telemetryBundlePath = path.resolve(__dirname, "../playground/benchmarks/mcp-telemetry/build/index.js");
+if (fs.existsSync(telemetryBundlePath)) {
+  const telemetryBundle = fs.readFileSync(telemetryBundlePath, "utf-8");
+  const bundleVersionMatch = telemetryBundle.match(/version:\s*"(\d+\.\d+(?:\.\d+)?)"/);
+  const bundleVersion = bundleVersionMatch ? bundleVersionMatch[1] : null;
+  if (bundleVersion !== packageVersion) {
+    errors.push("Version parity: telemetry bundle has v" + bundleVersion + ", package.json has " + packageVersion);
+  }
+}
+
 const handshakePath = path.resolve(__dirname, "../tests/init_handshake.test.ts");
 if (fs.existsSync(handshakePath)) {
   const handshakeContent = fs.readFileSync(handshakePath, "utf-8");
