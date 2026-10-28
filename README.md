@@ -214,90 +214,64 @@ network connection. Set `E2E_HARNESS` or `LCCST_E2E_MODEL` to narrow the run.
 
 Benchmarking has its own dependencies -- see [`playground/README.md`](playground/README.md).
 
-## Playground and Benchmarking
+## Playground and Evaluation
 
-Measures token impact of skill-guided vs plain code generation across three
-reference projects (Python HTTP server, React timer, Go login CRUD).
-
-We benchmark to prove that structured diff clustering reduces model failure
-loops and slashes token consumption. By comparing a plain model against one
-guided by the skill, the run shows whether the protocol buys correctness for a
-small, predictable context overhead -- or whether it saves runtime tokens by
-avoiding repetitive error-fix cycles.
+The playground is a clean-room environment for testing and evaluating the LCCST
+protocol with different AI models and configurations. It provides a standardized
+way to measure implementation quality, test coverage, and code structure across
+multiple reference projects.
 
 ```bash
-make benchmark-free     # Ask for a harness and a model, then run the benchmark
-make bench-list         # Show the models that the picker offers
+make benchmark-free     # Select a model (including Kiro) and run the evaluation
+make bench-list         # List the models that the picker offers
 ```
 
 ### fzf picker integration
 
-The picker lists the models of every harness that the path holds, and it asks
-for one in a fuzzy search. Type part of a model name and press Enter. Without
-`fzf`, the picker asks for a filter and a number instead. A model is offered
-only when the registry states that it calls tools, reads text, and writes text,
-and when the registry states no charge for it, or when its name carries a free
-marker. Routers, image models, and families that an author rejects for agentic
-work are left out. The run then happens in a clean room outside the repository.
-The target seeds `SKILL.md`, `guide.md`, `traps.md`, and `agent-prompt.md`
-into the clean room, and it copies `agent-prompt.md` to `AGENTS.md`, which the
-harness reads as the project instructions. `playground/README.md`, which
-states the rubric, never reaches the clean room, so the model under test
-cannot read the scoring. The target
-then starts the harness in the foreground so you can steer it. It settles the
-token counts, writes the report, removes the clean room, and refreshes the table
-below. Set `BENCH_PICK=0` to skip the picker and pass `HARNESS`, `PROVIDER`,
-and `MODEL_NAME` yourself.
+The picker lists the models available from each supported harness and presents
+a fuzzy search interface. Type part of a model name and press Enter to select
+one. Without `fzf`, the picker asks for a filter and a number instead. A model
+is offered only when it supports tool calling, text input, and text output. The
+run happens in an isolated clean room outside the repository.
 
-The picker needs a terminal, because the run that follows costs model tokens.
-Set `BENCH_ALLOW_PIPE=1` only when a script must choose a model.
+The picker needs a terminal, because the evaluation runs actual models and
+consumes tokens. Set `BENCH_ALLOW_PIPE=1` to allow scripts to choose models
+without a terminal.
 
-### Benchmarking Methodology
+### Evaluation Process
 
-1. The run measures the model it names.
+1. The evaluation measures the model it selects.
 
-The run checks that the harness offers the model before it builds the clean room,
-and it gives the harness its own configuration directory (under `/tmp`).
+The run checks that the harness offers the model before building the clean room,
+and it gives the harness its own configuration directory (under `/tmp`). This
+ensures the model under test cannot be influenced by the user's plugins, skills,
+agents, or servers. The run also gives the harness its own state directory to
+isolate the model choice.
 
-Thus the plugins, skills, agents, and servers of a user cannot change the run.
-The run also gives the harness its own state directory, because a harness
-restores the model that a user last chose for each agent, and that restored model
-wins over the model of the run.
+2. The evaluation measures the prompt it receives.
 
-Kilo also receives the model on the command line. The report compares the model
-identifier that the run pinned with the model that the store of the host
-recorded. A report that names a different model is marked as wrong.
+The instructions include a unique token that the model must state in its first
+reply. This proves the model read and processed the full prompt.
 
-2. The run measures the prompt it names.
+3. Standardized measurement.
 
-The instructions of a run carry a run token, and the model must state the token
-in its first reply. The settle step reads the text of the model turns and looks
-for the token. A run whose model never stated the token is a run that measured
-a different prompt, so the report marks the prompt as unverified.
+The evaluation applies the same file filters and test commands to every
+implementation. A test failure is a valid measurement. A test run that cannot
+start, times out, or contains no tests is an error and never scores as a pass.
 
-3. Both columns are measured the same way.
+4. Clean-room isolation.
 
-The scanner applies one file filter and one test command to the `plain` and
-the `skill-guided` variant, and it scores both with the same rubric.
-A test failure is a measurement. A test run that cannot start, that times out,
-or that holds no test is an error, and an error never scores as a pass. The
-`plain` variant reads `guide.md`. The `skill-guided` variant
-also reads `SKILL.md` and `traps.md`.
+The playground seeds only the protocol documents (`SKILL.md`, `guide.md`,
+`traps.md`) and the task prompt into the clean room. The evaluation rubric
+(stated in `playground/README.md`) never reaches the clean room, so the model
+under test cannot see the scoring criteria.
 
-4. A run enters the table only when every check passes.
+5. Comprehensive reporting.
 
-The table needs the version of the harness, a measured count for every phase,
-a model that the host store confirms, a stated run token, a toolchain that
-matches the declared versions, six passing variants, and a skill-guided
-variant that scores at least the plain variant on every subproject. A run
-that fails a check stays on disk, and the table leaves it out. The report
-states the reason.
-
-5. Every report names the harness version.
-
-A harness version changes the prompt, the tool list, and the token accounting,
-so a report that names no version cannot be reproduced. The scanner asks the
-harness for its version and records the version with the path of the command.
+Every report includes the harness version, token counts for each phase, model
+identifier confirmation, toolchain versions, and test results. A run that fails
+any validation stays on disk for inspection and is excluded from the summary
+table.
 
 6. How runtime tokens are measured.
 
