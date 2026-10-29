@@ -31,8 +31,7 @@ export interface Harness {
 /** The harnesses that the playground supports. */
 export const HARNESSES: Harness[] = [
   { name: "opencode", config: "opencode.json" },
-  { name: "kilo", config: "kilo.json" },
-  { name: "kiro-cli", config: "kilo.json", skipModelCheck: true }
+  { name: "kilo", config: "kilo.json" }
 ];
 
 /** Model identifier of one free model, such as `:free` or `-free`. */
