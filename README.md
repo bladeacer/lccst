@@ -305,7 +305,64 @@ variant and not the other.
 
 <!-- BENCHMARK_RESULTS_START -->
 
-_No findings yet. A run enters this table only when it names the version of the harness, every subproject passes, every phase holds a settled token count, the host store confirms the model, and the model states the run token of the instructions. Run `make benchmark-free`, then `make bench-report`._
+#### opencode/opencode/mimo-v2.6-flash-free: skill version v4.7.0
+
+| Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `opencode` | **opencode** | `v2.2.1` | `mimo-v2.6-flash-free` | `v4.7.0` | `lccst-telemetry` | **python-http-server** | 66/100 | **74/100** | PASSED | 1,593 | 1,792 | 64,999 | 143,471 |
+| `opencode` | **opencode** | `v2.2.1` | `mimo-v2.6-flash-free` | `v4.7.0` | `lccst-telemetry` | **react-timer** | 74/100 | **100/100** | PASSED | 456 | 997 | 105,102 | 375,995 |
+| `opencode` | **opencode** | `v2.2.1` | `mimo-v2.6-flash-free` | `v4.7.0` | `lccst-telemetry` | **go-login-crud** | 100/100 | **100/100** | PASSED | 2,448 | 3,062 | 248,033 | 1,158,202 |
+| **Summary** | | | | | **Workspace Totals / Avg** | **80/100** | **91/100** | **3/3 Passed** | **4,497** | **5,851** | **418,134** | **1,677,668** |
+
+> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
+> tokens.
+> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
+> tokens.
+> Skill-guided implementation used **+30%** more FCT and **+301%** more ART
+> compared to plain implementation across the workspace suite.
+
+
+### Benchmark Summary
+
+| Metric | `opencode-opencode-mimo-v2.6-flash-free` |
+| --- | --- |
+| Harness | opencode |
+| Harness version | v2.2.1 |
+| Plain score | 80/100 |
+| Guided score | 91/100 |
+| Plain FCT | 4,497 |
+| Guided FCT | 5,851 |
+| FCT overhead | +30% |
+| Plain ART | 418,134 |
+| Guided ART | 1,677,668 |
+| ART overhead | +301% |
+| Tests passed | 3/3 |
+
+#### Token Efficiency
+
+* **`opencode-opencode-mimo-v2.6-flash-free`** was the most token-efficient
+  overall (+30% FCT, +301% ART overhead) but scored 91/100 (weakest:
+  python-http-server at 74/100).
+
+Across all runners, `go-login-crud` remained the most resource-intensive
+subproject.
+
+#### Least Token Usage
+
+`opencode-opencode-mimo-v2.6-flash-free` consumed the fewest tokens overall
+(2,106,150): 4,497 plain FCT, 5,851 guided FCT, 418,134 plain ART, and 1,677,668
+guided ART.
+
+#### Overall Top Models
+
+| Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
+| ---: | :--- | :---: | :---: | :---: | :---: | :--- |
+| 1 | `opencode-opencode-mimo-v2.6-flash-free` | 80/100 | 91/100 | +30% | +301% | Best overall |
+
+See [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark runs.
+
+> Only benchmark runs which perform well enough are included
+
 
 <!-- BENCHMARK_RESULTS_END -->
 
