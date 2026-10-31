@@ -708,6 +708,8 @@ def make_report(**overrides):
         "prompt_state": table.PROMPT_VERIFIED,
         "model_state": table.MODEL_VERIFIED,
         "harness_version": "opencode v2.0.18 (/usr/bin/opencode)",
+        "passed_phases": 6,
+        "prompt_per_pass": 42.0,
     }
     values.update(overrides)
     return table.BenchmarkReport(**values)

@@ -223,7 +223,7 @@ telemetry-build:
 # The token that the run puts in the instructions of the workspace. The model
 # must state it, so the report can prove that the model read the instructions.
 # The name of the harness file is fixed, so the token comes from the content.
-BENCH_PROMPT_TOKEN ?= $(shell python3 -c "import hashlib;print(hashlib.sha256(open('playground/agent-prompt.md','rb').read()).hexdigest()[:8])")
+BENCH_PROMPT_TOKEN ?= $(shell python3 -c "import hashlib,sys;print(hashlib.sha256(open('playground/agent-prompt.md','rb').read() + sys.argv[1].encode()).hexdigest()[:8])" $(BENCH_WORKSPACE))
 
 # The instructions of the run are `playground/agent-prompt.md`. The `AGENTS.md`
 # of this repository is a different document, and it never reaches a run. The
@@ -330,7 +330,7 @@ benchmark-run: clean-telemetry bench-model
 	@echo "[Harness] Workspace: $(BENCH_WORKSPACE)"
 	@echo "[Harness] Harness:  $(HARNESS) with $(BENCH_MODEL_ID)"
 	@echo "[Harness] Version: $(HARNESS_VERSION)"
-	@echo "[Harness] Run token: $(BENCH_PROMPT_TOKEN) (the model must state it)"
+	@echo "[Harness] Run token: $(BENCH_PROMPT_TOKEN) for $(AGENT_MODEL) (the model must state it)"
 	@echo "[Harness] Starting one session per subproject variant. Each session runs in the same clean room."
 	@$(foreach subproject,$(BENCH_SUBPROJECTS),$(foreach variant,$(BENCH_VARIANTS),$(call RUN_VARIANT_SESSION,$(subproject),$(variant))))
 	@$(MAKE) -C "$(CURDIR)" --no-print-directory bench-report HARNESS_VERSION="$(HARNESS_VERSION)"

@@ -123,7 +123,9 @@ function settle(): void {
     process.stdout.write("The workspace holds no run token: the prompt check did not run.\n");
   }
   process.stdout.write(
-    `Telemetry settled: ${settled.phases.length} phases, ${settled.model_turns} model turns, ` +
+    `Telemetry settled: ${settled.phases.length} phases, ${settled.passed_phases} passing phases, ` +
+      `${settled.model_turns} model turns, ${settled.total_prompt_tokens} prompt, ` +
+      `${settled.total_completion_tokens} completion, ${settled.total_cache_read_tokens} cache read, ` +
       `${settled.total_tokens} tokens, ${unsettled} phases without counts.\n`
   );
 }

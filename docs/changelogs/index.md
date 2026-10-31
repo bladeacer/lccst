@@ -1,6 +1,8 @@
 # LCCST Changelogs
 
 <!-- CHANGELOG_LIST -->
+- [4.8.0](lccst-4.8.0.md)
+- [4.7.0](lccst-4.7.0.md)
 - [4.6.0](lccst-4.6.0.md)
 - [4.5.0](lccst-4.5.0.md)
 - [4.4.0](lccst-4.4.0.md)

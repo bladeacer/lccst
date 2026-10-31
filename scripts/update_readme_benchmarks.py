@@ -82,6 +82,8 @@ class BenchmarkReport:
     flagged: str = "no"
     drift: str = "no"
     harness_version: str = "not stated"
+    passed_phases: int = 0
+    prompt_per_pass: float | None = None
 
     @property
     def is_reproducible(self) -> bool:
@@ -226,7 +228,7 @@ def read_note_states(text: str) -> dict[str, str]:
     with no note returns the unknown state for every check, so a report that
     predates the notes never passes a check.
     """
-    states = {
+    states: dict[str, str] = {
         "token_state": NO_TOKENS,
         "prompt_state": PROMPT_UNKNOWN,
         "model_state": MODEL_UNVERIFIED,
@@ -275,6 +277,36 @@ def _fct_overhead(r: BenchmarkReport) -> float:
     return max((r.total_fct_guided - r.total_fct_plain) / r.total_fct_plain, 0)
 
 
+def _numeric_field(text: str, field: str) -> int | None:
+    """Read one integer field from the parsed report text when the text carries it.
+
+    The README generator only has the rendered report text, so it reads numeric
+    metadata from the prose and table fragments rather than from a JSON blob.
+    """
+    value = _read_numeric_field(text, field)
+    return value
+
+
+def _read_numeric_field(text: str, field: str) -> int | None:
+    """Read one integer field from the report text when present."""
+    pattern = re.compile(rf"\b{re.escape(field)}\s*:\s*(\d+)\b")
+    match = pattern.search(text)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def _read_prompt_per_pass(text: str) -> float | None:
+    """Read prompt-per-pass from the report text when the report states it."""
+    match = re.search(r"prompt\s+([\d,.]+)\s*/\s*pass", text, re.IGNORECASE)
+    if not match:
+        return None
+    try:
+        return float(match.group(1).replace(",", ""))
+    except ValueError:
+        return None
+
+
 def _art_overhead(r: BenchmarkReport) -> float:
     """Return ART overhead as a decimal (negative = token savings).
 
@@ -284,6 +316,39 @@ def _art_overhead(r: BenchmarkReport) -> float:
     if r.total_art_plain == 0:
         return None
     return (r.total_art_guided - r.total_art_plain) / r.total_art_plain
+
+
+def _numeric_field(text: str, field: str) -> int | None:
+    """Read one integer field from the report text when present."""
+    pattern = re.compile(rf"\b{re.escape(field)}\s*:\s*(\d+)\b")
+    match = pattern.search(text)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def _read_prompt_per_pass(text: str) -> float | None:
+    """Read prompt-per-pass from the report text when present."""
+    match = re.search(r"prompt\s+([\d,.]+)\s*/\s*pass", text, re.IGNORECASE)
+    if not match:
+        return None
+    try:
+        return float(match.group(1).replace(",", ""))
+    except ValueError:
+        return None
+
+
+def _read_prompt_per_pass(text: str, total_prompt: int | None, passed_phases: int | None) -> float | None:
+    """Read prompt-per-pass from the report text when present."""
+    if passed_phases and total_prompt:
+        return total_prompt / passed_phases
+    match = re.search(r"prompt\s+([\d,.]+)\s*/\s*pass", text, re.IGNORECASE)
+    if not match:
+        return None
+    try:
+        return float(match.group(1).replace(",", ""))
+    except ValueError:
+        return None
 
 
 def _parse_robustness_section(
@@ -468,7 +533,7 @@ def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
 
     _fill_art_values(text, projects)
 
-    return BenchmarkReport(
+    report = BenchmarkReport(
         provider=provider,
         agent_name=agent_name,
         model_name=model_name,
@@ -480,6 +545,16 @@ def parse_report(text: str, agent_tag: str) -> BenchmarkReport | None:
         ),
         **read_note_states(text),
     )
+
+    _passed_phases = _read_numeric_field(text, "passed_phases")
+    _total_prompt = _read_numeric_field(text, "total_prompt_tokens")
+    if _passed_phases and _total_prompt:
+        report.passed_phases = _passed_phases
+        report.prompt_per_pass = _total_prompt / _passed_phases
+    else:
+        report.prompt_per_pass = _read_prompt_per_pass(text, _total_prompt, _passed_phases)
+
+    return report
 
 
 def get_agent_reports(

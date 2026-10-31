@@ -54,6 +54,7 @@ export interface TelemetryData {
   model_turns: number;
   active_mcps: string[];
   phases: PhaseRecord[];
+  passed_phases: number;
   breakdown: {
     [subproject: string]: {
       plain: StepMetrics;
@@ -113,11 +114,12 @@ export function emptyTelemetry(): TelemetryData {
     total_completion_tokens: 0,
     total_cache_read_tokens: 0,
     total_tokens: 0,
-    model_turns: 0,
-    active_mcps: ["lccst-telemetry"],
-    phases: [],
-    breakdown: {}
-  };
+  model_turns: 0,
+  active_mcps: ["lccst-telemetry"],
+  phases: [],
+  passed_phases: 0,
+  breakdown: {}
+};
 }
 
 /**
@@ -382,6 +384,7 @@ export function settlePhase(
     total_cache_read_tokens: data.total_cache_read_tokens + usage.cacheReadTokens,
     total_tokens:
       data.total_tokens + usage.promptTokens + usage.completionTokens + usage.cacheReadTokens,
-    model_turns: data.model_turns + usage.messageIds.length
+    model_turns: data.model_turns + usage.messageIds.length,
+    passed_phases: data.passed_phases + (usage.messageIds.length > 0 ? 1 : 0),
   };
 }

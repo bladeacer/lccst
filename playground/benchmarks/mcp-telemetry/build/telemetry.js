@@ -251,7 +251,8 @@ export function settlePhase(data, index, usage, tokenSeen = false) {
         total_prompt_tokens: data.total_prompt_tokens + usage.promptTokens,
         total_completion_tokens: data.total_completion_tokens + usage.completionTokens,
         total_cache_read_tokens: data.total_cache_read_tokens + usage.cacheReadTokens,
-        total_tokens: data.total_tokens + usage.promptTokens + usage.completionTokens + usage.cacheReadTokens,
-        model_turns: data.model_turns + usage.messageIds.length
-    };
+    total_tokens: data.total_tokens + usage.promptTokens + usage.completionTokens + usage.cacheReadTokens,
+    model_turns: data.model_turns + usage.messageIds.length,
+    passed_phases: data.passed_phases + (usage.messageIds.length > 0 ? 1 : 0)
+};
 }

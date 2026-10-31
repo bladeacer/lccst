@@ -569,7 +569,21 @@ def empty_telemetry():
         "models": [],
         "prompt_verified": False,
         "flagged_phases": [],
+        "passed_phases": 0,
     }
+
+
+def prompt_tokens_per_passing_phase(record):
+    """Return prompt tokens per passing phase for a report, or None when undefined."""
+    if not isinstance(record, dict):
+        return None
+    passed = int(record.get("passed_phases") or 0)
+    if passed <= 0:
+        return None
+    prompt = int(record.get("total_prompt_tokens") or 0)
+    if prompt <= 0:
+        return None
+    return prompt / passed
 
 
 def load_telemetry(agent_tag):
@@ -617,6 +631,10 @@ def load_telemetry(agent_tag):
         # several phases is no proof that every session received them.
         record["prompt_verified"] = bool(settled) and all(
             bool(phase.get("token_seen")) for phase in settled
+        )
+        record["passed_phases"] = sum(
+            1 for phase in record.get("phases", []) or []
+            if isinstance(phase, dict) and phase.get("settled")
         )
         record["flagged_phases"] = [
             {
@@ -836,6 +854,16 @@ def read_prompt_token(workspace):
     return token or None
 
 
+def passed_phase_count(record):
+    """Return the number of phases that hold a settled count."""
+    if not isinstance(record, dict):
+        return 0
+    phases = record.get("phases") or []
+    if not isinstance(phases, list):
+        return 0
+    return sum(1 for phase in phases if isinstance(phase, dict) and phase.get("settled"))
+
+
 def collect_results(install):
     """Measure both variants of every subproject."""
     results = {}
@@ -908,6 +936,8 @@ def generate_markdown(results, provider, harness, model, model_id, agent_tag,
         mcps = "none recorded"
     else:
         mcps = "unknown, the run recorded no phase"
+    prompt_per_pass = prompt_tokens_per_passing_phase(record)
+    passed_phases = int(record.get("passed_phases") or 0)
 
     notes = [model_note(model_id or model, record["models"])]
     notes.append(prompt_note(record["prompt_verified"], read_prompt_token(WORKSPACE)))
@@ -986,7 +1016,7 @@ rules.
 |---|:-:|:-:|:-:|
 | File-Content Tokens (FCT) | {plain_fct} | {guided_fct} | {token_diff:+d} ({token_pct:+.0f}%) |
 | Total Program Lines | {plain_lines} | {guided_lines} | {guided_lines - plain_lines:+d} |
-| Agent Runtime Tokens (ART) | {record['total_tokens']} total tokens | {record['model_turns']} model turns over {len(record['phases'])} phases | -- |
+| Agent Runtime Tokens (ART) | {record['total_tokens']} total tokens | {record['model_turns']} model turns over {len(record['phases'])} phases, {passed_phases} passed | prompt {prompt_per_pass:.0f}/pass |
 
 ## Runtime Cost Partitioning (ART breakdown)
 
@@ -1007,12 +1037,14 @@ rules.
             )
 
     md += """
+
 ## Robustness Metrics
 
 The score below is a text-level proxy, not a proof of design quality. The
 feature detectors read the text of the source files, so a term in a comment
 can earn what a real implementation earns. The test run is the only
 behavioural proof in this report.
+
 
 | Project Submodule Target | Strategy Variant | Files | Lines | Tokens | Unit Test Standing | Robustness Score |
 |---|---|:-:|:-:|:-:|:-:|:-:|
