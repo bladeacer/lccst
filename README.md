@@ -33,7 +33,7 @@ Protocol:
 - **`build`** -- Run build
 - **`verify`** -- Run the full quality gate (format, lint, test, build)
 - **`compliance`** -- Audit deliverable tiers
-- **`version`** -- Report the current LCCST version
+- **`version`** -- Report the current lccst version
 
 The server also registers a `swarm` prompt that returns the SKILL.md content
 for the active workspace. This prompt is for Bare Skill Mode.
@@ -107,7 +107,7 @@ extension. The server does not search `tools/`, `bin/`, or `script/`.
 - **Ecosystem-native discovery:** LSP, Tree-sitter, and native test runners
   trace side effects; the Tooling Ladder prefers project scripts over bare
   binaries.
-- **Token investment:** LCCST puns on low-cost asset management while
+- **Token investment:** lccst puns on low-cost asset management while
   clustering by locality. Tokens are strategic capital -- spent on tests,
   typing, and the Tooling Ladder, not on boilerplate.
 
@@ -216,7 +216,7 @@ Benchmarking has its own dependencies -- see [`playground/README.md`](playground
 
 ## Playground and Evaluation
 
-The playground is a clean-room environment for testing and evaluating the LCCST
+The playground is a clean-room environment for testing and evaluating the lccst
 protocol with different AI models and configurations. It provides a standardized
 way to measure implementation quality, test coverage, and code structure across
 multiple reference projects.

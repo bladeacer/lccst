@@ -1,4 +1,4 @@
-### LCCST 3.8.0
+### lccst 3.8.0
 
 Date: _2026-09-30_
 
@@ -227,7 +227,7 @@ value.
 A probe against a local capture server, with a fake home directory, confirmed
 that `OPENCODE_CONFIG_DIR` stops the global `AGENTS.md`, the global agents, and
 the global skills of a user from reaching the prompt. The probe also confirmed
-that a probe run inside the LCCST repository does not receive the repository
+that a probe run inside the lccst repository does not receive the repository
 `AGENTS.md` in the clean room, and that a global agent prompt is applied when the
 configuration directory is not redirected. The isolation the changelog claimed
 for `v3.7.0` holds.

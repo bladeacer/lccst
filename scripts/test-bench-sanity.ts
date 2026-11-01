@@ -303,7 +303,7 @@ async function runCase(harness: Harness): Promise<void> {
   );
 }
 
-console.log("LCCST: Harness connection sanity checks\n");
+console.log("lccst: Harness connection sanity checks\n");
 console.log("The check opens the harness the way a benchmark run opens it, and it");
 console.log("closes the harness without sending the prompt, so no model is reached.");
 

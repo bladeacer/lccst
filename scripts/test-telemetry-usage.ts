@@ -109,7 +109,7 @@ function addMessage(
   store.prepare(`INSERT INTO session_message ${columns}`).run(id, sessionId, role, timeCreated, data);
 }
 
-console.log("LCCST: Telemetry unit tests\n");
+console.log("lccst: Telemetry unit tests\n");
 
 // -- Window arithmetic -------------------------------------------
 const none = sumTurnUsage([], { fromTime: 0, toTime: 10 });

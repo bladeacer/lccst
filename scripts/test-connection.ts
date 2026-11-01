@@ -13,7 +13,7 @@ const testsDir = path.resolve(__dirname, "../tests");
 // for a server that stays silent.
 const RESPONSE_TIMEOUT_MS = 5000;
 
-console.log("LCCST: Commencing test suite runner parsing verification...");
+console.log("lccst: Commencing test suite runner parsing verification...");
 
 if (!fs.existsSync(testsDir)) {
   console.error(`Runtime Error: Directory not found at path: ${testsDir}`);

@@ -518,7 +518,7 @@ async function main(): Promise<void> {
   }
 
   const fuzzy = hasFuzzySearch();
-  console.log("LCCST benchmark picker");
+  console.log("lccst benchmark picker");
   console.log(
     freeOnly
       ? "Free models only: a free marker in the name, or no charge in the registry."

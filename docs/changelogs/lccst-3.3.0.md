@@ -1,4 +1,4 @@
-### LCCST 3.3.0
+### lccst 3.3.0
 
 Date: _2026-08-05_
 
@@ -46,11 +46,11 @@ Date: _2026-08-06_
 
 ### Workspace-Bound Path Resolution
 
-The MCP server resolved every `path` argument against the LCCST install directory (`ROOT`). Running `/audit`, `/tooling`, `/init`, or any step tool from another project with `.` scanned the LCCST repository. The scan targeted the client's project instead. Targets now resolve against the workspace root. The workspace root is the server's `process.cwd()`. Hosts spawn this as the project being edited. An optional `LCCST_WORKSPACE` environment variable provides a fallback. `ROOT` is retained only for LCCST's own files (`SKILL.md`, `package.json`).
+The MCP server resolved every `path` argument against the lccst install directory (`ROOT`). Running `/audit`, `/tooling`, `/init`, or any step tool from another project with `.` scanned the lccst repository. The scan targeted the client's project instead. Targets now resolve against the workspace root. The workspace root is the server's `process.cwd()`. Hosts spawn this as the project being edited. An optional `LCCST_WORKSPACE` environment variable provides a fallback. `ROOT` is retained only for lccst's own files (`SKILL.md`, `package.json`).
 
 ### /audit Honors Its `path` Argument
 
-The `/audit` handler previously ignored its `path` schema entirely (`async () =>`) and always ran `git diff` against the LCCST repo. It now accepts the argument, resolves it through `resolveTarget`, and executes git against the target directory. A subdirectory of a repo is audited in repo context.
+The `/audit` handler previously ignored its `path` schema entirely (`async () =>`) and always ran `git diff` against the lccst repo. It now accepts the argument, resolves it through `resolveTarget`, and executes git against the target directory. A subdirectory of a repo is audited in repo context.
 
 ## Consistency
 

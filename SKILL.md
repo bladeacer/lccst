@@ -38,7 +38,7 @@ arguments:
   required: ["command"]
 ---
 
-# LCCST (Locust)
+# lccst (Locust)
 
 ## Mandate
 
@@ -127,7 +127,7 @@ manual step. Do not wait for a tool that the host does not provide.
   End with a pass or fail summary. Accepts `path`, `mode`, and `dryRun`.
 - `/compliance`: Audit deliverable tiers. Report must-have items first.
   Accepts `path` only.
-- `/version`: Report the current LCCST version. Accepts no arguments.
+- `/version`: Report the current lccst version. Accepts no arguments.
 
 Run a command on its own or use it as a step in `/swarm` or `/verify`. Do not
 infer a different command from a request that names no command.

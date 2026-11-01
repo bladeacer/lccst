@@ -12,6 +12,6 @@ export const expectedResponse = (response: any): boolean => {
   return (
     response.id === 7 &&
     response.result?.content?.[0]?.type === "text" &&
-    /LCCST v\d+\.\d+\.\d+/.test(response.result.content[0].text)
+    /lccst v\d+\.\d+\.\d+/.test(response.result.content[0].text)
   );
 };

@@ -267,7 +267,7 @@ function runCase(harness: Harness): void {
   }
 }
 
-console.log("LCCST: Telemetry end-to-end tests on real harnesses\n");
+console.log("lccst: Telemetry end-to-end tests on real harnesses\n");
 console.log("The run needs a network connection and a model that the harness can reach.");
 
 const selected = process.argv.slice(2);

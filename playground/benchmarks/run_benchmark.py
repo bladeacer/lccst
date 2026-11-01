@@ -936,7 +936,7 @@ def generate_markdown(results, provider, harness, model, model_id, agent_tag,
         mcps = "none recorded"
     else:
         mcps = "unknown, the run recorded no phase"
-    prompt_per_pass = prompt_tokens_per_passing_phase(record)
+    prompt_per_pass = prompt_tokens_per_passing_phase(record) or 0
     passed_phases = int(record.get("passed_phases") or 0)
 
     notes = [model_note(model_id or model, record["models"])]

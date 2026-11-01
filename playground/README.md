@@ -1,6 +1,6 @@
-# LCCST Playground
+# lccst Playground
 
-Clean-room evaluation harness for LCCST. Tests and evaluates the protocol with
+Clean-room evaluation harness for lccst. Tests and evaluates the protocol with
 different AI models and configurations.
 
 ## Vocabulary
@@ -28,9 +28,9 @@ A login system with user create, read, update, and delete operations.
 
 | Tool | Minimum version | Use |
 | --- | --- | --- |
-| Node.js | 20 | LCCST server and React projects |
+| Node.js | 20 | lccst server and React projects |
 | pnpm | 9 | Node dependencies |
-| TypeScript | 5.4 | LCCST source |
+| TypeScript | 5.4 | lccst source |
 | Python | 3.10 | Evaluation script |
 | Go | 1.21 | Go project |
 | `uv` | 0.4 | Python dependencies |

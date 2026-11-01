@@ -1076,7 +1076,7 @@ server.registerTool("compliance", {
 
 // Tool: /version
 server.registerTool("version", {
-  description: "Report the LCCST protocol and server version.",
+description: "Report the lccst protocol and server version.",
   inputSchema: {},
   outputSchema: ENVELOPE_OUTPUT_SCHEMA,
 }, async () => {
@@ -1085,7 +1085,7 @@ server.registerTool("version", {
     const pkg = JSON.parse(fs.readFileSync(path.resolve(ROOT, "package.json"), "utf-8"));
     pkgVersion = pkg.version ?? "(unknown)";
   } catch { /* ignore */ }
-  return envelope("/version", { version: pkgVersion }, `LCCST v${pkgVersion}`);
+  return envelope("/version", { version: pkgVersion }, `lccst v${pkgVersion}`);
 });
 
 // --- Protocol command definitions ----------------------------------
@@ -1106,7 +1106,7 @@ export const PROTOCOL_COMMANDS: ProtocolCommand[] = [
   { name: "build", description: "Run the project build command (Makefile `build` target first, then manifest build).", args: ["path", "mode", "dryRun"] },
   { name: "verify", description: "Run the full quality gate: format, lint, test, build. Reports a later step as skipped_after_failure when an earlier step fails.", args: ["path", "mode", "dryRun"] },
   { name: "compliance", description: "Audit deliverable tiers: must-haves (unit tests, docstrings) and nice-to-haves (API docs, changelog).", args: ["path"] },
-  { name: "version", description: "Report the LCCST protocol and server version.", args: [] },
+  { name: "version", description: "Report the lccst protocol and server version.", args: [] },
 ];
 
 // --- Start transport (only when run directly, not when imported) ----

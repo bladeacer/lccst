@@ -1,4 +1,4 @@
-# LCCST Playground Guide
+# lccst Playground Guide
 
 ## Purpose
 
@@ -16,8 +16,8 @@ that directory, so no other project file can reach it. The directory holds
 server is named by a path that is relative to the clean room.
 
 The `AGENTS.md` of this file is a copy of `agent-prompt.md`. It is not the
-`AGENTS.md` of the LCCST repository. The repository file states the rules for
-maintaining LCCST, and it never reaches a run. The clean room is outside the
+`AGENTS.md` of the lccst repository. The repository file states the rules for
+maintaining lccst, and it never reaches a run. The clean room is outside the
 repository, and the run refuses a `BENCH_TMP` that places the workspace inside
 the repository, because a harness reads the instructions of every parent
 directory.

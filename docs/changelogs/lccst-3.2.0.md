@@ -1,4 +1,4 @@
-### LCCST 3.2.0
+### lccst 3.2.0
 
 Date: _2026-07-30_
 
@@ -80,7 +80,7 @@ Eleven tools are now exposed (was three):
 - `build` -- run build (new `buildCommand` added to project detection)
 - `verify` -- run the full quality gate (format, lint, test, build) with a pass/fail summary
 - `compliance` -- audit deliverable tiers (must-haves: unit tests, docstrings; nice-to-haves: API docs, changelog)
-- `version` -- report the current LCCST version
+- `version` -- report the current lccst version
 
 ### SKILL.md Subcommands
 

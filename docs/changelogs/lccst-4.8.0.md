@@ -1,4 +1,4 @@
-### LCCST 4.8.0
+### lccst 4.8.0
 
 Date: _2026-10-31_
 
@@ -15,6 +15,7 @@ The run report now publishes one extra derived metric: prompt tokens per passing
 
 ## Correctness
 
+- The kilo harness invocation now uses `kilo run` instead of `kilo --prompt` for benchmark sessions, so kilo runs receive the task prompt in headless mode and can state the run token like opencode runs do.
 - The inclusion gate still requires a prompted, measured, non-flagged, non-drifted run with a verified model and a stated run token.
 - The README table reader now also reads `passed_phases` and `prompt_per_pass` from the report text when those values are present.
 

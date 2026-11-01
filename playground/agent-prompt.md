@@ -1,4 +1,4 @@
-# LCCST Playground Agent Instructions
+# lccst Playground Agent Instructions
 
 This file arrives as the project instructions of the workspace, in the file
 `AGENTS.md`. The harness sends the first task with it. You are running one
@@ -40,7 +40,7 @@ This is a blind deletion pass for one variant directory. Do not read or examine
 the directory before removing it. Do not remove any other path. Do not run
 `ls`, `find`, `git status`, `git diff`, `git log`, or `open`. Do not read,
 write, or delete any path outside the current working directory. Do not load
-the LCCST repository file at `.agents/AGENTS.md` or any parent `AGENTS.md` into
+the lccst repository file at `.agents/AGENTS.md` or any parent `AGENTS.md` into
 your planning. The clean room copies this file to `AGENTS.md`. The repository
 file does not reach this run, and a plan from that file is a plan for a
 different job.

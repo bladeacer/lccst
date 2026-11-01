@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file gives agents the rules and limits for work in the LCCST repository.
+This file gives agents the rules and limits for work in the lccst repository.
 Use this file with `SKILL.md`, the protocol specification, and `README.md`,
 the user-facing documentation.
 
@@ -9,7 +9,7 @@ for user-facing claims.
 
 ## Project Overview
 
-LCCST (Locust) is a deterministic workspace gatekeeper. It decomposes each
+lccst (Locust) is a deterministic workspace gatekeeper. It decomposes each
 workspace change into isolated, test-verified, atomic Git commits.
 
 The main deliverables are one MCP server (`src/index.ts`) and one protocol
@@ -154,7 +154,7 @@ file to `docs/changelogs/index.md`.
 
 Use the Ada_CRDT structure:
 
-1. Start with `### LCCST <version>`.
+1. Start with `### lccst <version>`.
 2. Add the release date in the existing italic format.
 3. Add one summary line.
 4. Add relevant sections: `## Correctness`, `## Consistency`,
@@ -189,7 +189,7 @@ The server exposes eleven tools:
 - `build`: Run the project build command.
 - `verify`: Run the full quality gate: format, lint, test, and build.
 - `compliance`: Audit must-have and nice-to-have deliverables.
-- `version`: Report the current LCCST version.
+- `version`: Report the current lccst version.
 
 The `lccst` server is registered in `opencode.jsonc`. It is disabled by
 default (`enabled: false`). In benchmark playgrounds, it stays disabled. Only

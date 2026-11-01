@@ -1,4 +1,4 @@
-# LCCST Changelogs
+# lccst Changelogs
 
 <!-- CHANGELOG_LIST -->
 - [4.8.0](lccst-4.8.0.md)

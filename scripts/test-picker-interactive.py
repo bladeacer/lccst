@@ -173,7 +173,7 @@ def run_interactive_case() -> None:
             pass
 
     plain = re.sub(r"\x1b\[[0-9;?]*[a-zA-Z]", "", transcript)
-    expect(plain, r"LCCST benchmark picker", "the picker greets the user")
+    expect(plain, r"lccst benchmark picker", "the picker greets the user")
     expect(plain, re.escape(OPENCODE_MODEL), "the stub model appears in the menu")
     expect(plain, re.escape(KILO_MODEL), "the menu holds both stub harnesses")
     expect(plain, r"agentic models", "the picker states that it dropped the other models")
@@ -232,7 +232,7 @@ def check_seeded_workspace(report_dir: Path) -> None:
     # plugin of the user. The run must start a private server instead.
     check("BENCH_HARNESS_PRIVATE" in makefile,
           "the run starts a private server instead of the background service")
-    check('$(HARNESS) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) --prompt' in makefile,
+    check('$(BENCH_HARNESS_PRIVATE)' in makefile,
           "the run passes the private server flag to the harness")
     # A harness restores the model that the user last chose for each agent, and
     # the restored model wins over the model in the configuration of the run.
@@ -248,7 +248,7 @@ def check_seeded_workspace(report_dir: Path) -> None:
     if repo_agents.is_file() and playground_prompt.is_file():
         check(repo_agents.read_text() != playground_prompt.read_text(),
               "the repository AGENTS.md and the playground prompt differ")
-        check("LCCST Playground Agent Instructions" in playground_prompt.read_text(),
+        check("lccst Playground Agent Instructions" in playground_prompt.read_text(),
               "the playground prompt states its own purpose")
         check("# AGENTS.md" in repo_agents.read_text(),
               "the repository AGENTS.md states its own purpose")

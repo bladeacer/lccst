@@ -70,7 +70,7 @@ endef
 # that leaves with a non-zero status must not stop the other sessions, so the
 # failure prints a note and the next session still runs.
 define RUN_VARIANT_SESSION
-echo "[Harness] Session: $(1) / $(2)"; cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(BENCH_HARNESS_STATE) $(HARNESS) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) --prompt "$(call SINGLE_VARIANT_TASK,$(1),$(2))" || { STATUS=$$?; echo "[Harness] The harness left with status $$STATUS for $(1)/$(2). Continuing with the next session."; };
+echo "[Harness] Session: $(1) / $(2)"; cd "$(BENCH_WORKSPACE)" && $(BENCH_HARNESS_CONFIG)="$(BENCH_WORKSPACE)/harness-config" $(BENCH_HARNESS_STATE) $(HARNESS) $(if $(filter kilo,$(HARNESS)),run) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) $(if $(filter kilo,$(HARNESS)),"$(call SINGLE_VARIANT_TASK,$(1),$(2))",--prompt "$(call SINGLE_VARIANT_TASK,$(1),$(2))") || { STATUS=$$?; echo "[Harness] The harness left with status $$STATUS for $(1)/$(2). Continuing with the next session."; };
 endef
 CONFIG_FILE  ?=
 

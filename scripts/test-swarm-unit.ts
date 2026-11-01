@@ -18,7 +18,7 @@ function withTempDir(fn: (dir: string) => void) {
   finally { fs.rmSync(dir, { recursive: true, force: true }); }
 }
 
-console.log("LCCST: Swarm library unit tests\n");
+console.log("lccst: Swarm library unit tests\n");
 
 // -- Project detection ----------------------------------------------
 withTempDir((dir) => {

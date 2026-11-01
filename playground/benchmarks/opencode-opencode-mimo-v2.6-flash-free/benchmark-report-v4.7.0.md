@@ -1,4 +1,4 @@
-# LCCST Playground Benchmark Report
+# lccst Playground Benchmark Report
 
 **Provider:** opencode
 **Harness:** opencode

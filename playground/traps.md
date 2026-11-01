@@ -1,4 +1,4 @@
-# LCCST Playground Traps
+# lccst Playground Traps
 
 The `skill-guided` variant reads this file. The `plain` variant does not. The
 file names the mistakes that cost the most time in earlier runs, so the guided

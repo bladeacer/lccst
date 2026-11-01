@@ -12,7 +12,7 @@ if (!targetVersion || !/^\d+\.\d+\.\d+$/.test(targetVersion)) {
   process.exit(1);
 }
 
-console.log(`LCCST: Commencing version synchronization to version ${targetVersion}...`);
+console.log(`lccst: Commencing version synchronization to version ${targetVersion}...`);
 
 const filesToUpdate = [
   {
