@@ -586,6 +586,17 @@ def prompt_tokens_per_passing_phase(record):
     return prompt / passed
 
 
+def prompt_per_pass_cell(record):
+    """Return the prompt-per-pass cell of the report.
+
+    A run that recorded no passing phase has no prompt-per-pass value. The
+    report states the absence with `--` instead of formatting a missing number,
+    because a report of an unmeasured run must still render.
+    """
+    value = prompt_tokens_per_passing_phase(record)
+    return "--" if value is None else f"{value:.0f}/pass"
+
+
 def load_telemetry(agent_tag):
     """Read the telemetry record of the run.
 
@@ -936,7 +947,7 @@ def generate_markdown(results, provider, harness, model, model_id, agent_tag,
         mcps = "none recorded"
     else:
         mcps = "unknown, the run recorded no phase"
-    prompt_per_pass = prompt_tokens_per_passing_phase(record) or 0
+    prompt_per_pass_text = prompt_per_pass_cell(record)
     passed_phases = int(record.get("passed_phases") or 0)
 
     notes = [model_note(model_id or model, record["models"])]
@@ -1016,7 +1027,7 @@ rules.
 |---|:-:|:-:|:-:|
 | File-Content Tokens (FCT) | {plain_fct} | {guided_fct} | {token_diff:+d} ({token_pct:+.0f}%) |
 | Total Program Lines | {plain_lines} | {guided_lines} | {guided_lines - plain_lines:+d} |
-| Agent Runtime Tokens (ART) | {record['total_tokens']} total tokens | {record['model_turns']} model turns over {len(record['phases'])} phases, {passed_phases} passed | prompt {prompt_per_pass:.0f}/pass |
+| Agent Runtime Tokens (ART) | {record['total_tokens']} total tokens | {record['model_turns']} model turns over {len(record['phases'])} phases, {passed_phases} passed | prompt {prompt_per_pass_text} |
 
 ## Runtime Cost Partitioning (ART breakdown)
 

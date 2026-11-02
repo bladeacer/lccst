@@ -1,6 +1,6 @@
 ### lccst 4.8.0
 
-Date: _2026-10-31_
+Date: _2026-11-02_
 
 The benchmark run token is now unique to each run. The token still proves that a model received the project instructions, but two runs no longer share the same token value by default. The startup banner now states the run token together with the run identity.
 
@@ -15,8 +15,15 @@ The run report now publishes one extra derived metric: prompt tokens per passing
 
 ## Correctness
 
-- The kilo harness invocation now uses `kilo run` instead of `kilo --prompt` for benchmark sessions, so kilo runs receive the task prompt in headless mode and can state the run token like opencode runs do.
-- The inclusion gate still requires a prompted, measured, non-flagged, non-drifted run with a verified model and a stated run token.
+- Both harnesses stay in the terminal interface and receive the task prompt
+  through `--prompt`, so the user can steer each session. Kilo keeps the reply
+  text of a session in the `part` table, and the settle step reads that table,
+  so a kilo phase can state the run token like an opencode phase does.
+- A run that recorded no passing phase now states `--` in the prompt-per-pass
+  cell instead of formatting a missing value, so the report of an unmeasured
+  run still renders.
+- The inclusion gate still requires a prompted, measured, non-flagged,
+  non-drifted run with a verified model and a stated run token.
 - The README table reader now also reads `passed_phases` and `prompt_per_pass` from the report text when those values are present.
 
 ## Version

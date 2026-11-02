@@ -959,6 +959,19 @@ class ReportTextTest(unittest.TestCase):
         self.assertIn("**Prompt verified.**", text)
         self.assertIn("**Measured runtime tokens.**", text)
 
+    def test_a_run_without_a_passing_phase_states_no_prompt_per_pass(self):
+        """An unmeasured run must still render a report, not raise an error."""
+        text = self.build(scanner.empty_telemetry())
+        self.assertIn("prompt --", text)
+        self.assertNotIn("prompt None", text)
+
+    def test_a_run_with_passing_phases_states_prompt_per_pass(self):
+        record = scanner.empty_telemetry()
+        record["passed_phases"] = 2
+        record["total_prompt_tokens"] = 84
+        text = self.build(record)
+        self.assertIn("prompt 42/pass", text)
+
     def test_the_report_names_the_requested_model_id(self):
         text = self.build(scanner.empty_telemetry())
         self.assertIn("**Requested Model ID:** opencode/ling-free", text)
