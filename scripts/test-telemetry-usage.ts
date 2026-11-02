@@ -679,12 +679,15 @@ assert(
 
 // kilo 7.7.9, legacy schema: `session` plus `message`. The author sits inside
 // `data`, the model is a flat `modelID` and `providerID` pair with no `model`
-// object at all, and the message row holds no text of any kind.
+// object at all, and the message row holds no text of any kind. The terminal
+// interface keeps the reply text of the turn in the `part` table, so the
+// settle step reads the run token from that table.
 {
   const file = path.join(storeDir(), "kilo-live.db");
   const store = new DatabaseSync(file);
   store.exec("CREATE TABLE session (id text, directory text, parent_id text, time_updated integer)");
   store.exec("CREATE TABLE message (id text, session_id text, time_created integer, time_updated integer, data text)");
+  store.exec("CREATE TABLE part (id text, message_id text, session_id text, time_created integer, data text)");
   store.prepare(
     "INSERT INTO session (id, directory, parent_id, time_updated) VALUES (?, ?, ?, ?)"
   ).run("ses_k", "/tmp/lccst-bench-y", null, 100);
@@ -704,6 +707,15 @@ assert(
   store.prepare(
     "INSERT INTO message (id, session_id, time_created, time_updated, data) VALUES (?, ?, ?, ?, ?)"
   ).run("msg_k", "ses_k", 95, 99, data);
+  store.prepare(
+    "INSERT INTO part (id, message_id, session_id, time_created, data) VALUES (?, ?, ?, ?, ?)"
+  ).run(
+    "prt_k",
+    "msg_k",
+    "ses_k",
+    95,
+    JSON.stringify({ type: "text", text: "Run token 5a6b7c8d acknowledged." })
+  );
   store.close();
 
   const usage = readTurnUsage({
@@ -721,7 +733,11 @@ assert(
     usage?.models[0] !== undefined,
     "a flat modelID no longer loses the model"
   );
-  assert(usage?.text === "", "the live kilo schema holds no text in the message row");
+  assert(usage?.text.includes("5a6b7c8d"), "the kilo part table yields the reply text");
+  assert(
+    statesToken(usage ?? { text: "" }, "5a6b7c8d"),
+    "a kilo terminal session verifies the run token"
+  );
 }
 
 // A host that keeps the text of a turn in a table of its own.

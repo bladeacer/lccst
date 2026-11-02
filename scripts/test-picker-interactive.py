@@ -232,8 +232,8 @@ def check_seeded_workspace(report_dir: Path) -> None:
     # plugin of the user. The run must start a private server instead.
     check("BENCH_HARNESS_PRIVATE" in makefile,
           "the run starts a private server instead of the background service")
-    check('$(BENCH_HARNESS_PRIVATE)' in makefile,
-          "the run passes the private server flag to the harness")
+    check('$(HARNESS) $(BENCH_HARNESS_PRIVATE) $(BENCH_HARNESS_MODEL) --prompt' in makefile,
+          "the run keeps the harness in the terminal interface with a prompt")
     # A harness restores the model that the user last chose for each agent, and
     # the restored model wins over the model in the configuration of the run.
     # The run must name the model on the command line, or the run measures the

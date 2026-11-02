@@ -89,7 +89,9 @@ stays in `playground/README.md`, which the run never copies, so the model
 under test cannot read the scoring. The target
 writes the run token to `prompt-token.txt` and to the last line of `AGENTS.md`.
 The target then starts the harness in the foreground with the `BENCH_TASK`
-prompt, so the user can steer the run. The run points the configuration
+prompt, so the user can steer the run. Both harnesses open their terminal
+interface and receive the prompt through `--prompt`; the run uses no headless
+subcommand. The run points the configuration
 directory of the harness at the clean room, and it starts a private server, so
 the plugins, skills, agents, and servers of the user cannot change the
 measurement. A background service of a user read the global configuration
