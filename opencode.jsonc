@@ -6,15 +6,15 @@
     // The lccst-telemetry server is benchmark-only instrumentation and
     // stays enabled inside playground workspaces; the main server must
     // stay disabled there to keep benchmark runs isolated.
-    "lccst": {
-      "type": "local",
-      "command": ["node", "dist/index.js"],
-      "enabled": false
-    },
-    "lccst-telemetry": {
-      "type": "local",
-      "command": ["node", "playground/benchmarks/mcp-telemetry/build/index.js"],
-      "enabled": true
+    "servers": {
+      "lccst": {
+        "type": "local",
+        "command": ["node", "dist/index.js"],
+      },
+      "lccst-telemetry": {
+        "type": "local",
+        "command": ["node", "playground/benchmarks/mcp-telemetry/build/index.js"],
+      }
     }
   }
 }
