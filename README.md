@@ -305,6 +305,22 @@ variant and not the other.
 
 <!-- BENCHMARK_RESULTS_START -->
 
+#### opencode/opencode/glm-5.3-flash-free: skill version v4.8.0
+
+| Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| `opencode` | **opencode** | `v2.2.7` | `glm-5.3-flash-free` | `v4.8.0` | `lccst-telemetry` | **python-http-server** | 50/100 | **83/100** | PASSED | 1,331 | 1,290 | 77,742 | 99,820 |
+| `opencode` | **opencode** | `v2.2.7` | `glm-5.3-flash-free` | `v4.8.0` | `lccst-telemetry` | **react-timer** | 100/100 | **100/100** | PASSED | 628 | 723 | 327,706 | 157,965 |
+| `opencode` | **opencode** | `v2.2.7` | `glm-5.3-flash-free` | `v4.8.0` | `lccst-telemetry` | **go-login-crud** | 100/100 | **100/100** | PASSED | 2,164 | 2,486 | 446,754 | 291,037 |
+| **Summary** | | | | | **Workspace Totals / Avg** | **83/100** | **94/100** | **3/3 Passed** | **4,123** | **4,499** | **852,202** | **548,822** |
+
+> **Highest ART subproject:** `go-login-crud` consumed the most guided runtime
+> tokens.
+> **Highest FCT subproject:** `go-login-crud` consumed the most guided FCT
+> tokens.
+> Skill-guided implementation used **+9%** more FCT and **-36%** more ART
+> compared to plain implementation across the workspace suite.
+
 #### opencode/opencode/deepseek-v4.1-flash-free: skill version v4.7.0
 
 | Provider | Harness | Harness Version | Model | Skill Layer | Context Tools (MCP) | Subproject | Plain Score | Skill-Guided | Test Status | FCT (Plain) | FCT (Guided) | ART (Plain) | ART (Guided) |
@@ -340,25 +356,28 @@ variant and not the other.
 
 ### Benchmark Summary
 
-| Metric | `opencode-opencode-deepseek-v4.1-flash-free` | `opencode-opencode-mimo-v2.6-flash-free` |
-| --- | --- | --- |
-| Harness | opencode | opencode |
-| Harness version | v2.2.1 | v2.2.1 |
-| Plain score | 75/100 | 80/100 |
-| Guided score | 93/100 | 91/100 |
-| Plain FCT | 4,229 | 4,497 |
-| Guided FCT | 4,663 | 5,851 |
-| FCT overhead | +10% | +30% |
-| Plain ART | 1,221,313 | 418,134 |
-| Guided ART | 1,154,830 | 1,677,668 |
-| ART overhead | -5% | +301% |
-| Tests passed | 3/3 | 3/3 |
+| Metric | `opencode-opencode-glm-5.3-flash-free` | `opencode-opencode-deepseek-v4.1-flash-free` | `opencode-opencode-mimo-v2.6-flash-free` |
+| --- | --- | --- | --- |
+| Harness | opencode | opencode | opencode |
+| Harness version | v2.2.7 | v2.2.1 | v2.2.1 |
+| Plain score | 83/100 | 75/100 | 80/100 |
+| Guided score | 94/100 | 93/100 | 91/100 |
+| Plain FCT | 4,123 | 4,229 | 4,497 |
+| Guided FCT | 4,499 | 4,663 | 5,851 |
+| FCT overhead | +9% | +10% | +30% |
+| Plain ART | 852,202 | 1,221,313 | 418,134 |
+| Guided ART | 548,822 | 1,154,830 | 1,677,668 |
+| ART overhead | -36% | -5% | +301% |
+| Tests passed | 3/3 | 3/3 | 3/3 |
 
 #### Token Efficiency
 
-* **`opencode-opencode-deepseek-v4.1-flash-free`** was the most token-efficient
-  overall (+10% FCT, -5% ART overhead) but scored 93/100 (weakest:
+* **`opencode-opencode-glm-5.3-flash-free`** was the most token-efficient
+  overall (+9% FCT, -36% ART overhead) but scored 94/100 (weakest:
   python-http-server at 83/100).
+
+* **`opencode-opencode-deepseek-v4.1-flash-free`** scored 93/100 (weakest:
+  python-http-server at 83/100) with +10% FCT and -5% ART overhead.
 
 * **`opencode-opencode-mimo-v2.6-flash-free`** scored 91/100 (weakest:
   python-http-server at 74/100) with +30% FCT and +301% ART overhead.
@@ -368,16 +387,17 @@ subproject.
 
 #### Least Token Usage
 
-`opencode-opencode-mimo-v2.6-flash-free` consumed the fewest tokens overall
-(2,106,150): 4,497 plain FCT, 5,851 guided FCT, 418,134 plain ART, and 1,677,668
+`opencode-opencode-glm-5.3-flash-free` consumed the fewest tokens overall
+(1,409,646): 4,123 plain FCT, 4,499 guided FCT, 852,202 plain ART, and 548,822
 guided ART.
 
 #### Overall Top Models
 
 | Rank | Agent-Model | Plain Score | Guided Score | FCT Overhead | ART Overhead | Verdict |
 | ---: | :--- | :---: | :---: | :---: | :---: | :--- |
-| 1 | `opencode-opencode-deepseek-v4.1-flash-free` | 75/100 | 93/100 | +10% | -5% | Best overall |
-| 2 | `opencode-opencode-mimo-v2.6-flash-free` | 80/100 | 91/100 | +30% | +301% | Avoid using |
+| 1 | `opencode-opencode-glm-5.3-flash-free` | 83/100 | 94/100 | +9% | -36% | Best overall |
+| 2 | `opencode-opencode-deepseek-v4.1-flash-free` | 75/100 | 93/100 | +10% | -5% | Strong contender |
+| 3 | `opencode-opencode-mimo-v2.6-flash-free` | 80/100 | 91/100 | +30% | +301% | Avoid using |
 
 See [`model-ranking.md`](model-ranking.md) for the full ranking of all benchmark runs.
 
